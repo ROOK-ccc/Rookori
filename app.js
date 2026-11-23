@@ -258,6 +258,7 @@ function renderSite() {
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
   } else if (path === 'learn') {
     showScreen('home', siteHeadings.learn);
+    byId(siteHeadings.learn).scrollIntoView({ block: 'start' });
   } else if (path === 'openings' || path === 'memorize') {
     learningPages.catalog(path === 'memorize');
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
