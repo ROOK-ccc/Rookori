@@ -44,6 +44,17 @@ test('既存の共有URLを開ける。無効な共有URLはエラー画面に�
   assert.equal(readSiteRoute(`${url}#mode`).path, 'mode');
 });
 
+test('公開先のサブフォルダーを維持して内部リンクと共有結果URLを生成する', () => {
+  const pages = 'https://rook-ccc.github.io/Rookori/';
+  const shared = siteAddress(pages, 'result', { code: 'ATCI', mode: 'beginner' });
+  assert.equal(shared, `${pages}?type=ATCI&mode=beginner`);
+  assert.equal(readSiteRoute(shared).code, 'ATCI');
+  const study = siteAddress(shared, 'study/italian-game', {});
+  assert.equal(study, `${pages}#study/italian-game`);
+  assert.equal(readSiteRoute(study).opening.id, 'italian-game');
+  assert.equal(siteAddress(study, 'home', {}), pages);
+});
+
 test('ローカルの検索パラメーターを変更できない場合でも学習案内と診断へ移動できる', () => {
   const url = `${base}?type=ATCI&mode=beginner`;
   assert.equal(siteAddress(url, 'home', {}, true), `${url}#home`);

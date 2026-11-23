@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Rookori（ルーコリ）は日本語のチェス学習サイトです。駒の動きから、16タイプ診断、オープニング学習、棋譜の振り返りまで、盤上で学べます。">
-  <title>Rookori（ルーコリ） | チェスの旅を、共に。</title>
-  <link rel="canonical" href="https://rook-ccc.github.io/ChessPath/">
+  <meta name="description" content="Rookori（ルーコリ）は初心者から中級者までの日本語チェス学習サイトです。駒の動きやルール、16タイプ診断、オープニング、対局の振り返りをチェス盤で学べます。">
+  <title>Rookori（ルーコリ）｜初心者から学べる日本語チェス学習サイト</title>
+  <!-- PUBLIC_SITE_METADATA -->
   <link rel="icon" type="image/png" sizes="192x192" href="brand/rookori.png">
   <link rel="apple-touch-icon" href="brand/rookori.png">
   <meta property="og:type" content="website">
@@ -13,8 +13,6 @@
   <meta property="og:site_name" content="Rookori">
   <meta property="og:title" content="Rookori（ルーコリ） | チェスの旅を、共に。">
   <meta property="og:description" content="はじめての一手から、もっと強くなるその先まで。チェスの基本・診断・オープニング・対局復習を日本語で。">
-  <meta property="og:url" content="https://rook-ccc.github.io/ChessPath/">
-  <meta property="og:image" content="https://rook-ccc.github.io/ChessPath/brand/rookori-share.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="720">
   <meta property="og:image:height" content="720">
@@ -41,6 +39,7 @@
   <script src="chess-board.js" defer></script>
   <script src="navigation.js" defer></script>
   <script src="learning.js" defer></script>
+  <script src="analytics.js" defer></script>
   <script src="app.js" defer></script>
   <script src="opening-study-ui.js" defer></script>
   <script src="opening-memory-ui.js" defer></script>
@@ -104,12 +103,20 @@
     </div>
   </dialog>
 
+  <aside class="shell analytics-notice" id="analytics-notice" aria-label="アクセス解析の設定" hidden>
+    <p>サイト改善のため、Google Analytics による利用状況の計測に同意しますか？ <a href="#privacy">アクセス解析とプライバシー</a></p>
+    <div class="analytics-actions">
+      <button class="button secondary" type="button" data-analytics-choice="granted">同意する</button>
+      <button class="button secondary" type="button" data-analytics-choice="denied">同意しない</button>
+    </div>
+  </aside>
   <main class="shell" id="main">
     <section id="home" class="screen">
       <div class="hero">
         <div class="hero-copy">
           <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
           <p class="hero-description">はじめての一手から、もっと強くなるその先まで。</p>
+          <p class="hero-description">Rookori（ルーコリ）は、チェスのルールや戦法、対局の振り返りを日本語で学べるサイトです。</p>
           <div class="hero-actions" id="learn-title" tabindex="-1" role="group" aria-label="学習を始める">
             <a class="button hero-button" href="#intro">チェスを始める</a>
             <a class="button hero-secondary" href="#improve">もっと強くなる</a>
@@ -733,7 +740,7 @@
     <section id="about" class="screen inner-screen guide-screen" hidden>
       <h1 id="about-title" tabindex="-1">Rookori（ルーコリ）について</h1>
       <p class="guide-intro" data-chess-terms>Rookoriは、現役高校生が自身のチェス学習経験をもとに制作している日本語のチェス学習サイトです。初めての一手からオープニングの暗記・復習まで、自分のペースで進められます。</p>
-      <p class="brand-update">ChessPathはRookori（ルーコリ）に名称を変更しました。これまでと同じURLで、保存した学習記録や対局履歴を引き続き使えます。</p>
+      <p class="brand-update">ChessPathはRookori（ルーコリ）に名称を変更し、公開先も変わりました。同じブラウザーで、保存した学習記録や対局履歴を引き続き使えます。</p>
       <p>学習記録はこのブラウザー内に保存されます。駒の画像にはCBurnettのSVGを使っています。</p>
       <a class="text-button" href="pieces/cburnett/LICENSE.txt">駒の画像とライセンス</a>
     </section>
@@ -748,9 +755,20 @@
       <p id="chess-glossary-status" class="glossary-metadata" role="status"></p>
       <div id="chess-glossary-list"></div>
     </section>
+    <section id="privacy" class="screen inner-screen guide-screen" hidden>
+      <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>
+      <p class="guide-intro">Rookoriでは、利用状況を把握してサイトを改善するため、同意した方に Google Analytics 4 を使用します。</p>
+      <p>表示した画面の種類を計測します。Google はブラウザーを区別するための Cookie などを使用します。棋譜やメモ、診断の回答・結果、学習履歴は計測の対象に含めません。選択内容はこのブラウザーに保存し、いつでも変更できます。</p>
+      <p><a class="text-button" href="https://policies.google.com/technologies/partner-sites?hl=ja">Google によるデータの使用について</a></p>
+      <p id="analytics-status" role="status">アクセス解析は無効です。</p>
+      <div id="analytics-settings" class="analytics-actions" hidden>
+        <button class="button secondary" type="button" data-analytics-choice="granted">同意する</button>
+        <button class="button secondary" type="button" data-analytics-choice="denied">同意しない</button>
+      </div>
+    </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

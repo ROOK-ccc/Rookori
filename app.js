@@ -30,6 +30,7 @@ function showScreen(id, focusTarget) {
   });
   window.scrollTo(0, 0);
   byId(focusTarget).focus({ preventScroll: true });
+  rookoriAnalytics.screen(id, displayedRoute?.path);
 }
 
 function showQuiz(mode, savedAnswers, savedIndex) {

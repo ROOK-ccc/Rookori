@@ -166,6 +166,9 @@ h1, h2, h3 { line-height: 1.35; }
 .glossary-example { background: #f4e9d3; padding: 6px 10px; border-radius: 5px; }
 .glossary-related { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; color: var(--muted); font-size: .92rem; }
 .site-footer { padding: 17px 0; border-top: 1px solid var(--line); color: var(--muted); font: bold 1rem Georgia, serif; }
+.analytics-notice { margin-block: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
+.analytics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.analytics-actions .button { min-height: 44px; padding: 6px 12px; }
 
 .inner-screen { max-width: 790px; margin: 0 auto; padding: clamp(34px, 7vw, 72px) 0 55px; }
 .inner-screen h1 { font-family: var(--serif); font-size: clamp(1.65rem, 4.6vw, 2.7rem); overflow-wrap: anywhere; }

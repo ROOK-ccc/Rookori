@@ -37,7 +37,7 @@ test('用語を日本語、かなの表記ゆれ、英語と別表記から検�
 });
 
 test('個々の用語を直接開くルートを認識する', () => {
-  const site = 'https://example.test/ChessPath/';
+  const site = 'https://example.test/Rookori/';
   assert.equal(readSiteRoute(site + '#glossary').path, 'glossary');
   for (const id of ['fen', 'threefold-repetition']) {
     assert.equal(readSiteRoute(site + '#glossary/' + id).termId, id);

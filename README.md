@@ -2,7 +2,9 @@
 
 Rookoriは、現役高校生が自身のチェス学習経験をもとに制作している日本語の学習サイトです。チェス未経験の人から、実戦で使える戦法を増やしたい人まで、自分のペースで学べます。
 
-旧名称はChessPathです。同じURLで保存済みの記録を利用でき、旧版から書き出したJSONも引き続き読み込めます。 [Rookoriの公開サイト](https://rook-ccc.github.io/ChessPath/)
+旧名称はChessPathです。公開先は `/Rookori/` に変わりました。 [Rookoriの公開サイト](https://rook-ccc.github.io/Rookori/)
+
+GitHub PagesではURLのパスだけが変わったため、同じブラウザーの同じプロファイルなら学習記録・対局履歴を引き続き使えます。端末やブラウザーを変えるときは、「学習データのバックアップ」と「対局履歴」のバックアップから、それぞれ旧版のJSONを復元できます。問題エディターの自作問題は、エディターで書き出したJSONから復元します。共有済みの診断結果リンクを更新するときは、URLの `/ChessPath/` を `/Rookori/` に置き換え、`?type=...` 以降を引き継いでください。
 
 - **チェスを始める**から「はじめてのチェス」に進み、ルール・駒の練習・理解度チェックを始められます。
 - **もっと強くなる**から、目標に合う診断や戦法一覧に進めます。
@@ -207,13 +209,13 @@ Rookoriは、現役高校生が自身のチェス学習経験をもとに制作�
 
 ### 初回の設定
 
-GitHubのChessPathリポジトリで **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に切り替えます。自動公開の設定は `.github/workflows/deploy.yml` に入っています。 [GitHub Pagesの公開元設定](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+GitHubのRookoriリポジトリで **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に切り替えます。自動公開の設定は `.github/workflows/deploy.yml` に入っています。 [Rookoriリポジトリ](https://github.com/ROOK-ccc/Rookori) · [GitHub Pagesの公開元設定](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
 Windowsでは、GitHub Desktopの **File → Clone repository** から既存リポジトリを開発フォルダーとは別の場所にコピーします。初回は、開発フォルダー直下のソース、最新の `course-problems.js`、テスト、`publish.cjs`、`README.md` と、`brand`、`pieces`、`vendor`、`.github` をクローン先の同じ階層へコピーします。GitHub側で自作問題を更新した場合は、`course-problems.js` の差分を確認し、新しい内容を取り込んでから送信します。ZIPや過去バージョンのフォルダーはコピーの対象外です。エディターをGitHubに置く場合はリポジトリから閲覧できるため、ローカル専用にしたい場合は `editor.html`、`editor.css`、`editor.js` を開発フォルダーに置いておきます。 [GitHub Desktopでクローンする方法](https://docs.github.com/en/desktop/adding-and-cloning-repositories/cloning-and-forking-repositories-from-github-desktop)
 
 ### 毎回の更新
 
-GitHub Desktopで `main` の **Changes** を確認し、**Commit to main → Push origin** の順に押します。GitHubの **Actions → Deploy ChessPath to GitHub Pages** で実行結果を確認できます。テストか公開用ファイルの生成が失敗したときは、赤いステップを開くと原因を確認できます。成功すると、同じ `/ChessPath/` のURLに反映されます。 [GitHub Desktopでコミットと送信をする方法](https://docs.github.com/en/desktop/making-changes-in-a-branch/committing-and-reviewing-changes-to-your-project-in-github-desktop?platform=windows)
+GitHub Desktopで `main` の **Changes** を確認し、**Commit to main → Push origin** の順に押します。GitHubの **Actions → Deploy Rookori to GitHub Pages** で実行結果を確認できます。テストか公開用ファイルの生成が失敗したときは、赤いステップを開くと原因を確認できます。成功すると `/Rookori/` のURLに反映されます。 [GitHub Desktopでコミットと送信をする方法](https://docs.github.com/en/desktop/making-changes-in-a-branch/committing-and-reviewing-changes-to-your-project-in-github-desktop?platform=windows)
 
 手元で公開用ファイルだけを確認する場合は、これまでどおり `node publish.cjs` を使えます。Actionsでは `node publish.cjs --print-output` が返したフォルダーだけを公開します。
 
@@ -224,3 +226,25 @@ GitHub Desktopで `main` の **Changes** を確認し、**Commit to main → Pus
 リンクを開くと、12問に答えなくても同じ結果を表示できます。「自分も診断する」からモード選択に進めます。リンクに含まれるのはタイプと診断モードで、回答の内容は含まれません。
 
 `index.html` を直接開いて作ったリンクは自分のPC内のファイルを指します。他の端末との共有には、両方の端末が開けるサイトのアドレスを使ってください。静的ホスティングには `node publish.cjs` で作成した公開用フォルダーを使います。
+
+## Google 検索とアクセス解析
+
+`site-config.json` の `siteUrl` が、公開ビルドで出力する canonical、OGP の URL、`robots.txt`、`sitemap.xml` の基準です。将来公開先を変える場合は末尾が `/` の HTTPS URL に更新します。現時点の独自ドメイン購入・移行は不要です。公開ビルドはサービス紹介のトップページだけをサイトマップに載せます。ハッシュで切り替える学習画面や、個別の診断結果・保存済み対局は列挙しません。
+
+### Google Search Console
+
+1. Search Console の **プロパティを追加 → URL プレフィックス** で `https://rook-ccc.github.io/Rookori/` を入力します。
+2. **HTML タグ**を選び、表示されたタグの `content` の値だけを `site-config.json` の `googleSearchVerification` に入力します。空欄なら公開ビルドは確認タグを出力しません。
+3. GitHub Pages に反映されたら、公開トップページのソース内に確認タグがあることを確認し、Search Console の **確認** を押します。
+4. **サイトマップ**から `sitemap.xml` を送信し、**URL 検査**でトップページの状態を確認します。必要に応じてインデックス登録をリクエストします。 [所有権の確認](https://support.google.com/webmasters/answer/9008080?hl=ja) · [サイトマップ](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap?hl=ja)
+
+`/Rookori/robots.txt` と `/Rookori/sitemap.xml` は公開ビルドに含まれます。検索エンジンがホストの巡回ルールとして読むのは `https://rook-ccc.github.io/robots.txt` です。プロジェクトサイトからホスト直下のファイルを管理する設定はないため、サイトマップは Search Console から直接送信します。 [Google の robots.txt の仕様](https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt?hl=ja)
+
+### Google Analytics 4（GA4）
+
+1. Google Analytics の **管理**で GA4 プロパティを作り、**データ ストリーム → ウェブ**に公開URLを登録します。
+2. ストリームの **拡張計測機能をオフ**にし、別の Google タグや Google Tag Manager のタグを追加せず、測定 ID をコピーします。拡張計測をオフにすると、ブラウザー履歴による二重計測や、フォーム・外部リンクなどの自動収集を避けられます。
+3. `site-config.json` の `ga4MeasurementId` に実際の測定 ID を入力します。空欄の間は Google タグを読み込みません。ID を設定した場合も、公開先で「同意する」を選んだ後に限ってタグを読み込みます。
+4. 公開後に **リアルタイム** を開き、Rookori で同意・画面移動して `page_view` を確認します。拒否時は送信しないことも確認します。集計後は **レポート → 集客 → 集客の概要** などで「アクティブ ユーザー」「新規ユーザー」を確認できます。数値は同意した利用環境での推計です。 [Analytics の設定](https://support.google.com/analytics/answer/9304153?hl=ja) · [手動ページビュー](https://developers.google.com/analytics/devguides/collection/ga4/views?hl=ja) · [ユーザー指標](https://support.google.com/analytics/answer/12253918?hl=ja)
+
+計測には固定の画面名とURLだけを使います。棋譜、メモ、診断の回答・結果、学習履歴、元のURLのクエリや個別IDは渡しません。フッターの「アクセス解析とプライバシー」から同意の取り消しができます。

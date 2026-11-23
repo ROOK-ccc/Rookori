@@ -1,4 +1,4 @@
-name: Deploy ChessPath to GitHub Pages
+name: Deploy Rookori to GitHub Pages
 
 on:
   push:

@@ -1,0 +1,133 @@
+function createRookoriAnalytics(win, doc) {
+  const noop = { screen() {} };
+  const canonical = doc.querySelector('link[rel="canonical"]')?.href;
+  const id = doc.querySelector('meta[name="rookori-ga4-measurement-id"]')?.content;
+  if (!canonical || !/^G-[A-Z0-9]+$/.test(id ?? '')) return noop;
+  const site = new URL(canonical);
+  // A locally opened file, staging copy or already-tagged page must not start this tag.
+  if (win.location.origin !== site.origin
+    || ![site.pathname, site.pathname + 'index.html'].includes(win.location.pathname)
+    || typeof win.gtag === 'function'
+    || doc.querySelector('script[src*="googletagmanager.com/gtag/js"], script[src*="googletagmanager.com/gtm.js"]')) return noop;
+
+  const titles = {
+    home: 'ホーム', beginner: '初心者ガイド', improve: '学習ガイド', journal: 'チェス日記帳',
+    openings: 'オープニング一覧', memorize: 'オープニング暗記一覧', 'opening-study': 'オープニング学習',
+    'opening-practice': '暗記練習', mode: '診断の種類', quiz: '16タイプ診断',
+    'opening-quiz': 'オープニング診断', result: '16タイプ診断の結果', 'opening-result': 'オープニング診断の結果',
+    intro: 'はじめてのチェス', 'intro-lesson': '入門レッスン', 'intro-summary': '入門の結果',
+    dashboard: '今日の学習', daily: '今日の練習問題', review: '復習', progress: '上達記録',
+    'game-review': '対局の取り込み', 'game-player': '対局再生', 'game-library': '対局履歴',
+    backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集',
+    privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー',
+  };
+  const consentKey = 'rookori.analytics-consent.v1';
+  const disableKey = `ga-disable-${id}`;
+  const notice = doc.getElementById('analytics-notice');
+  const settings = doc.getElementById('analytics-settings');
+  const status = doc.getElementById('analytics-status');
+  const buttons = doc.querySelectorAll('[data-analytics-choice]');
+  let choice = null;
+  try { choice = win.localStorage.getItem(consentKey); } catch { /* The choice can still last for this visit. */ }
+  if (choice !== 'granted' && choice !== 'denied') choice = null;
+  let gtag;
+  let current;
+  let last;
+
+  const consentOptions = value => ({
+    analytics_storage: value, ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied',
+  });
+
+  function updateControls() {
+    notice.hidden = choice !== null;
+    settings.hidden = false;
+    status.textContent = choice === 'granted' ? 'アクセス解析に同意しています。'
+      : choice === 'denied' ? 'アクセス解析に同意していません。' : 'アクセス解析は同意するまで無効です。';
+    for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.analyticsChoice === choice));
+  }
+
+  function start() {
+    win[disableKey] = false;
+    if (gtag) {
+      gtag('consent', 'update', consentOptions('granted'));
+      return;
+    }
+    win.dataLayer ??= [];
+    gtag = win.gtag = function () { win.dataLayer.push(arguments); };
+    gtag('consent', 'default', consentOptions('granted'));
+    gtag('js', new Date());
+    gtag('config', id, {
+      send_page_view: false,
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false,
+      cookie_domain: 'none',
+      cookie_path: site.pathname,
+      page_location: site.href,
+      page_referrer: site.href,
+      page_title: 'Rookori',
+    });
+    const tag = doc.createElement('script');
+    tag.async = true;
+    tag.referrerPolicy = 'no-referrer';
+    tag.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+    doc.head.append(tag);
+  }
+
+  function track() {
+    if (choice !== 'granted' || !current || current.key === last?.key) return;
+    // Only fixed screen names reach Google. The routing key is used for local deduplication.
+    const context = {
+      page_location: current.location,
+      page_referrer: last?.location ?? site.href,
+      page_title: current.title,
+    };
+    gtag('set', context);
+    gtag('event', 'page_view', { ...context, send_to: id });
+    last = current;
+  }
+
+  function changeChoice(value) {
+    if (value === choice) return;
+    choice = value;
+    if (choice === 'granted') {
+      start();
+      track();
+    } else {
+      win[disableKey] = true;
+      gtag?.('consent', 'update', consentOptions('denied'));
+      last = null;
+    }
+    updateControls();
+  }
+
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      const value = button.dataset.analyticsChoice;
+      try { win.localStorage.setItem(consentKey, value); } catch { /* Keep the choice in memory. */ }
+      changeChoice(value);
+    });
+  }
+  win.addEventListener('storage', event => {
+    if (event.key === consentKey || event.key === null) {
+      changeChoice(event.newValue === 'granted' || event.newValue === 'denied' ? event.newValue : null);
+    }
+  });
+  if (choice === 'granted') start();
+  updateControls();
+
+  return {
+    screen(id, route) {
+      const name = id === 'quiz' && route === 'opening-quiz' ? 'opening-quiz'
+        : id === 'openings' && route === 'memorize' ? 'memorize' : id;
+      if (!Object.hasOwn(titles, name)) return;
+      current = {
+        key: id === 'home' ? 'home' : `${name}:${route ?? ''}`,
+        location: name === 'home' ? site.href : new URL(`#${name}`, site).href,
+        title: `Rookori | ${titles[name]}`,
+      };
+      track();
+    },
+  };
+}
+
+const rookoriAnalytics = createRookoriAnalytics(window, document);

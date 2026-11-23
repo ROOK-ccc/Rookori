@@ -144,7 +144,7 @@ test('設定した局面と棋譜をバックアップから復元し、重複�
 });
 
 test('対局の画面に直接移動し、履歴の局面番号を該当する対局にだけ復元する', () => {
-  const url = 'https://example.test/ChessPath/';
+  const url = 'https://example.test/Rookori/';
   const path = `game-review/${gameId}`;
   assert.equal(readSiteRoute(url + '#game-review').path, 'game-review');
   assert.equal(readSiteRoute(url + '#game-library').path, 'game-library');
