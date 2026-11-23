@@ -1,0 +1,348 @@
+const byId = (id) => document.getElementById(id);
+
+let currentMode;
+let questions = [];
+let answers = [];
+let questionIndex = 0;
+let displayedRoute;
+let lastOpeningAnswers;
+
+const quizBackLabels = {
+  beginner: '初心者向けガイドに戻る',
+  improve: '学習案内に戻る',
+  'opening-result': '診断結果に戻る',
+  'intro-summary': '入門コースのまとめに戻る',
+  home: 'トップに戻る',
+  mode: 'モード選択に戻る',
+};
+
+function element(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+
+function showScreen(id, focusTarget) {
+  document.querySelectorAll('.screen').forEach((screen) => {
+    screen.hidden = screen.id !== id;
+  });
+  window.scrollTo(0, 0);
+  byId(focusTarget).focus({ preventScroll: true });
+}
+
+function showQuiz(mode, savedAnswers, savedIndex) {
+  currentMode = mode;
+  questions = mode === 'opening' ? openingQuestions : getQuestions(mode);
+  answers = savedAnswers?.length === questions.length ? savedAnswers.slice() : Array(questions.length).fill(null);
+  questionIndex = Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < questions.length ? savedIndex : 0;
+  renderQuestion();
+}
+
+function selectAnswer(index) {
+  answers[questionIndex] = index;
+  Array.from(byId('answers').children).forEach((button, choice) => {
+    button.setAttribute('aria-pressed', String(choice === index));
+  });
+  byId('next').disabled = false;
+  updateEntry({ quizAnswers: answers, questionIndex });
+}
+
+function renderQuestion() {
+  const question = questions[questionIndex];
+  const lastQuestion = questionIndex === questions.length - 1;
+  const openingQuiz = currentMode === 'opening';
+  byId('quiz-mode').textContent = openingQuiz ? 'オープニング診断' : modes[currentMode].name;
+  byId('opening-quiz-intro').hidden = !openingQuiz || questionIndex !== 0;
+  byId('question-number').textContent = `${questionIndex + 1} / ${questions.length} 問`;
+  byId('progress').max = questions.length;
+  byId('progress').value = questionIndex + 1;
+  byId('question-title').textContent = question.prompt;
+  byId('answers').replaceChildren(...question.choices.map((choice, index) => {
+    const button = element('button', null, 'answer');
+    button.type = 'button';
+    button.setAttribute('aria-pressed', String(answers[questionIndex] === index));
+    button.append(element('span', ['A', 'B', 'C'][index], 'answer-letter'), element('span', choice));
+    button.addEventListener('click', () => selectAnswer(index));
+    return button;
+  }));
+  byId('previous').textContent = questionIndex === 0 ? quizBackLabels[quizBackPath()] : '前の質問に戻る';
+  byId('next').textContent = lastQuestion ? '結果を見る' : '次の質問へ';
+  byId('next').disabled = answers[questionIndex] === null;
+  showScreen('quiz', 'question-title');
+}
+
+function resultDetail(title, text, className) {
+  const card = element('section', null, className);
+  card.append(element('h2', title), element('p', text));
+  return card;
+}
+
+function renderResult(code, mode, fromLink = false) {
+  const type = types[code];
+  byId('result-mode').textContent = modes[mode].name;
+  byId('result-code').textContent = code;
+  byId('result-title').textContent = type.name;
+  byId('result-description').textContent = type.description;
+  byId('result-note').textContent = modes[mode].resultNote;
+  byId('shared-note').hidden = !fromLink;
+  byId('restart').textContent = fromLink ? '自分も診断する' : 'もう一度診断する';
+  byId('result-axes').replaceChildren(...axes.map(({ codes, labels }, index) => {
+    const letter = code[index];
+    const item = element('li');
+    item.append(element('span', letter, 'axis-code'), element('span', labels[codes.indexOf(letter)]));
+    return item;
+  }));
+  const opening = resultDetail('おすすめオープニング', type.opening, 'opening');
+  opening.append(element('p', '好みに基づいた序盤の戦い方の提案です。', 'opening-note'));
+  byId('result-details').replaceChildren(
+    resultDetail('活かしやすい強み', type.strength, 'result-strength'),
+    resultDetail('対局で意識したい注意点', type.caution, 'result-caution'),
+    opening,
+    resultDetail('上達のヒント', type.tip),
+  );
+  renderShareCard(code);
+  const link = makeResultLink(location.href, code, mode);
+  byId('result-link-url').value = link;
+  byId('manual-result-link').hidden = true;
+  byId('link-status').textContent = '';
+  byId('local-link-note').hidden = location.protocol !== 'file:';
+  byId('share-result-link').hidden = location.protocol === 'file:'
+    || !navigator.share || navigator.canShare?.({ url: link }) === false;
+  showScreen('result', 'result-title');
+}
+
+function renderOpeningResult(resultAnswers, studyId) {
+  lastOpeningAnswers = resultAnswers;
+  const ratingLabel = (value) => ['低', '低', '中', '中', '高'][value - 1];
+  byId('opening-results').replaceChildren(...scoreOpenings(resultAnswers).map(({ candidate, reason }) => {
+    const card = element('article', null, 'opening-card');
+    card.dataset.openingId = candidate.id;
+    const english = element('p', candidate.english, 'opening-english');
+    english.lang = 'en';
+    const ratings = element('dl', null, 'opening-ratings');
+    for (const [label, value] of [['難易度', candidate.traits.complexity], ['学習負担', candidate.traits.burden]]) {
+      const rating = element('div');
+      rating.append(element('dt', label), element('dd', ratingLabel(value)));
+      ratings.append(rating);
+    }
+    const learn = element('a', '盤上で学ぶ', 'button secondary opening-learn');
+    learn.href = `#study/${candidate.id}`;
+    learn.id = `learn-${candidate.id}`;
+    learn.setAttribute('aria-label', `${candidate.name}を盤上で学ぶ`);
+    card.append(
+      element('p', openingSlots[candidate.slot], 'eyebrow'),
+      element('h2', candidate.name),
+      english,
+      element('h3', 'どんな戦法？'),
+      element('p', candidate.description),
+      element('p', candidate.condition, 'opening-condition'),
+      element('h3', 'まず意識すること'),
+      element('p', candidate.tip),
+      element('h3', 'おすすめした理由'),
+      element('p', reason),
+      ratings,
+      learn,
+    );
+    return card;
+  }));
+  showWithReturnFocus('opening-result', 'opening-result-title', studyId && `learn-${studyId}`);
+}
+
+function updateEntry(data) {
+  history.replaceState({ ...history.state, path: displayedRoute.path, ...data }, '');
+}
+
+function goTo(path, data = {}) {
+  const from = displayedRoute?.path ?? 'home';
+  if (path === from && !Object.keys(data).length) {
+    if (path === 'home' || path === 'learn') renderSite();
+    return;
+  }
+  const entry = { ...data, path, from };
+  try {
+    history.pushState(entry, '', siteAddress(location.href, path, data));
+  } catch (error) {
+    // ローカルファイルでは検索パラメーターの変更が制限されることがあります。
+    if (error.name !== 'SecurityError' || location.protocol !== 'file:') throw error;
+    history.pushState(entry, '', siteAddress(location.href, path, data, true));
+  }
+  renderSite();
+}
+
+function backTo(path, data) {
+  if (history.state?.from === path) {
+    history.back();
+  } else {
+    goTo(path, data);
+  }
+}
+
+function quizBackPath() {
+  if (currentMode !== 'opening') return 'mode';
+  const path = displayedRoute.returnTo;
+  return Object.hasOwn(quizBackLabels, path) ? path : 'home';
+}
+
+function showWithReturnFocus(screen, heading, buttonId) {
+  const button = buttonId && byId(buttonId);
+  showScreen(screen, button ? buttonId : heading);
+  if (button) button.scrollIntoView({ block: 'nearest' });
+}
+
+function renderSite() {
+  const previous = displayedRoute;
+  const route = readSiteRoute(location.href, history.state);
+  const { path } = route;
+  displayedRoute = route;
+  if (previous?.opening) openingStudyScreen.close();
+  if (previous?.practice) openingMemoryScreen.close();
+  if (previous?.lesson) introScreen.close();
+
+  let menuPath = 'learn';
+  if (path === 'home') menuPath = 'home';
+  if (path === 'mode' || path === 'result' || route.mode && route.mode !== 'opening') menuPath = 'mode';
+  if (path === 'opening-quiz' || path === 'opening-result' || route.recommended) menuPath = 'opening-quiz';
+  if (path === 'review') menuPath = 'review';
+  for (const link of document.querySelectorAll('.site-nav a')) {
+    if (link.hash === `#${menuPath}` && path !== 'error') link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+
+  if (route.practice) {
+    openingMemoryScreen.open(route.practice, route.color);
+  } else if (path === 'review') {
+    openingMemoryScreen.review();
+  } else if (route.lesson) {
+    introScreen.open(route.lesson);
+  } else if (path === 'intro') {
+    introScreen.showOverview();
+  } else if (path === 'intro-summary') {
+    introScreen.showSummary();
+  } else if (route.opening) {
+    if (route.recommended) lastOpeningAnswers = route.openingAnswers;
+    openingStudyScreen.open(route.opening, route);
+  } else if (path === 'opening-result') {
+    renderOpeningResult(route.openingAnswers, previous?.opening?.id);
+  } else if (path === 'result') {
+    renderResult(route.code, route.mode, route.fromLink);
+  } else if (route.mode) {
+    if (location.hash === '#opening-result') history.replaceState({ path }, '', '#opening-quiz');
+    showQuiz(route.mode, route.quizAnswers, route.questionIndex);
+  } else if (path === 'learn') {
+    showScreen('home', siteHeadings.learn);
+    byId(siteHeadings.learn).scrollIntoView();
+  } else if (path === 'openings') {
+    showWithReturnFocus(path, siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
+  } else {
+    byId('latest-opening-result').hidden = !lastOpeningAnswers;
+    showScreen(path, siteHeadings[path]);
+  }
+}
+
+byId('copy-result-link').addEventListener('click', async () => {
+  const field = byId('result-link-url');
+  const url = field.value;
+  const stillViewingLink = () => field.value === url && !byId('result').hidden;
+  try {
+    await navigator.clipboard.writeText(url);
+    if (stillViewingLink()) {
+      byId('link-status').textContent = 'リンクをコピーしました';
+    }
+  } catch {
+    if (!stillViewingLink()) return;
+    byId('manual-result-link').hidden = false;
+    byId('link-status').textContent = 'URLを選択しました。コピーして共有してください。';
+    field.focus();
+    field.select();
+  }
+});
+
+byId('share-result-link').addEventListener('click', async () => {
+  try {
+    await navigator.share({ url: byId('result-link-url').value });
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      byId('link-status').textContent = 'リンクを共有できませんでした。「結果のリンクをコピー」をお試しください。';
+    }
+  }
+});
+
+byId('mode-options').replaceChildren(...Object.entries(modes).map(([key, mode]) => {
+  const card = element('section', null, 'mode-card');
+  const button = element('a', `${mode.name}を始める`, 'button primary');
+  button.href = `#quiz-${key}`;
+  card.append(element('h2', mode.name), element('p', mode.description), button);
+  return card;
+}));
+
+const catalogHeadings = { white: '白番（先手）', blackE4: '黒番（対1.e4）', blackD4: '黒番（対1.d4）' };
+byId('opening-catalog').replaceChildren(...Object.entries(catalogHeadings).map(([slot, label]) => {
+  const group = element('section');
+  const list = element('ul', null, 'goal-links');
+  for (const opening of openings.filter((item) => item.slot === slot)) {
+    const item = element('li');
+    const link = element('a', opening.name);
+    link.id = `catalog-${opening.id}`;
+    link.href = `#study/${opening.id}`;
+    const arrow = element('span', '→');
+    arrow.setAttribute('aria-hidden', 'true');
+    link.append(arrow);
+    item.append(link);
+    list.append(item);
+  }
+  group.append(element('h2', label), list);
+  return group;
+}));
+
+document.addEventListener('click', (event) => {
+  const link = event.target.closest('a[href^="#"]');
+  if (!link || event.defaultPrevented || event.button !== 0
+      || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  const path = link.getAttribute('href').slice(1);
+  const route = displayedRoute;
+  if (['study-back', 'study-more'].includes(link.id)) {
+    backTo(path, path === 'opening-result' ? { openingAnswers: route.openingAnswers } : undefined);
+  } else if (path.startsWith('study/') && route.path === 'opening-result') {
+    goTo(path, { openingAnswers: route.openingAnswers });
+  } else if (path === 'opening-result') {
+    goTo(path, { openingAnswers: lastOpeningAnswers });
+  } else if (path === 'opening-quiz' && ['beginner', 'improve', 'intro-summary'].includes(route.path)) {
+    goTo(path, { returnTo: route.path });
+  } else {
+    goTo(path);
+  }
+});
+
+byId('restart-opening').addEventListener('click', () => goTo('opening-quiz', { returnTo: 'opening-result' }));
+byId('home-back').addEventListener('click', () => goTo('home'));
+byId('restart').addEventListener('click', () => goTo('mode'));
+byId('error-home').addEventListener('click', () => goTo('home'));
+byId('previous').addEventListener('click', () => {
+  if (questionIndex === 0) {
+    backTo(quizBackPath());
+    return;
+  }
+  questionIndex -= 1;
+  updateEntry({ questionIndex });
+  renderQuestion();
+});
+byId('next').addEventListener('click', () => {
+  if (questionIndex === questions.length - 1) {
+    if (currentMode === 'opening') {
+      goTo('opening-result', { openingAnswers: answers });
+      return;
+    }
+    const code = scoreAnswers(questions, answers);
+    goTo('result', { code, mode: currentMode });
+    return;
+  }
+  questionIndex += 1;
+  updateEntry({ questionIndex });
+  renderQuestion();
+});
+
+history.scrollRestoration = 'manual';
+window.addEventListener('popstate', renderSite);
+window.addEventListener('DOMContentLoaded', renderSite, { once: true });
