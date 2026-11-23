@@ -21,7 +21,7 @@ try {
     'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
     'learning.js', 'learning-insights.js', 'learning-progress-ui.js', 'learning-ui.js', 'site-menu.js',
     'game-review.js', 'opening-classification.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
-    'chess-glossary.js',
+    'chess-terms.js', 'chess-glossary.js',
     'intro-data.js', 'intro-course.js', 'intro-ui.js', 'chess-board.js',
     'problem-data.js', 'problem-curriculum.js',
     'vendor/chess.js', 'vendor/chess.LICENSE.txt',

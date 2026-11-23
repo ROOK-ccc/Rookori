@@ -29,6 +29,8 @@ function readSiteRoute(address, state) {
   // 履歴の各項目には、その画面の回答や学習の進行だけを保存します。
   const entry = state?.path === path ? state : {};
   if (Object.hasOwn(siteHeadings, path)) return { path };
+  const term = /^glossary\/([a-z0-9-]+)$/.exec(path);
+  if (term) return { path, termId: term[1] };
   if (path === 'intro' || path === 'intro-summary') return { path };
   if (path === 'review') return { path };
   const game = /^game-review\/(sample|preview|[a-f0-9]{32})$/.exec(path);

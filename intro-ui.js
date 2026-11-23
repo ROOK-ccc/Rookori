@@ -84,7 +84,7 @@ const introScreen = (() => {
     termNote.hidden = lesson.id !== 'mate';
     if (!termNote.hidden) chessGlossary.annotate(termNote, 'この課題では、エンドゲームでチェックメイトを狙うタクティクスを練習します。');
     byId('lesson-task').textContent = lesson.task;
-    byId('lesson-hint').textContent = `ヒント　${lesson.hint}`;
+    chessGlossary.annotate(byId('lesson-hint'), `ヒント　${lesson.hint}`);
     const choices = byId('lesson-choices');
     choices.hidden = !lesson.choices;
     choices.replaceChildren(...(lesson.choices ?? []).map((choice, index) => {

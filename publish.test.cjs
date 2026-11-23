@@ -32,7 +32,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="learning-insights\.js"/);
   assert.match(html, /src="learning-progress-ui\.js"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
-    'opening-classification.js', 'chess-glossary.js']) {
+    'opening-classification.js', 'chess-terms.js', 'chess-glossary.js']) {
     assert.ok(artifacts.includes(file));
   }
   assert.ok(!artifacts.some(file => file.startsWith('editor.')));

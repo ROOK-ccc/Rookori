@@ -36,6 +36,7 @@
   <script src="game-review.js" defer></script>
   <script src="opening-classification.js" defer></script>
   <script src="game-library.js" defer></script>
+  <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
@@ -93,7 +94,7 @@
       <div class="hero">
         <div class="hero-copy">
           <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
-          <p class="hero-description">駒の動かし方から、実戦で使える作戦まで。自分のペースで学べる日本語のチェス学習サイトです。</p>
+          <p class="hero-description">駒の動かし方から、実戦で使える作戦まで。自分のペースで学べる日本語のチェスサイトです。</p>
           <div class="hero-actions" id="learn-title" tabindex="-1" role="group" aria-label="学習を始める">
             <a class="button hero-button" href="#intro">チェスを始める</a>
             <a class="button hero-secondary" href="#improve">もっと強くなる</a>
@@ -121,12 +122,12 @@
         <div class="path-grid">
           <a class="path-card" id="start" href="#mode">
             <h3>チェス16タイプ診断</h3>
-            <p>あなたのプレイスタイルを16タイプから発見！</p>
+            <p>自分の戦い方の傾向を知る。</p>
             <span aria-hidden="true">→</span>
           </a>
           <a class="path-card" id="start-opening" href="#opening-quiz">
             <h3>オープニング診断</h3>
-            <p>8つの質問で、自分に合う序盤の戦法を探す。</p>
+            <p>自分に合う序盤の戦法を探す。</p>
             <span aria-hidden="true">→</span>
           </a>
         </div>
@@ -593,7 +594,7 @@
               <details id="game-opening-details" hidden>
                 <summary>分類の詳細</summary>
                 <p id="game-opening-code"></p>
-                <p>棋譜の序盤で確認できた局面の分類です。</p>
+                <p data-chess-terms>手順前後でも一致する、棋譜の序盤の局面を照合しています。</p>
               </details>
             </section>
             <section class="game-card" aria-labelledby="game-moves-title">
@@ -724,13 +725,18 @@
       <a class="text-button" href="#learn">学習トップへ戻る</a>
       <h1 id="glossary-title" tabindex="-1">チェス用語集</h1>
       <p class="guide-intro">学習画面で点線の下線が付いた言葉は、その場で意味を確認できます。</p>
-      <dl class="chess-glossary-list" id="chess-glossary-list"></dl>
+      <div class="glossary-controls" role="search" aria-label="チェス用語を探す">
+        <label for="chess-term-search">用語を検索 <input id="chess-term-search" type="search" placeholder="フォーク、castling など"></label>
+        <label for="chess-term-category">分野 <select id="chess-term-category"><option value="">すべての分野</option></select></label>
+      </div>
+      <p id="chess-glossary-status" class="glossary-metadata" role="status"></p>
+      <div id="chess-glossary-list"></div>
     </section>
   </main>
 
   <footer class="site-footer"><div class="shell">ChessPath · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
-  <div id="chess-term-popup" class="chess-term-popup" aria-hidden="true" hidden></div>
+  <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>
 </body>
 </html>

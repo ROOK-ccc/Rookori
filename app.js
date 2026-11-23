@@ -213,7 +213,9 @@ function renderSite() {
     else link.removeAttribute('aria-current');
   }
 
-  if (route.game || path === 'game-review' || path === 'game-library') {
+  if (path === 'glossary' || route.termId) {
+    chessGlossary.open(route.termId);
+  } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);
   } else if (route.reviewId) {
     const item = route.retry ? learningTracker.item(route.reviewId)

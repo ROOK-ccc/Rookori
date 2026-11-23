@@ -33,7 +33,8 @@ const siteMenu = (() => {
 
   function mark(route) {
     const path = route.path;
-    const current = route.reviewId ? 'review'
+    const current = route.termId ? 'glossary'
+      : route.reviewId ? 'review'
       : route.game ? 'game-review'
       : route.practice || path === 'memorize' ? 'memorize'
       : route.opening ? 'openings'
