@@ -39,6 +39,8 @@
 
 .game-player .study-layout { grid-template-columns: minmax(0, 1fr) minmax(0, .88fr); }
 .game-side > :first-child { margin-top: 0; }
+.game-opening { border-top: 3px solid var(--gold-dark); }
+.game-opening #game-opening-name { font-weight: 700; margin-bottom: 4px; }
 .game-player .study-square { cursor: default; }
 .game-move-controls {
   display: grid;

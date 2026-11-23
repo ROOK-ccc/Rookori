@@ -4,14 +4,14 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 
-const source = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'game-review.js', 'navigation.js']
+const source = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'game-review.js', 'opening-classification.js', 'navigation.js']
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
 const {
-  chessRules, sampleGamePgn, parseReviewGames, reviewPosition, reviewOpening, openings,
-  openingVariations, reviewGameRecord, reviewNote, makeGameBackup, validateGameBackup, readSiteRoute,
+  chessRules, sampleGamePgn, parseReviewGames, reviewPosition, classifyReviewOpening, openingReferenceLines,
+  buildOpeningPositionIndex, openingPositionKey, findStudyOpening, reviewGameRecord, reviewNote, makeGameBackup, validateGameBackup, readSiteRoute,
 } = runInNewContext(source + `
-  ({ chessRules, sampleGamePgn, parseReviewGames, reviewPosition, reviewOpening, openings,
-    openingVariations, reviewGameRecord, reviewNote, makeGameBackup, validateGameBackup, readSiteRoute })
+  ({ chessRules, sampleGamePgn, parseReviewGames, reviewPosition, classifyReviewOpening, openingReferenceLines,
+    buildOpeningPositionIndex, openingPositionKey, findStudyOpening, reviewGameRecord, reviewNote, makeGameBackup, validateGameBackup, readSiteRoute })
 `, { URL });
 
 const san = game => Array.from(game.positions.slice(1), ({ move }) => move.san);
@@ -81,10 +81,38 @@ test('最初・途中・最後を選び、すべての局面で手順と盤を�
   }
 });
 
-test('既存教材と冒頭の手順が一致する場合に教材を選ぶ', () => {
+test('掲載した分類の局面は合法で、すべて既存教材に移動できる', () => {
+  for (const [id, eco, pgn] of openingReferenceLines) {
+    const [game] = parseReviewGames(pgn);
+    const match = classifyReviewOpening(game);
+    assert.equal(match.id, id, pgn);
+    assert.equal(match.eco, eco, pgn);
+    assert.ok(findStudyOpening(id), id);
+  }
+});
+
+test('短い棋譜も分類し、手順が前後しても同じ局面ならバリエーションを選ぶ', () => {
   const [game] = parseReviewGames('1. e4 c5 2. Nc3 *');
-  assert.equal(reviewOpening(game, [...openings, ...openingVariations]).id, 'sicilian-closed');
-  assert.equal(reviewOpening(parseReviewGames('1. e4 *')[0], openings), null);
+  assert.equal(classifyReviewOpening(game).id, 'sicilian-closed');
+  const [italian] = parseReviewGames('1. Nf3 Nc6 2. e4 e5 3. Bc4 *');
+  const before = italian.positions.map(position => position.fen).join('\n');
+  assert.equal(classifyReviewOpening(italian).eco, 'C50');
+  assert.equal(classifyReviewOpening(italian).ply, 5);
+  assert.equal(italian.positions.map(position => position.fen).join('\n'), before);
+  const [scheveningen] = parseReviewGames('1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 e6 *');
+  assert.equal(classifyReviewOpening(scheveningen).id, 'sicilian-scheveningen');
+  assert.equal(classifyReviewOpening(scheveningen).eco, 'B80');
+});
+
+test('不明な局面・別の初期配置は分類せず、競合する名前やコードを断定しない', () => {
+  assert.equal(classifyReviewOpening(parseReviewGames('[ECO "C50"]\n\n1. e4 *')[0]), null);
+  const fen = chessRules.DEFAULT_POSITION.replace('0 1', '0 2');
+  assert.equal(classifyReviewOpening(parseReviewGames(`[FEN "${fen}"]\n\n2. e4 e5 *`)[0]), null);
+  const line = '1. e4 e5';
+  const [game] = parseReviewGames(line);
+  const key = openingPositionKey(game.positions.at(-1).fen);
+  assert.equal(buildOpeningPositionIndex([['a', 'C20', line], ['b', 'C20', line]]).get(key), null);
+  assert.equal(buildOpeningPositionIndex([['a', 'C20', line], ['a', 'C21', line]]).get(key).eco, null);
 });
 
 test('設定した局面と棋譜をバックアップから復元し、重複や不正な局面を拒否する', () => {

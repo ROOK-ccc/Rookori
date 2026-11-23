@@ -31,7 +31,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.equal(ids.length, new Set(ids).size, '画面内のIDは重複しない');
   assert.match(html, /src="learning-insights\.js"/);
   assert.match(html, /src="learning-progress-ui\.js"/);
-  for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css']) {
+  for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
+    'opening-classification.js', 'chess-glossary.js']) {
     assert.ok(artifacts.includes(file));
   }
   assert.ok(!artifacts.some(file => file.startsWith('editor.')));

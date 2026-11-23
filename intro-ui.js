@@ -78,8 +78,11 @@ const introScreen = (() => {
     const chapter = introChapters[lesson.chapterNumber - 1];
     byId('lesson-chapter').textContent = `第${lesson.chapterNumber}章　${chapter.title}`;
     byId('lesson-title').textContent = lesson.title;
-    byId('lesson-description').textContent = lesson.text;
+    chessGlossary.annotate(byId('lesson-description'), lesson.text ?? '');
     byId('lesson-description').hidden = !lesson.text;
+    const termNote = byId('lesson-terms');
+    termNote.hidden = lesson.id !== 'mate';
+    if (!termNote.hidden) chessGlossary.annotate(termNote, 'この課題では、エンドゲームでチェックメイトを狙うタクティクスを練習します。');
     byId('lesson-task').textContent = lesson.task;
     byId('lesson-hint').textContent = `ヒント　${lesson.hint}`;
     const choices = byId('lesson-choices');

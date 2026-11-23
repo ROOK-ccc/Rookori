@@ -192,6 +192,27 @@ const gameReviewPages = (() => {
     renderNoteForm(view);
   }
 
+  function showOpening(game) {
+    let match;
+    try { match = classifyReviewOpening(game); }
+    catch { /* Opening classification is optional for replay. */ }
+    const opening = match && findStudyOpening(match.id);
+    const name = opening?.parentId ? `${findStudyOpening(opening.parentId).name}：${opening.name}` : opening?.name;
+    chessGlossary.annotate(byId('game-opening-name'), name ?? '一致する局面が見つかりませんでした');
+    chessGlossary.annotate(byId('game-opening-description'), opening?.description
+      ?? 'そのまま手順を再生して、気になる場面を見返せます。');
+    const link = byId('game-learning-link');
+    link.hidden = !opening;
+    if (opening) link.href = `#study/${opening.id}`;
+    const details = byId('game-opening-details');
+    details.open = false;
+    details.hidden = !opening || !match.eco;
+    chessGlossary.annotate(byId('game-opening-code'), details.hidden ? '' : `ECOコード ${match.eco}（${match.ply}手目の局面）`);
+    byId('game-next-learning').textContent = '序盤で迷ったら、駒を中央にどう出せるか、入門レッスンで試してみましょう。';
+  }
+
+  byId('game-learning-link').addEventListener('click', () => updateEntry({ gamePly: viewer.position.ply }));
+
   function showGame(view, start) {
     const { game } = view;
     byId('game-player-title').textContent = title(game);
@@ -207,14 +228,8 @@ const gameReviewPages = (() => {
     ];
     metadata.replaceChildren(...fields.flatMap(([name, value]) =>
       [element('dt', name), element('dd', String(value ?? '記録なし'))]));
-    byId('game-player-content').querySelector('details').open = false;
-    const opening = reviewOpening(game, [...openings, ...openingVariations]);
-    const learningLink = byId('game-learning-link');
-    learningLink.href = opening ? `#study/${opening.id}` : '#lesson/center';
-    learningLink.textContent = opening ? `${opening.name}の基本を学ぶ` : '中央の使い方を学ぶ';
-    byId('game-next-learning').textContent = opening
-      ? `対局の冒頭は「${opening.name}」の教材の手順と一致しました。序盤の一手ずつの狙いを盤で確かめてみましょう。`
-      : '序盤で迷ったら、駒を中央にどう出せるか、入門レッスンで試してみましょう。';
+    metadata.closest('details').open = false;
+    showOpening(game);
     const moves = document.createDocumentFragment();
     for (const position of game.positions) {
       const item = element('li');

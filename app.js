@@ -24,6 +24,7 @@ function element(tag, text, className) {
 }
 
 function showScreen(id, focusTarget) {
+  chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
     screen.hidden = screen.id !== id;
   });
@@ -74,7 +75,7 @@ function renderQuestion() {
 
 function resultDetail(title, text, className) {
   const card = element('section', null, className);
-  card.append(element('h2', title), element('p', text));
+  card.append(chessTermText('h2', title), chessTermText('p', text));
   return card;
 }
 
@@ -132,13 +133,13 @@ function renderOpeningResult(resultAnswers, studyId) {
     learn.setAttribute('aria-label', `${candidate.name}を盤上で学ぶ`);
     card.append(
       element('p', openingSlots[candidate.slot], 'eyebrow'),
-      element('h2', candidate.name),
+      chessTermText('h2', candidate.name),
       english,
       element('h3', 'どんな戦法？'),
-      element('p', candidate.description),
-      element('p', candidate.condition, 'opening-condition'),
+      chessTermText('p', candidate.description),
+      chessTermText('p', candidate.condition, 'opening-condition'),
       element('h3', 'まず意識すること'),
-      element('p', candidate.tip),
+      chessTermText('p', candidate.tip),
       element('h3', 'おすすめした理由'),
       element('p', reason),
       ratings,
@@ -254,7 +255,6 @@ function renderSite() {
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
   } else if (path === 'learn') {
     showScreen('home', siteHeadings.learn);
-    byId(siteHeadings.learn).scrollIntoView();
   } else if (path === 'openings' || path === 'memorize') {
     learningPages.catalog(path === 'memorize');
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);

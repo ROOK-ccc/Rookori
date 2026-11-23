@@ -130,15 +130,6 @@ function reviewPosition(game, ply) {
   return game.positions[Math.max(0, Math.min(ply, game.positions.length - 1))];
 }
 
-function reviewOpening(game, candidates) {
-  if (game.initialFen !== chessRules.DEFAULT_POSITION) return null;
-  const matches = candidates.filter(({ moves }) => moves.every((move, index) =>
-    game.positions[index + 1]?.move.lan === move));
-  const maxLength = Math.max(0, ...matches.map(({ moves }) => moves.length));
-  const longest = matches.filter(({ moves }) => moves.length === maxLength);
-  return longest.length === 1 ? longest[0] : null;
-}
-
 function reviewGameRecord(game, id, savedAt = new Date().toISOString()) {
   return {
     id, savedAt, pgn: game.pgn, initialFen: game.initialFen, positions: game.positions,

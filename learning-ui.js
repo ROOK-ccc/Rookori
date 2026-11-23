@@ -140,10 +140,10 @@ const learningPages = (() => {
       const article = element('div', null, 'catalog-entry');
       const english = element('p', opening.english, 'opening-english');
       english.lang = 'en';
-      article.append(element('h3', opening.name), english,
+      article.append(chessTermText('h3', opening.name), english,
         element('p', openingSlots[opening.slot] + '・' + ((opening.traits?.complexity ?? 4) <= 3 ? '初心者向け' : '経験者向け')
           + '・' + (learned.has(opening.id) ? '学習済み' : '未学習'), 'catalog-meta'),
-        element('p', opening.description), links(opening));
+        chessTermText('p', opening.description), links(opening));
       return article;
     };
     let count = 0;

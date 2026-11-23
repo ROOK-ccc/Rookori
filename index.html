@@ -34,7 +34,9 @@
   <script src="learning-progress-ui.js" defer></script>
   <script src="learning-ui.js" defer></script>
   <script src="game-review.js" defer></script>
+  <script src="opening-classification.js" defer></script>
   <script src="game-library.js" defer></script>
+  <script src="chess-glossary.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
@@ -79,6 +81,7 @@
           <h3>診断・その他</h3>
           <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
           <a href="#backup"><span aria-hidden="true">⇅</span>学習データのバックアップ</a>
+          <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
           <a href="#about"><span aria-hidden="true">ⓘ</span>ChessPathについて</a>
         </section>
       </nav>
@@ -90,8 +93,11 @@
       <div class="hero">
         <div class="hero-copy">
           <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
-          <p class="hero-description">初めての一手から、もっと強くなるための学習まで。ChessPathで、あなたに合った学び方を見つけよう。</p>
-          <a class="button hero-button" href="#learn">学習を始める <span aria-hidden="true">↓</span></a>
+          <p class="hero-description">駒の動かし方から、実戦で使える作戦まで。自分のペースで学べる日本語のチェス学習サイトです。</p>
+          <div class="hero-actions" id="learn-title" tabindex="-1" role="group" aria-label="学習を始める">
+            <a class="button hero-button" href="#intro">チェスを始める</a>
+            <a class="button hero-secondary" href="#improve">もっと強くなる</a>
+          </div>
         </div>
         <div class="hero-art" aria-hidden="true">
           <div class="board-frame">
@@ -110,36 +116,9 @@
           </div>
         </div>
       </div>
-      <section class="home-section" aria-labelledby="learn-title">
-        <h2 id="learn-title" tabindex="-1">学習を始める</h2>
-        <div class="path-grid">
-          <a class="path-card path-first" href="#beginner">
-            <h3>これからチェスを始める</h3>
-            <p>ルールや基本を学びながら、チェスの楽しさを見つけよう。</p>
-            <span aria-hidden="true">→</span>
-          </a>
-          <a class="path-card" href="#improve">
-            <h3>もっとチェスが強くなりたい</h3>
-            <p>自分に合った戦法を見つけ、実戦で使える知識を身につけよう。</p>
-            <span aria-hidden="true">→</span>
-          </a>
-          <a class="path-card" href="#progress">
-            <h3>学習の記録をしたい</h3>
-            <p>日々の学習を記録し、トレーニングを積もう。</p>
-
-            <span aria-hidden="true">→</span>
-          </a>
-        </div>
-      </section>
-      <section class="home-section" aria-labelledby="home-game-review-title">
-        <h2 id="home-game-review-title">対局を振り返る</h2>
-        <p>自分が指した手を盤に並べて、気になった場面をもう一度考えてみましょう。</p>
-        <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a></div>
-      </section>
       <section class="home-section home-diagnostics" aria-labelledby="diagnostics-title">
         <h2 id="diagnostics-title">診断から始める</h2>
-        <div class="study-mode-links"><a class="button secondary" href="#openings">オープニング一覧</a><button class="text-button" id="home-dashboard-mode" type="button">学習ダッシュボードをホームにする</button><button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button></div>
-        <div class="path-grid two-paths">
+        <div class="path-grid">
           <a class="path-card" id="start" href="#mode">
             <h3>チェス16タイプ診断</h3>
             <p>あなたのプレイスタイルを16タイプから発見！</p>
@@ -147,10 +126,18 @@
           </a>
           <a class="path-card" id="start-opening" href="#opening-quiz">
             <h3>オープニング診断</h3>
-            <p>あなたにぴったりのチェスの戦い方を見つけよう！</p>
+            <p>8つの質問で、自分に合う序盤の戦法を探す。</p>
             <span aria-hidden="true">→</span>
           </a>
         </div>
+        <div class="study-mode-links home-more">
+          <a class="text-button" href="#game-review">対局を振り返る</a>
+          <a class="text-button" href="#glossary">チェス用語集</a>
+        </div>
+        <details class="home-settings">
+          <summary>ホームの表示設定</summary>
+          <div class="study-mode-links"><button class="text-button" id="home-dashboard-mode" type="button">学習ダッシュボードをホームにする</button><button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button></div>
+        </details>
       </section>
     </section>
 
@@ -173,7 +160,7 @@
         </li>
         <li>
           <h2>自分に合う戦法を見つける</h2>
-          <p>オープニングは、対局が始まってすぐの駒の動かし方や作戦のこと。8つの質問に答えると、好みに合う戦法が見つかります。</p>
+          <p data-chess-terms>8つの質問に答えると、好みに合うオープニングが見つかります。</p>
           <a class="button primary" href="#opening-quiz">オープニング診断を始める</a>
         </li>
         <li>
@@ -198,7 +185,7 @@
         </li>
         <li>
           <h2>学習する</h2>
-          <p>好みに合う序盤を探すならオープニング診断、普段の戦い方を振り返るなら16タイプ診断へ。気になる戦法が決まっていれば、戦法一覧からすぐに学習盤を開けます。</p>
+          <p data-chess-terms>好みに合う序盤を探すならオープニング診断、普段の戦い方を振り返るなら16タイプ診断へ。気になる戦法が決まっていれば、戦法一覧からすぐに学習盤を開けます。</p>
         </li>
         <li>
           <h2>次の学習へ</h2>
@@ -213,8 +200,8 @@
       <h1 id="journal-title" tabindex="-1">チェス日記帳</h1>
       <ol class="learning-steps">
         <li>
-          <h2>学習の記録は準備中</h2>
-          <p>練習した戦法や気づきを記録できるチェス日記帳は、今後追加予定です。</p>
+          <h2>自分の対局を記録する</h2>
+          <p>指した手を再生し、気になった局面とメモを対局履歴に残せます。</p>
           <a class="button secondary" href="#game-review">対局を振り返る</a>
         </li>
         <li>
@@ -228,7 +215,7 @@
     <section id="openings" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
       <h1 id="openings-title" tabindex="-1">オープニングを盤上で学ぶ</h1>
-      <p class="guide-intro">気になる戦法を選ぶと、実際の駒の動きと一手ごとの狙いを確認できます。</p>
+      <p class="guide-intro" data-chess-terms>気になるオープニングを選ぶと、実際の駒の動きと一手ごとの狙いを確認できます。</p>
       <div class="catalog-controls">
         <label>戦法名で検索 <input id="catalog-search" type="search" placeholder="イタリアン、Italian など"></label>
         <label>色 <select id="catalog-color"><option value="">すべて</option><option value="w">白番</option><option value="b">黒番</option></select></label>
@@ -251,7 +238,7 @@
       </div>
       <progress id="quiz-progress" value="0" max="12" aria-labelledby="question-number"></progress>
       <div class="quiz-panel">
-        <p id="opening-quiz-intro" class="quiz-intro" hidden>オープニングとは、対局が始まってすぐの駒の動かし方や作戦のことです。</p>
+        <p id="opening-quiz-intro" class="quiz-intro" hidden data-chess-terms>8つの質問に答えると、自分に合うオープニングを盤上で試せます。</p>
         <h1 id="question-title" tabindex="-1"></h1>
         <div class="answers" id="answers" role="group" aria-labelledby="question-title"></div>
       </div>
@@ -387,7 +374,10 @@
     </section>
 
     <section id="intro" class="screen inner-screen guide-screen" hidden>
-      <a class="text-button" href="#beginner">初心者向けガイドに戻る</a>
+      <div class="study-navigation">
+        <a class="text-button" href="#learn">学習トップへ戻る</a>
+        <a class="text-button" href="#beginner">初心者向けガイドを見る</a>
+      </div>
       <h1 id="intro-title" tabindex="-1">はじめてのチェス</h1>
       <p class="guide-intro">短い説明を読んで、盤上で一手ずつ試しましょう。</p>
       <div class="intro-overview">
@@ -415,6 +405,7 @@
       <p class="eyebrow" id="lesson-chapter"></p>
       <h1 id="lesson-title" tabindex="-1"></h1>
       <p class="lesson-description" id="lesson-description"></p>
+      <p class="lesson-description" id="lesson-terms" hidden></p>
       <div class="lesson-goal"><strong>課題</strong><p id="lesson-task"></p></div>
       <div class="study-layout lesson-layout">
         <div class="study-board-area">
@@ -544,10 +535,10 @@
       </div>
       <form id="game-import-form" class="game-card">
         <h2>自分の対局を開く</h2>
-        <p>棋譜（対局で指した手の記録）を貼り付けるか、棋譜ファイルを選んでください。</p>
+        <p data-chess-terms>対局で指した手の記録を貼り付けるか、棋譜ファイル（PGN）を選んでください。</p>
         <details>
           <summary>棋譜はどこで見つかる？</summary>
-          <p>対局したサイトやアプリで対局の詳細を開き、「棋譜をコピー」や「PGNをダウンロード」を探します。PGNは対局の手順を記録したテキスト形式です。</p>
+          <p data-chess-terms>対局したサイトやアプリで対局の詳細を開き、「棋譜をコピー」や「PGNをダウンロード」を探します。コピーした棋譜は下の欄に貼り付けます。</p>
         </details>
         <label for="game-pgn">棋譜を貼り付ける</label>
         <textarea id="game-pgn" rows="5" spellcheck="false"></textarea>
@@ -594,6 +585,17 @@
             </div>
           </div>
           <div class="game-side">
+            <section class="game-card game-opening" aria-labelledby="game-opening-title">
+              <h2 id="game-opening-title" data-chess-terms>棋譜のオープニング</h2>
+              <p id="game-opening-name"></p>
+              <p id="game-opening-description"></p>
+              <a id="game-learning-link" class="text-button" href="#openings">この戦法を盤上で学ぶ</a>
+              <details id="game-opening-details" hidden>
+                <summary>分類の詳細</summary>
+                <p id="game-opening-code"></p>
+                <p>棋譜の序盤で確認できた局面の分類です。</p>
+              </details>
+            </section>
             <section class="game-card" aria-labelledby="game-moves-title">
               <h2 id="game-moves-title">指した手</h2>
               <p>手を選ぶと、その直後の盤面に移動します。</p>
@@ -601,7 +603,7 @@
               <details>
                 <summary>詳しい対局情報</summary>
                 <dl id="game-metadata" class="game-metadata"></dl>
-                <p>現在の駒の配置や手番を文字で表したもの（FEN）</p>
+                <p data-chess-terms>現在の盤面の記録（FEN）</p>
                 <output id="game-fen" class="game-fen"></output>
               </details>
             </section>
@@ -625,7 +627,7 @@
               <h2 id="game-next-learning-title">次の学習</h2>
               <p id="game-next-learning"></p>
               <div class="study-complete-actions">
-                <a class="button primary" id="game-learning-link" href="#intro">序盤の基本を学ぶ</a>
+                <a class="button primary" href="#lesson/center">中央の使い方を学ぶ</a>
                 <a class="text-button" href="#intro">駒の動きやルールを確認</a>
               </div>
             </section>
@@ -714,13 +716,21 @@
     </section>
     <section id="about" class="screen inner-screen guide-screen" hidden>
       <h1 id="about-title" tabindex="-1">ChessPathについて</h1>
-      <p class="guide-intro">ChessPathは、初めての一手からオープニングの暗記・復習までを学べる日本語のチェス学習サイトです。</p>
+      <p class="guide-intro" data-chess-terms>ChessPathは、現役高校生が自身のチェス学習経験をもとに制作している日本語のチェス学習サイトです。初めての一手からオープニングの暗記・復習まで、自分のペースで進められます。</p>
       <p>学習記録はこのブラウザー内に保存されます。駒の画像にはCBurnettのSVGを使っています。</p>
       <a class="text-button" href="pieces/cburnett/LICENSE.txt">駒の画像とライセンス</a>
+    </section>
+    <section id="glossary" class="screen inner-screen guide-screen" hidden>
+      <a class="text-button" href="#learn">学習トップへ戻る</a>
+      <h1 id="glossary-title" tabindex="-1">チェス用語集</h1>
+      <p class="guide-intro">学習画面で点線の下線が付いた言葉は、その場で意味を確認できます。</p>
+      <dl class="chess-glossary-list" id="chess-glossary-list"></dl>
     </section>
   </main>
 
   <footer class="site-footer"><div class="shell">ChessPath · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
+  <div id="chess-term-definitions" hidden></div>
+  <div id="chess-term-popup" class="chess-term-popup" aria-hidden="true" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>
 </body>
 </html>
