@@ -1,6 +1,8 @@
-# ChessPath Ver.3.1.2
+# Rookori（ルーコリ） Ver.3.1.2
 
-ChessPathは、現役高校生が自身のチェス学習経験をもとに制作している日本語の学習サイトです。チェス未経験の人から、実戦で使える戦法を増やしたい人まで、自分のペースで学べます。
+Rookoriは、現役高校生が自身のチェス学習経験をもとに制作している日本語の学習サイトです。チェス未経験の人から、実戦で使える戦法を増やしたい人まで、自分のペースで学べます。
+
+旧名称はChessPathです。同じURLで保存済みの記録を利用でき、旧版から書き出したJSONも引き続き読み込めます。 [Rookoriの公開サイト](https://rook-ccc.github.io/ChessPath/)
 
 - **チェスを始める**から「はじめてのチェス」に進み、ルール・駒の練習・理解度チェックを始められます。
 - **もっと強くなる**から、目標に合う診断や戦法一覧に進めます。
@@ -46,7 +48,7 @@ ChessPathは、現役高校生が自身のチェス学習経験をもとに制�
 
 ## Windowsで開く
 
-1. エクスプローラーで `chesspath` フォルダーを開きます。
+1. エクスプローラーで `ChessPath` フォルダーを開きます。
 2. `index.html` をダブルクリックします。拡張子を表示していない場合は `index` と表示されます。
 3. EdgeやChromeでサイトが開いたら、「学習を始める」か、受けたい診断を選びます。事前のインストールや起動コマンドは不要です。
 
@@ -125,7 +127,7 @@ ChessPathは、現役高校生が自身のチェス学習経験をもとに制�
 
 エディターに「編集中」「下書き保存済み」と、現在の保存済み問題について「公開用ファイル未出力」または「公開用ファイル出力済み」が表示されます。出力後は置き換え手順が表示されます。出力済み表示はその版の書き出しを実行した記録で、サイト側のファイルが置き換わったことまでは確認しません。
 
-公開用のフォルダーを作る場合は、Node.jsで `node publish.cjs` を実行します。保存済みのJSONを直接使う場合は `node publish.cjs "chesspath-problems.json"` のようにファイルを指定します。公開するのは作成された `chesspath-public-…` フォルダーの中身だけです。エディターと下書きはこのフォルダーに含まれません。
+公開用のフォルダーを作る場合は、Node.jsで `node publish.cjs` を実行します。保存済みのJSONを直接使う場合は `node publish.cjs "rookori-problems.json"` のようにファイルを指定します。公開するのは作成された `chesspath-public-…` フォルダーの中身だけです。エディターと下書きはこのフォルダーに含まれません。
 
 ## オープニング診断
 
@@ -133,7 +135,7 @@ ChessPathは、現役高校生が自身のチェス学習経験をもとに制�
 
 経験を聞くQ1と覚えたい手順の量を聞くQ4は重みを大きくしています。どちらかでAを選ぶと、複雑さと学習負担がともに3以下の候補に絞ります。両方がB以上なら4まで、両方がCなら5まで候補に入ります。同点の場合は学習負担が小さい順、次に複雑さが小さい順、さらに同じ場合はIDの辞書順で選びます。表示する理由は、候補の特徴に最も近い回答に基づきます。
 
-評価はChessPath独自の学習用の目安です。戦法の成立には相手の応手が関わり、3枠はよくある初手を学ぶための基本セットです。`opening-data.js` の `moves` には、初期配置からの代表的な手順をUCI形式で登録しています。たとえば `e2e4` は「e2からe4へ動かす」の意味です。戦法の分類と手順は [Lichessのオープニング分類データ](https://github.com/lichess-org/chess-openings) を参考にしています。
+評価はRookori独自の学習用の目安です。戦法の成立には相手の応手が関わり、3枠はよくある初手を学ぶための基本セットです。`opening-data.js` の `moves` には、初期配置からの代表的な手順をUCI形式で登録しています。たとえば `e2e4` は「e2からe4へ動かす」の意味です。戦法の分類と手順は [Lichessのオープニング分類データ](https://github.com/lichess-org/chess-openings) を参考にしています。
 
 ## チェス盤で学ぶ
 
@@ -195,7 +197,7 @@ ChessPathは、現役高校生が自身のチェス学習経験をもとに制�
 
 ## SNS共有カード
 
-診断結果の4軸の下に共有カードが表示されます。タイプ名・タイプコード・キャッチコピー・4軸の文字と特徴を1枚にまとめています。「PNG画像を保存」で、1200×1500px（縦4:5）の `ChessPath-ATCI.png` などを保存できます。画像ファイルの共有に対応した環境では「画像を共有」も表示されます。
+診断結果の4軸の下に共有カードが表示されます。タイプ名・タイプコード・キャッチコピー・4軸の文字と特徴を1枚にまとめています。「PNG画像を保存」で、1200×1500px（縦4:5）の `Rookori-ATCI.png` などを保存できます。画像ファイルの共有に対応した環境では「画像を共有」も表示されます。
 
 タイプごとの光の色、駒、背景模様、金属の色、駒の角度、キャッチコピーは `card-data.js` の `cardStyles` で変更できます。駒は6種類、背景模様は放射線・斜線・円弧・格子・アーチの5種類、金属の色は金・銀・銅の3種類です。
 
@@ -207,7 +209,7 @@ ChessPathは、現役高校生が自身のチェス学習経験をもとに制�
 
 GitHubのChessPathリポジトリで **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に切り替えます。自動公開の設定は `.github/workflows/deploy.yml` に入っています。 [GitHub Pagesの公開元設定](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
-Windowsでは、GitHub Desktopの **File → Clone repository** から既存リポジトリを開発フォルダーとは別の場所にコピーします。初回は、開発フォルダー直下のソース、最新の `course-problems.js`、テスト、`publish.cjs`、`README.md` と、`pieces`、`vendor`、`.github` をクローン先の同じ階層へコピーします。GitHub側で自作問題を更新した場合は、`course-problems.js` の差分を確認し、新しい内容を取り込んでから送信します。ZIPや過去バージョンのフォルダーはコピーの対象外です。エディターをGitHubに置く場合はリポジトリから閲覧できるため、ローカル専用にしたい場合は `editor.html`、`editor.css`、`editor.js` を開発フォルダーに置いておきます。 [GitHub Desktopでクローンする方法](https://docs.github.com/en/desktop/adding-and-cloning-repositories/cloning-and-forking-repositories-from-github-desktop)
+Windowsでは、GitHub Desktopの **File → Clone repository** から既存リポジトリを開発フォルダーとは別の場所にコピーします。初回は、開発フォルダー直下のソース、最新の `course-problems.js`、テスト、`publish.cjs`、`README.md` と、`brand`、`pieces`、`vendor`、`.github` をクローン先の同じ階層へコピーします。GitHub側で自作問題を更新した場合は、`course-problems.js` の差分を確認し、新しい内容を取り込んでから送信します。ZIPや過去バージョンのフォルダーはコピーの対象外です。エディターをGitHubに置く場合はリポジトリから閲覧できるため、ローカル専用にしたい場合は `editor.html`、`editor.css`、`editor.js` を開発フォルダーに置いておきます。 [GitHub Desktopでクローンする方法](https://docs.github.com/en/desktop/adding-and-cloning-repositories/cloning-and-forking-repositories-from-github-desktop)
 
 ### 毎回の更新
 

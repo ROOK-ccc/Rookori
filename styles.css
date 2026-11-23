@@ -32,8 +32,8 @@ h1, h2, h3 { line-height: 1.35; }
 .site-header { border-bottom: 1px solid var(--line); }
 .header-inner { min-height: 75px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: inline-flex; align-items: center; color: var(--ink); font: bold 1.75rem/1 Georgia, serif; text-decoration: none; letter-spacing: -.055em; }
-.brand-mark { width: 34px; height: 36px; display: grid; place-items: center; margin-right: 9px; border-radius: 7px; background: var(--charcoal); color: var(--gold); font: 1.5rem/1 'Segoe UI Symbol', 'Apple Symbols', serif; letter-spacing: normal; }
-.brand-dot { color: var(--gold-dark); }
+.brand-mark { display: block; width: 36px; height: 36px; margin-right: 9px; border-radius: 50%; }
+.brand-update { margin-bottom: 12px; }
 .site-nav { display: flex; align-items: stretch; gap: clamp(10px, 2vw, 24px); }
 .site-nav a { display: grid; place-items: center; min-height: 44px; padding: 4px; color: var(--muted); text-align: center; text-decoration: none; font-size: .875rem; border-bottom: 2px solid transparent; }
 .site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--charcoal); border-bottom-color: #a98649; }
@@ -228,15 +228,11 @@ progress::-moz-progress-bar { background: var(--rust); }
 .result-emblem {
   grid-area: 1 / 2 / 5 / 3;
   align-self: center;
-  display: grid;
-  place-items: center;
+  display: block;
   inline-size: clamp(64px, 17vw, 136px);
+  block-size: auto;
   aspect-ratio: 1;
-  border: 1px solid #b4bc9d;
-  border-radius: 12px;
-  background: conic-gradient(#3b4c39 25%, #304331 0 50%, #3b4c39 0 75%, #304331 0) 0 0 / 50% 50%;
-  color: #f1d4aa;
-  font: clamp(2.6rem, 10vw, 5.8rem)/1 'Segoe UI Symbol', 'Apple Symbols', serif;
+  border-radius: 50%;
 }
 .result-banner .eyebrow { color: #f1c5a8; }
 .result-banner h1 { margin-bottom: 12px; }

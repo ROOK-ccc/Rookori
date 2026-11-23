@@ -188,7 +188,7 @@ function validateProblemPack(pack, baseLessons) {
 
 function problemCourseScript(pack) {
   const json = JSON.stringify(pack, null, 2).replace(/</g, '\\u003c');
-  return `// ChessPathの公開教材データ。編集は問題エディターから行えます。\nconst publishedProblemPack = ${json};\n`;
+  return `// Rookoriの公開教材データ。編集は問題エディターから行えます。\nconst publishedProblemPack = ${json};\n`;
 }
 
 class ProblemPractice {

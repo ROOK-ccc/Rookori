@@ -196,7 +196,7 @@ const learningPages = (() => {
       if (!validateLearningBackup(data)) throw new Error('保存されている学習データを確認してください。');
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
       const download = link('バックアップ', url);
-      download.download = 'ChessPath-' + localDay() + '.json';
+      download.download = 'Rookori-' + localDay() + '.json';
       download.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       status('学習データをダウンロードします。');
@@ -215,7 +215,7 @@ const learningPages = (() => {
       status('形式を確認しました。内容の置き換えを確認してください。');
       confirmation.hidden = false;
       byId('backup-cancel').focus();
-    } catch { status('このファイルはChessPathの学習バックアップとして読み込めません。'); }
+    } catch { status('このファイルはRookoriの学習バックアップとして読み込めません。'); }
   });
   byId('backup-cancel').addEventListener('click', () => {
     stagedBackup = null;

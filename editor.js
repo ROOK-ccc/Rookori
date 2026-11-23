@@ -445,13 +445,13 @@ on('export-one', () => report('editor-status', () => {
   const problem = readyProblem();
   writeJson(`${problem.id}.json`, [problem]);
 }));
-on('export-all', () => report('editor-status', () => writeJson('chesspath-problems.json', library)));
+on('export-all', () => report('editor-status', () => writeJson('rookori-problems.json', library)));
 on('export-course', () => report('editor-status', () => {
   const validated = validateProblemPack(pack(library), introLessons);
   download('course-problems.js', problemCourseScript(validated), 'text/javascript');
   exportFingerprint = JSON.stringify(library);
   persist();
-  say('editor-status', '公開教材ファイルを出力しました。ChessPathの同名ファイルと入れ替えてください。');
+  say('editor-status', '公開教材ファイルを出力しました。エディターと同じフォルダーにある同名ファイルと入れ替えてください。');
 }));
 byId('import-problems').addEventListener('change', async (event) => {
   const file = event.target.files[0];

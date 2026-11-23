@@ -39,3 +39,41 @@ test('16タイプの共有カードに既存の名称・4軸と個別のデザ�
   assert.equal(taglines.size, 16);
   assert.equal(appearances.size, 16);
 });
+
+test('保存と画像共有はRookori名の同じPNGを使う', async () => {
+  const controls = new Map();
+  const recorded = {};
+  const blob = new Blob(['PNG'], { type: 'image/png' });
+  const document = {
+    getElementById(id) {
+      const control = { addEventListener: (event, listener) => { control[event] = listener; } };
+      if (id === 'share-preview') {
+        control.setAttribute = (name, value) => { recorded[name] = value; };
+        control.toBlob = (callback, type) => {
+          assert.equal(type, 'image/png');
+          callback(blob);
+        };
+      }
+      controls.set(id, control);
+      return control;
+    },
+    createElement: () => ({ click() { recorded.download = this.download; } }),
+  };
+  runInNewContext(source + '\ndrawCard = () => {}; renderShareCard("ATCI");', {
+    document, File,
+    navigator: {
+      canShare: ({ files }) => files[0].type === 'image/png',
+      share: async ({ files }) => { recorded.shared = files[0]; },
+    },
+    URL: { createObjectURL: file => { recorded.saved = file; return 'blob:test'; } },
+    window: { setTimeout() {} },
+  });
+  assert.match(recorded['aria-label'], /^Rookori チェス16タイプ診断、ATCI、炎の戦術家/);
+  assert.equal(controls.get('save-card').disabled, false);
+  assert.equal(controls.get('share-card').hidden, false);
+  controls.get('save-card').click();
+  await controls.get('share-card').click();
+  assert.equal(recorded.download, 'Rookori-ATCI.png');
+  assert.equal(recorded.saved.type, 'image/png');
+  assert.equal(recorded.shared, recorded.saved);
+});

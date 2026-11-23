@@ -16,6 +16,7 @@ try {
   const courseScript = vm.runInContext(`${source}\nproblemCourseScript(validateProblemPack(publishedProblemPack, introLessons))`, context);
   const files = [
     'index.html', 'styles.css', 'app.js', 'navigation.js',
+    'brand/rookori.png', 'brand/rookori-share.jpg',
     'data.js', 'scoring.js', 'card-data.js', 'cards.js', 'result-links.js',
     'opening-data.js', 'opening-scoring.js', 'opening-study.js', 'opening-study-ui.js',
     'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',

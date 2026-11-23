@@ -38,7 +38,7 @@ const chessTerms = [
   { id: 'variation', category: 'opening', term: 'バリエーション', english: 'Variation', aliases: ['ヴァリエーション', '分岐'], definition: '同じオープニングから分かれた別の手順です。相手が選んだ手や自分の駒の出し方で、別の形に進みます。' },
   { id: 'gambit', category: 'opening', term: 'ギャンビット', english: 'Gambit', aliases: ['ガンビット'], definition: '序盤にポーンなどを取らせる代わりに、駒を早く出したり中央を使いやすくしたりする作戦です。相手が取らない手順もあります。', example: 'クイーンズ・ギャンビットでは、白が序盤にcポーンを出して黒の中央のポーンに働きかけます。', related: ['opening', 'center'] },
   { id: 'fianchetto', category: 'opening', term: 'フィアンケット', english: 'Fianchetto', aliases: ['フィアンケット'], definition: '端に近いポーンを1マス進め、空いたマスにビショップを置く駒組みです。例えば白のポーンをg3へ動かし、ビショップをg2に置くと長い斜めの線を狙えます。' },
-  { id: 'transposition', category: 'opening', term: '手順前後', english: 'Transposition', aliases: ['トランスポジション', '手順の入れ替え'], definition: '別の順番で指した手が、同じ盤面と手番に行き着くことです。ChessPathのオープニング判定では、駒の配置や指せる手の条件も照合します。', related: ['opening', 'fen'] },
+  { id: 'transposition', category: 'opening', term: '手順前後', english: 'Transposition', aliases: ['トランスポジション', '手順の入れ替え'], definition: '別の順番で指した手が、同じ盤面と手番に行き着くことです。Rookoriのオープニング判定では、駒の配置や指せる手の条件も照合します。', related: ['opening', 'fen'] },
   { id: 'eco', category: 'opening', term: 'ECOコード', english: 'Encyclopaedia of Chess Openings', aliases: ['ECO', 'ECO コード'], definition: 'オープニングを整理するための、英字一つと数字二つの分類番号です。例えばB20はシシリアン・ディフェンスの基本形を表します。' },
   { id: 'pgn', category: 'analysis', term: 'PGN', english: 'Portable Game Notation', aliases: ['棋譜ファイル'], definition: '対局で指した手や対局者名などを記録できるテキスト形式です。対局サイトの「棋譜をコピー」や「.pgnをダウンロード」から取得できます。', related: ['san', 'fen'] },
   { id: 'fen', category: 'analysis', term: 'FEN', english: 'Forsyth–Edwards Notation', definition: '駒の配置や次に指す側など、一つの盤面の状態を文字で表す形式です。棋譜の途中の局面も、この文字列から再現できます。', related: ['position', 'pgn'] },

@@ -337,7 +337,7 @@ const gameReviewPages = (() => {
   noteField.addEventListener('input', () => updateDraft(viewer, noteField.value));
   byId('game-save').addEventListener('click', saveGame);
   byId('game-download').addEventListener('click', () =>
-    download('chesspath-game.pgn', viewer.game.pgn + '\n', 'application/x-chess-pgn;charset=utf-8'));
+    download('rookori-game.pgn', viewer.game.pgn + '\n', 'application/x-chess-pgn;charset=utf-8'));
   byId('game-note-form').addEventListener('submit', event => {
     event.preventDefault();
     if (!viewer.busy) savePoint();
@@ -392,7 +392,7 @@ const gameReviewPages = (() => {
     try {
       const backup = makeGameBackup(await library.all());
       if (!activeHistory(page)) return;
-      download('chesspath-game-library.json', JSON.stringify(backup, null, 2), 'application/json');
+      download('rookori-game-library.json', JSON.stringify(backup, null, 2), 'application/json');
       status.textContent = '対局とメモを書き出しました。';
     } catch {
       if (activeHistory(page)) status.textContent = 'バックアップを書き出せませんでした。';

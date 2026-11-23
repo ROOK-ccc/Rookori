@@ -6,6 +6,7 @@ let cardFile;
 let cardRevision = 0;
 
 const cardGold = '#edcf97';
+const cardBrandName = 'Rookori';
 const cardInk = '#151219';
 const cardIvory = '#fff6e7';
 const cardJapaneseFont = '"Yu Gothic", "Hiragino Sans", Meiryo, "Noto Sans CJK JP", sans-serif';
@@ -212,21 +213,33 @@ function drawPiece(ctx, card) {
   ctx.restore();
 }
 
+function drawCardBrandMark(ctx) {
+  // Draw the circular rook directly so file:// pages can export PNGs as well.
+  ctx.save();
+  ctx.translate(120.5, 119.5);
+  ctx.scale(.73, .73);
+  ctx.fillStyle = '#0c2820';
+  ctx.beginPath();
+  ctx.arc(0, 0, 49, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = cardGold;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fillStyle = cardGold;
+  ctx.fill(new Path2D(
+    'M-19 -28H-11V-21H-4V-28H5V-21H12V-28H20V-16L16 -12H-15L-19 -16Z ' +
+    'M-13 -9H14L11 -5Q13 11 17 15H-17Q-12 11 -11 -5Z ' +
+    'M-17 18H18L21 22V24H-21V22Z M-21 27H21Q25 27 25 32H-25Q-25 27 -21 27Z'
+  ));
+  ctx.restore();
+}
+
 function drawCardTitle(ctx, card) {
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = cardGold;
-  ctx.beginPath();
-  ctx.roundRect(84, 83, 73, 73, 12);
-  ctx.fill();
-  ctx.save();
-  ctx.translate(87, 89);
-  ctx.scale(.66, .66);
-  ctx.fillStyle = cardInk;
-  ctx.fill(new Path2D(piecePaths.rook));
-  ctx.restore();
+  drawCardBrandMark(ctx);
   ctx.textAlign = 'left';
   ctx.fillStyle = cardIvory;
-  cardText(ctx, 'ChessPath', 177, 105, 47, 420, 700, 'Georgia, serif');
+  cardText(ctx, cardBrandName, 177, 105, 47, 420, 700, 'Georgia, serif');
   ctx.fillStyle = cardGold;
   cardText(ctx, 'チェス16タイプ診断', 178, 149, 35, 490, 600);
   ctx.textAlign = 'right';
@@ -281,7 +294,7 @@ function renderShareCard(code) {
   const card = getCardData(code);
   const revision = ++cardRevision;
   cardCanvas.setAttribute('aria-label', [
-    'ChessPath チェス16タイプ診断', card.typeCode, card.typeName, card.tagline,
+    `${cardBrandName} チェス16タイプ診断`, card.typeCode, card.typeName, card.tagline,
     ...card.traits.map(({ letter, label }) => `${letter} ${label}`),
   ].join('、'));
   cardStatus.textContent = '';
@@ -296,7 +309,7 @@ function renderShareCard(code) {
       cardStatus.textContent = 'PNG画像を作成できませんでした。';
       return;
     }
-    cardFile = new File([blob], `ChessPath-${code}.png`, { type: 'image/png' });
+    cardFile = new File([blob], `${cardBrandName}-${code}.png`, { type: 'image/png' });
     saveCard.disabled = false;
     shareCard.hidden = !navigator.share || !navigator.canShare?.({ files: [cardFile] });
     if (shareCard.hidden) {

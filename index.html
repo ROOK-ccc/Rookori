@@ -3,8 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="初めての一手から、もっと強くなるための学習まで。診断で自分に合う戦法を見つけ、チェス盤で学べます。">
-  <title>ChessPath | チェスの旅を、共に。</title>
+  <meta name="description" content="Rookori（ルーコリ）は日本語のチェス学習サイトです。駒の動きから、16タイプ診断、オープニング学習、棋譜の振り返りまで、盤上で学べます。">
+  <title>Rookori（ルーコリ） | チェスの旅を、共に。</title>
+  <link rel="canonical" href="https://rook-ccc.github.io/ChessPath/">
+  <link rel="icon" type="image/png" sizes="192x192" href="brand/rookori.png">
+  <link rel="apple-touch-icon" href="brand/rookori.png">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:site_name" content="Rookori">
+  <meta property="og:title" content="Rookori（ルーコリ） | チェスの旅を、共に。">
+  <meta property="og:description" content="はじめての一手から、もっと強くなるその先まで。チェスの基本・診断・オープニング・対局復習を日本語で。">
+  <meta property="og:url" content="https://rook-ccc.github.io/ChessPath/">
+  <meta property="og:image" content="https://rook-ccc.github.io/ChessPath/brand/rookori-share.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="720">
+  <meta property="og:image:height" content="720">
+  <meta property="og:image:alt" content="深緑の円に金色のルークを描いたRookoriのロゴ">
+  <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="game-review.css">
   <script src="data.js" defer></script>
@@ -44,7 +59,7 @@
 <body>
   <header class="site-header">
     <div class="shell header-inner">
-      <a class="brand" href="#home" aria-label="ChessPath ホーム"><span class="brand-mark" aria-hidden="true">♜</span>ChessPath<span class="brand-dot" aria-hidden="true">.</span></a>
+      <a class="brand" href="#home" aria-label="Rookori（ルーコリ） ホーム"><img class="brand-mark" src="brand/rookori.png" width="36" height="36" alt="">Rookori</a>
       <nav class="site-nav" aria-label="メインメニュー">
         <a href="#home">ホーム</a>
         <a href="#learn">学習を始める</a>
@@ -83,7 +98,7 @@
           <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
           <a href="#backup"><span aria-hidden="true">⇅</span>学習データのバックアップ</a>
           <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
-          <a href="#about"><span aria-hidden="true">ⓘ</span>ChessPathについて</a>
+          <a href="#about"><span aria-hidden="true">ⓘ</span>Rookoriについて</a>
         </section>
       </nav>
     </div>
@@ -94,7 +109,7 @@
       <div class="hero">
         <div class="hero-copy">
           <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
-          <p class="hero-description">駒の動かし方から、実戦で使える作戦まで。自分のペースで学べる日本語のチェスサイトです。</p>
+          <p class="hero-description">はじめての一手から、もっと強くなるその先まで。</p>
           <div class="hero-actions" id="learn-title" tabindex="-1" role="group" aria-label="学習を始める">
             <a class="button hero-button" href="#intro">チェスを始める</a>
             <a class="button hero-secondary" href="#improve">もっと強くなる</a>
@@ -251,7 +266,7 @@
 
     <section id="result" class="screen inner-screen" hidden>
       <div class="result-banner">
-        <div class="result-emblem" aria-hidden="true">♜</div>
+        <img class="result-emblem" src="brand/rookori.png" width="136" height="136" alt="">
         <p id="result-mode" class="eyebrow"></p>
         <p id="result-code" class="result-code"></p>
         <h1 id="result-title" tabindex="-1"></h1>
@@ -296,7 +311,7 @@
         <h1 id="opening-result-title" tabindex="-1">あなたの<span>オープニングセット</span></h1>
         <p>あなたの回答から、こんな3つの戦法がおすすめです！</p>
       </div>
-      <p class="result-note">白番の戦い方と、黒番でよく出会う2つの初手への対応を学ぶ基本セットです。相手の初手や応手によっては、別の戦い方が必要になります。推薦は回答から見た戦法との相性を表し、難易度と学習負担はChessPath独自の目安です。</p>
+      <p class="result-note">白番の戦い方と、黒番でよく出会う2つの初手への対応を学ぶ基本セットです。相手の初手や応手によっては、別の戦い方が必要になります。推薦は回答から見た戦法との相性を表し、難易度と学習負担はRookori独自の目安です。</p>
       <div class="opening-results" id="opening-results"></div>
       <div class="opening-actions">
         <button class="button primary" id="restart-opening" type="button">もう一度診断する</button>
@@ -716,8 +731,9 @@
       </div>
     </section>
     <section id="about" class="screen inner-screen guide-screen" hidden>
-      <h1 id="about-title" tabindex="-1">ChessPathについて</h1>
-      <p class="guide-intro" data-chess-terms>ChessPathは、現役高校生が自身のチェス学習経験をもとに制作している日本語のチェス学習サイトです。初めての一手からオープニングの暗記・復習まで、自分のペースで進められます。</p>
+      <h1 id="about-title" tabindex="-1">Rookori（ルーコリ）について</h1>
+      <p class="guide-intro" data-chess-terms>Rookoriは、現役高校生が自身のチェス学習経験をもとに制作している日本語のチェス学習サイトです。初めての一手からオープニングの暗記・復習まで、自分のペースで進められます。</p>
+      <p class="brand-update">ChessPathはRookori（ルーコリ）に名称を変更しました。これまでと同じURLで、保存した学習記録や対局履歴を引き続き使えます。</p>
       <p>学習記録はこのブラウザー内に保存されます。駒の画像にはCBurnettのSVGを使っています。</p>
       <a class="text-button" href="pieces/cburnett/LICENSE.txt">駒の画像とライセンス</a>
     </section>
@@ -734,7 +750,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">ChessPath · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

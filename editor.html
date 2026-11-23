@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>問題作成エディター | ChessPath</title>
+  <title>問題作成エディター | Rookori</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="brand/rookori.png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="editor.css">
   <script src="vendor/chess.js" defer></script>
@@ -17,7 +18,7 @@
 </head>
 <body>
   <header class="site-header"><div class="shell header-inner">
-    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">♜</span>ChessPath<span class="brand-dot" aria-hidden="true">.</span></a>
+    <a class="brand" href="index.html" aria-label="Rookori（ルーコリ） ホーム"><img class="brand-mark" src="brand/rookori.png" width="36" height="36" alt="">Rookori</a>
     <p>教材制作用</p>
   </div></header>
   <main class="shell editor">
@@ -129,10 +130,10 @@
       <p id="editor-edit-state"></p>
       <p id="draft-status" role="status" class="editor-note"></p>
       <p id="editor-export-state" role="status"></p>
-      <p class="editor-note">保存した問題を実際の教材に反映するには、公開教材ファイルを書き出し、ChessPathフォルダー内のcourse-problems.jsを置き換える必要があります。</p>
+      <p class="editor-note">保存した問題を教材に反映するには、公開教材ファイルを書き出し、エディターと同じフォルダーにあるcourse-problems.jsと入れ替えます。</p>
       <ol id="editor-export-steps" hidden>
         <li>ダウンロード先の course-problems.js を確認します。</li>
-        <li>ChessPathフォルダーにある同名ファイルをバックアップしてから、ダウンロードしたファイルで置き換えます。</li>
+        <li>エディターと同じフォルダーにある同名ファイルをバックアップしてから、ダウンロードしたファイルで置き換えます。</li>
         <li>index.htmlを開き直し、指定した章に問題が表示されることを確認します。</li>
       </ol>
       <p id="editor-status" role="status" tabindex="-1"></p>
@@ -166,6 +167,6 @@
         </form>
       </dialog>
   </main>
-  <footer class="site-footer"><div class="shell">ChessPath · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
 </body>
 </html>
