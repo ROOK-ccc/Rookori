@@ -1,37 +1,31 @@
-// 各行は [配色名, 背景色, アクセント色, 駒, カード用の紹介文] の順です。
+// 色、駒、背景の模様とキャッチコピーをタイプごとに調整できます。
 const cardStyles = {
-  ATCI: ['ember', '#551c20', '#f17063', 'knight', 'ひらめきを、盤上の一手に。'],
-  ATCD: ['amber', '#493018', '#e3a748', 'queen', '読みを重ね、攻めの瞬間を待つ。'],
-  ATLI: ['orange', '#542817', '#ff9f58', 'knight', '好機を見つけたら、すばやく踏み込む。'],
-  ATLD: ['crimson', '#401424', '#d34e70', 'bishop', '狙いを定め、手順を組み立てる。'],
-  APCI: ['violet', '#422450', '#c18df0', 'knight', '意外な配置から、攻めの糸口を探る。'],
-  APCD: ['indigo', '#302951', '#a49af2', 'queen', '駒をつなぎ、じっくり攻めを組み立てる。'],
-  APLI: ['turquoise', '#173f43', '#62dfd8', 'knight', '駒を自然に動かし、先に主導権を狙う。'],
-  APLD: ['gold', '#443716', '#c7a047', 'rook', '目標を絞り、一手ずつ攻めを進める。'],
-  STCI: ['plum', '#321938', '#a367bb', 'bishop', '複雑な局面から、切り返しを探す。'],
-  STCD: ['blue', '#1c3253', '#6ca6f3', 'queen', '相手の狙いを読み、反撃を組み立てる。'],
-  STLI: ['silver-blue', '#344554', '#b8cfdf', 'knight', '形を保ちながら、相手の動きに応じる。'],
-  STLD: ['steel', '#303842', '#8798ad', 'rook', '守りを固め、着実に好機を待つ。'],
-  SPCI: ['green', '#25452b', '#86cd83', 'bishop', '選択肢を残して、相手の出方を見る。'],
-  SPCD: ['forest', '#18392b', '#4ba478', 'queen', '局面を見比べ、先を見越して駒を置く。'],
-  SPLI: ['olive', '#3e4426', '#adb96d', 'pawn', '慣れた形から、一手ずつ整える。'],
-  SPLD: ['teal', '#193d3b', '#60b3a7', 'rook', '安定した形から、局面を組み直す。'],
+  ATCI: { color: '#ea654f', motif: 'knight', pattern: 'rays', finish: 'gold', angle: -0.09, tagline: 'ひらめいた一手で、火をつける。' },
+  ATCD: { color: '#dd913c', motif: 'queen', pattern: 'lattice', finish: 'gold', angle: 0.03, tagline: '読み切った瞬間、攻めに出る。' },
+  ATLI: { color: '#f3bf4a', motif: 'knight', pattern: 'streaks', finish: 'silver', angle: -0.16, tagline: '好機が見えたら、風より速く。' },
+  ATLD: { color: '#e35182', motif: 'bishop', pattern: 'rings', finish: 'copper', angle: 0.04, tagline: '狙いはひとつ。手順は確かに。' },
+  APCI: { color: '#b476f0', motif: 'knight', pattern: 'rings', finish: 'copper', angle: 0.11, tagline: '思いがけない場所から仕掛ける。' },
+  APCD: { color: '#8581f8', motif: 'queen', pattern: 'lattice', finish: 'silver', angle: -0.04, tagline: '駒をつなぎ、攻めの形を描く。' },
+  APLI: { color: '#56dbcf', motif: 'pawn', pattern: 'streaks', finish: 'gold', angle: -0.10, tagline: '先に動いて、流れをつくる。' },
+  APLD: { color: '#c5a462', motif: 'king', pattern: 'arches', finish: 'gold', angle: 0, tagline: '目標を定め、駒を集める。' },
+  STCI: { color: '#c071cc', motif: 'bishop', pattern: 'rays', finish: 'silver', angle: 0.12, tagline: '相手の仕掛けを、切り返す。' },
+  STCD: { color: '#5c9af0', motif: 'queen', pattern: 'rings', finish: 'silver', angle: 0.02, tagline: '相手の狙いを読み、反撃へ。' },
+  STLI: { color: '#aac4da', motif: 'knight', pattern: 'arches', finish: 'silver', angle: 0.07, tagline: '形を保ち、隙を逃さない。' },
+  STLD: { color: '#8496b6', motif: 'rook', pattern: 'lattice', finish: 'silver', angle: 0, tagline: '守りを固め、好機を待つ。' },
+  SPCI: { color: '#79c68a', motif: 'bishop', pattern: 'rings', finish: 'gold', angle: -0.08, tagline: '選択肢を残し、流れに合わせる。' },
+  SPCD: { color: '#43ab7b', motif: 'king', pattern: 'lattice', finish: 'copper', angle: 0.02, tagline: '先を読み、相手の道を狭める。' },
+  SPLI: { color: '#a6b96a', motif: 'pawn', pattern: 'arches', finish: 'copper', angle: -0.04, tagline: 'いつもの形を、一手ずつ磨く。' },
+  SPLD: { color: '#53b5a9', motif: 'rook', pattern: 'arches', finish: 'gold', angle: 0.01, tagline: '崩れにくい形を、じっくり築く。' },
 };
 
 function getCardData(typeCode) {
-  const type = types[typeCode];
-  const [cardTheme, backgroundColor, accentColor, motif, shortTagline] = cardStyles[typeCode];
   return {
-    ...type,
+    ...cardStyles[typeCode],
     typeCode,
-    typeName: type.name,
-    shortTagline,
-    axesLabels: axes.map(({ codes, labels }, index) => labels[codes.indexOf(typeCode[index])]),
-    cardTheme,
-    backgroundColor,
-    accentColor,
-    motif,
-    strengths: type.strength,
-    studyTip: type.tip,
+    typeName: types[typeCode].name,
+    traits: axes.map(({ codes, labels }, index) => ({
+      letter: typeCode[index],
+      label: labels[codes.indexOf(typeCode[index])],
+    })),
   };
 }
