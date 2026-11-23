@@ -3,6 +3,7 @@ const openingStudyScreen = (() => {
   let candidate;
   let study;
   let flipped;
+  let completionRecorded;
   const board = createChessBoard(byId('study-board'), byId('study-promotion'), {
     position: () => study,
     isFlipped: () => flipped,
@@ -16,10 +17,12 @@ const openingStudyScreen = (() => {
 
   function open(opening, route) {
     candidate = opening;
+    completionRecorded = false;
     study = new OpeningStudy(candidate.moves);
     for (const uci of route.studyMoves ?? []) {
       if (!study.play(uci.slice(0, 2), uci.slice(2, 4), uci[4])) break;
     }
+    completionRecorded = study.complete;
     flipped = Boolean(route.flipped);
     board.reset();
     byId('study-title').textContent = candidate.name;
@@ -112,6 +115,10 @@ const openingStudyScreen = (() => {
       : study.guided ? candidate.explanations[study.step - 1]
         : '「一手戻る」で前の局面へ、「最初からやり直す」で基本手順の入口へ戻れます。';
     byId('study-complete').hidden = !study.complete;
+    if (study.complete && !completionRecorded) {
+      learningTracker.openingDone(candidate.id, 'study');
+      completionRecorded = true;
+    }
     board.render();
     if (active === next && next.disabled) undo.focus({ preventScroll: true });
     if (active === undo && undo.disabled) next.focus({ preventScroll: true });
@@ -126,6 +133,7 @@ const openingStudyScreen = (() => {
   for (const [id, action] of Object.entries(actions)) {
     byId(id).addEventListener('click', () => {
       action();
+      if (!study.complete) completionRecorded = false;
       board.clearSelection();
       saveProgress();
       render();

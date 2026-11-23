@@ -6,7 +6,8 @@ const siteHeadings = {
   journal: 'journal-title',
   openings: 'openings-title',
   mode: 'mode-title',
-  error: 'error-title',
+  error: 'error-title', dashboard: 'dashboard-title', daily: 'daily-title',
+  progress: 'progress-title', backup: 'backup-title', about: 'about-title', memorize: 'openings-title',
 };
 
 const quizModes = {
@@ -28,6 +29,10 @@ function readSiteRoute(address, state) {
   if (Object.hasOwn(siteHeadings, path)) return { path };
   if (path === 'intro' || path === 'intro-summary') return { path };
   if (path === 'review') return { path };
+  if (path.startsWith('review-item/')) {
+    try { return { path, reviewId: decodeURIComponent(path.slice(12)) }; }
+    catch { return { path: 'review' }; }
+  }
   const practice = /^practice\/([a-z0-9-]+)\/([wb])$/.exec(path);
   if (practice) {
     const opening = findStudyOpening(practice[1]);

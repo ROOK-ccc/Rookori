@@ -155,6 +155,7 @@ function updateEntry(data) {
 
 function goTo(path, data = {}) {
   const from = displayedRoute?.path ?? 'home';
+  siteMenu.close(path === from);
   if (path === from && !Object.keys(data).length) {
     if (path === 'home' || path === 'learn') renderSite();
     return;
@@ -195,24 +196,43 @@ function renderSite() {
   const route = readSiteRoute(location.href, history.state);
   const { path } = route;
   displayedRoute = route;
+  siteMenu.close(false);
+  siteMenu.mark(route);
   if (previous?.opening) openingStudyScreen.close();
-  if (previous?.practice) openingMemoryScreen.close();
+  if (previous?.practice || previous?.reviewId) openingMemoryScreen.close();
   if (previous?.lesson) introScreen.close();
 
   let menuPath = 'learn';
   if (path === 'home') menuPath = 'home';
   if (path === 'mode' || path === 'result' || route.mode && route.mode !== 'opening') menuPath = 'mode';
   if (path === 'opening-quiz' || path === 'opening-result' || route.recommended) menuPath = 'opening-quiz';
-  if (path === 'review') menuPath = 'review';
+  if (path === 'review' || route.reviewId) menuPath = 'review';
   for (const link of document.querySelectorAll('.site-nav a')) {
     if (link.hash === `#${menuPath}` && path !== 'error') link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
 
-  if (route.practice) {
+  if (route.reviewId) {
+    const item = learningTracker.due().find(item => item.id === route.reviewId);
+    if (item) openingMemoryScreen.open(findStudyOpening(item.variationId ?? item.openingId), item.color, item);
+    else {
+      openingMemoryScreen.review();
+      learningPages.todayReview('today-review', true);
+    }
+  } else if (route.practice) {
     openingMemoryScreen.open(route.practice, route.color);
   } else if (path === 'review') {
     openingMemoryScreen.review();
+    learningPages.todayReview('today-review', true);
+  } else if (path === 'dashboard' || (path === 'home' && learningTracker.home() === 'dashboard')) {
+    learningPages.dashboard();
+    showScreen('dashboard', 'dashboard-title');
+  } else if (path === 'daily') {
+    learningPages.daily();
+    showScreen('daily', 'daily-title');
+  } else if (path === 'progress') {
+    learningPages.progress();
+    showScreen('progress', 'progress-title');
   } else if (route.lesson) {
     introScreen.open(route.lesson);
   } else if (path === 'intro') {
@@ -232,8 +252,9 @@ function renderSite() {
   } else if (path === 'learn') {
     showScreen('home', siteHeadings.learn);
     byId(siteHeadings.learn).scrollIntoView();
-  } else if (path === 'openings') {
-    showWithReturnFocus(path, siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
+  } else if (path === 'openings' || path === 'memorize') {
+    learningPages.catalog(path === 'memorize');
+    showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
   } else {
     byId('latest-opening-result').hidden = !lastOpeningAnswers;
     showScreen(path, siteHeadings[path]);
@@ -276,30 +297,12 @@ byId('mode-options').replaceChildren(...Object.entries(modes).map(([key, mode]) 
   return card;
 }));
 
-const catalogHeadings = { white: '白番（先手）', blackE4: '黒番（対1.e4）', blackD4: '黒番（対1.d4）' };
-byId('opening-catalog').replaceChildren(...Object.entries(catalogHeadings).map(([slot, label]) => {
-  const group = element('section');
-  const list = element('ul', null, 'goal-links');
-  for (const opening of openings.filter((item) => item.slot === slot)) {
-    const item = element('li');
-    const link = element('a', opening.name);
-    link.id = `catalog-${opening.id}`;
-    link.href = `#study/${opening.id}`;
-    const arrow = element('span', '→');
-    arrow.setAttribute('aria-hidden', 'true');
-    link.append(arrow);
-    item.append(link);
-    list.append(item);
-  }
-  group.append(element('h2', label), list);
-  return group;
-}));
-
 document.addEventListener('click', (event) => {
   const link = event.target.closest('a[href^="#"]');
   if (!link || event.defaultPrevented || event.button !== 0
       || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
+  if (siteMenu.contains(link)) siteMenu.close(link.hash === '#' + displayedRoute.path);
   const path = link.getAttribute('href').slice(1);
   const route = displayedRoute;
   if (['study-back', 'study-more'].includes(link.id)) {

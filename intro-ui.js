@@ -35,6 +35,7 @@ const introScreen = (() => {
   }
 
   function grade(correct, wrongMessage = 'もう一度試してみましょう。') {
+    learningTracker.lessonAnswer(lesson.id, correct);
     progress.answer(lesson, correct);
     const feedback = byId('lesson-feedback');
     feedback.textContent = correct ? `${lesson.completionMessage ?? '正解！'} ${lesson.success}` : `不正解。 ${wrongMessage}`;

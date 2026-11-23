@@ -344,6 +344,58 @@ progress::-moz-progress-bar { background: var(--rust); }
 .study-resource li p { padding: 3px 8px 6px; }
 #variation-facts dt, #practice-result-stats dt, .review-card dt { font-weight: 700; }
 #variation-facts dd, #practice-result-stats dd, .review-card dd { margin: 0 0 8px; }
+
+/* Learning dashboard and site menu */
+.learning-block, .dashboard-priority { margin-block: 0 14px; }
+.dashboard-priority .learning-block { background: var(--charcoal); color: var(--white); border-color: #a98649; }
+.dashboard-priority .learning-block h2 { color: var(--gold); }
+.dashboard-priority .learning-block .primary { background: var(--gold); color: var(--charcoal); }
+.dashboard-priority .text-button { color: var(--white); }
+.learning-block > p { margin: 8px 0 12px; }
+.learning-values { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 5px 10px; margin: 10px 0 0; }
+.learning-values dd { margin: 0; font-weight: 700; }
+.daily-list { padding-inline-start: 24px; margin: 10px 0; }
+.daily-list li { margin-bottom: 7px; }
+.daily-list li > a, .daily-list li > .learning-done { margin-inline-start: 9px; }
+.learning-done { color: #356546; font-weight: 700; }
+.catalog-controls { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-bottom: 12px; }
+.catalog-controls label, #backup label { display: grid; min-width: 0; font-weight: 700; }
+.catalog-controls input, .catalog-controls select, #backup-import { min-height: 44px; max-width: 100%; font: inherit; border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; background: var(--white); color: var(--ink); }
+.catalog-entry h3 { margin-bottom: 3px; }
+.catalog-entry p { margin-bottom: 7px; }
+.catalog-meta { color: var(--muted); font-size: .88rem; }
+#opening-catalog details { border-top: 1px solid var(--line); padding-top: 7px; }
+#opening-catalog summary { cursor: pointer; padding: 8px 0; font-weight: 700; }
+#opening-catalog details .catalog-entry { border-inline-start: 3px solid #a98649; padding-inline-start: 13px; margin-top: 12px; }
+.progress-table { overflow-x: auto; margin-top: 16px; }
+.progress-table table { border-collapse: collapse; width: 100%; }
+.progress-table caption { font-weight: 700; text-align: start; margin-bottom: 5px; }
+.progress-table th, .progress-table td { white-space: nowrap; border-bottom: 1px solid var(--line); padding: 7px 9px; text-align: start; }
+.progress-table meter { display: block; width: 74px; }
+.review-history-title { margin: 22px 0 8px; font-size: 1.2rem; }
+.menu-toggle { width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid #765a2f; border-radius: 7px; background: var(--charcoal); color: var(--gold); font-size: 1.5rem; }
+#site-menu { position: fixed; inset: 0 0 0 auto; margin: 0; width: min(360px, 92vw); max-height: none; height: 100dvh; padding: 0; border: 0; border-inline-start: 1px solid #765a2f; background: var(--charcoal); color: var(--white); overscroll-behavior: contain; overflow-y: auto; }
+#site-menu[open] { animation: site-menu-in .16s ease-out; }
+@keyframes site-menu-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+#site-menu::backdrop { background: #14120fd0; }
+body:has(#site-menu[open]) { overflow: hidden; }
+.menu-panel { min-height: 100%; padding: 12px 18px 24px; }
+.menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.menu-heading h2, .menu-group h3 { color: var(--gold); }
+.menu-group { border-top: 1px solid #786849; padding-top: 8px; margin-top: 12px; }
+.menu-group h3 { font-size: .9rem; margin-bottom: 5px; }
+.menu-group a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-inline-start: 3px solid transparent; border-radius: 4px; color: var(--white); text-decoration: none; font-weight: 600; }
+.menu-group a span { color: var(--gold); width: 20px; text-align: center; }
+.menu-group a:hover, .menu-group a[aria-current="page"] { border-inline-start-color: var(--gold); background: #433721; }
+#site-menu :focus-visible { outline-color: var(--gold); }
+@media (max-width: 760px) {
+  #site-menu-toggle { order: 1; margin-inline-start: auto; }
+  .site-nav { order: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #site-menu[open] { animation: none; }
+}
+
 #review-list { display: grid; gap: 12px; margin-bottom: 15px; }
 .promotion-dialog {
   width: min(380px, calc(100% - 32px));

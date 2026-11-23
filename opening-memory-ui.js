@@ -9,16 +9,21 @@ const openingMemoryScreen = (() => {
   let practice;
   let flipped;
   let timer;
+  let recordedCompletion;
+  const currentItem = () => learningTracker.itemList(practice.opening)[practice.study.step];
   const board = createChessBoard(byId('practice-board'), byId('practice-promotion'), {
     position: () => practice.study,
     isFlipped: () => flipped,
     canPlay: () => practice.learnerTurn && !timer,
     hints: () => practice.hintLevel === 3 && practice.learnerTurn ? [practice.expected] : [],
     play(from, to, promotion) {
+      const item = currentItem();
+      const quality = practice.hintLevel ? 'hint' : practice.missed ? 'retry' : 'clean';
       if (!practice.play(from, to, promotion)) {
         incorrect();
         return false;
       }
+      learningTracker.observe(item, quality);
       return true;
     },
     onMove() {
@@ -38,6 +43,7 @@ const openingMemoryScreen = (() => {
   function incorrect(message = '登録手順と違います。同じ局面からもう一度試しましょう。') {
     text('practice-status', `不正解。 ${message}`);
     text('practice-comment', '');
+    learningTracker.observe(currentItem(), 'interrupted', { mistakes: 1 });
     save();
   }
 
@@ -59,6 +65,10 @@ const openingMemoryScreen = (() => {
         text('practice-status', `相手は ${practice.study.lastMove.san} と指しました。`);
         advanceOpponent();
       }, 520);
+    }
+    if (practice.complete && !practice.target && !recordedCompletion) {
+      learningTracker.openingDone(practice.opening.id, 'practice');
+      recordedCompletion = true;
     }
     save();
     render();
@@ -84,6 +94,10 @@ const openingMemoryScreen = (() => {
     byId('practice-hint').hidden = !practice.hintLevel;
     byId('practice-result').hidden = !practice.complete;
     if (practice.complete) {
+      const next = byId('practice-next-review');
+      const [item] = practice.target ? learningTracker.due() : [];
+      next.hidden = !item;
+      next.href = item ? reviewLink(item.id) : '#review';
       const record = practice.record();
       byId('practice-result-stats').replaceChildren(...stats([
         ['戦法', practice.opening.name], ['練習した手数', record.trained],
@@ -94,9 +108,11 @@ const openingMemoryScreen = (() => {
     board.render();
   }
 
-  function open(opening, color) {
+  function open(opening, color, target = null) {
     close();
-    practice = new OpeningPractice(opening, color);
+    practice = new OpeningPractice(opening, color, target);
+    recordedCompletion = false;
+    byId('practice-colors').hidden = Boolean(target);
     flipped = color === 'b';
     text('practice-title', opening.name);
     const explain = `#study/${opening.id}`;
@@ -108,7 +124,8 @@ const openingMemoryScreen = (() => {
       if (color === side) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
-    text('practice-status', color === 'w' ? '白の最初の手から指しましょう。' : '白の最初の手を再生します。');
+    text('practice-status', target ? '今日の復習。再現した局面から、次の一手を指しましょう。'
+      : color === 'w' ? '白の最初の手から指しましょう。' : '白の最初の手を再生します。');
     text('practice-comment', '');
     board.reset();
     showScreen('opening-practice', 'practice-title');
@@ -146,7 +163,10 @@ const openingMemoryScreen = (() => {
   }
 
   byId('practice-show-hint').addEventListener('click', () => {
+    const before = practice.hintLevel;
     const level = practice.revealHint();
+    if (level === before) return;
+    learningTracker.observe(currentItem(), 'interrupted', { hints: 1 });
     const from = practice.expected.slice(0, 2);
     const piece = practice.study.game.get(from);
     const messages = [
@@ -160,7 +180,7 @@ const openingMemoryScreen = (() => {
   });
   byId('practice-flip').addEventListener('click', () => { flipped = !flipped; render(); });
   for (const id of ['practice-again', 'practice-reset']) {
-    byId(id).addEventListener('click', () => open(practice.opening, practice.color));
+    byId(id).addEventListener('click', () => open(practice.opening, practice.color, practice.target));
   }
   return { open, close, review };
 })();
