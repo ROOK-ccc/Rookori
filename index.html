@@ -29,6 +29,8 @@
   <script src="opening-study-ui.js" defer></script>
   <script src="opening-memory-ui.js" defer></script>
   <script src="intro-ui.js" defer></script>
+  <script src="learning-insights.js" defer></script>
+  <script src="learning-progress-ui.js" defer></script>
   <script src="learning-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
@@ -232,7 +234,7 @@
         <p id="quiz-mode" class="eyebrow"></p>
         <p id="question-number" class="question-number"></p>
       </div>
-      <progress id="progress" value="0" max="12" aria-labelledby="question-number"></progress>
+      <progress id="quiz-progress" value="0" max="12" aria-labelledby="question-number"></progress>
       <div class="quiz-panel">
         <p id="opening-quiz-intro" class="quiz-intro" hidden>オープニングとは、対局が始まってすぐの駒の動かし方や作戦のことです。</p>
         <h1 id="question-title" tabindex="-1"></h1>
@@ -519,11 +521,6 @@
       <section class="dashboard-priority" id="dashboard-review"></section>
       <div id="dashboard-plan"></div>
       <div id="dashboard-progress"></div>
-      <div id="dashboard-continue"></div>
-      <div class="study-mode-links">
-        <a class="button secondary" href="#openings">オープニング一覧</a>
-        <a class="button secondary" href="#progress">上達記録</a>
-      </div>
       <button class="text-button" id="home-intro-mode" type="button">紹介型ホームを使う</button>
       <button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button>
     </section>
@@ -536,7 +533,33 @@
     <section id="progress" class="screen inner-screen guide-screen" hidden>
       <h1 id="progress-title" tabindex="-1">上達記録</h1>
       <p class="guide-intro">学習した内容と練習の成績を振り返れます。</p>
-      <div id="progress-summary"></div><div class="progress-table" id="progress-activity"></div>
+      <div id="progress-summary" class="report-summary"></div>
+      <section class="opening-card report-section" aria-labelledby="calendar-title">
+        <h2 id="calendar-title">学習の継続状況</h2>
+        <div id="progress-calendar"></div>
+      </section>
+      <section class="opening-card report-section" aria-labelledby="accuracy-title">
+        <h2 id="accuracy-title">初回正解率の推移</h2>
+        <div id="progress-accuracy"></div>
+      </section>
+      <section class="opening-card report-section" aria-labelledby="volume-title">
+        <h2 id="volume-title">日別学習量</h2>
+        <div id="progress-volume"></div>
+      </section>
+      <section class="opening-card report-section" aria-labelledby="mastery-title">
+        <h2 id="mastery-title">オープニング別の習熟度</h2>
+        <p>盤上で練習した手数、復習段階、初回の回答、ヒント、復習期限から、教材の習得状況を計算します。</p>
+        <div id="progress-mastery"></div>
+      </section>
+      <section class="opening-card report-section" aria-labelledby="weakness-title">
+        <h2 id="weakness-title">次に復習したい手順</h2>
+        <div id="progress-weakness"></div>
+      </section>
+      <details class="opening-card report-section">
+        <summary>詳しい学習統計</summary>
+        <p id="progress-totals"></p>
+        <div class="progress-table" id="progress-activity"></div>
+      </details>
     </section>
     <section id="backup" class="screen inner-screen guide-screen" hidden>
       <h1 id="backup-title" tabindex="-1">学習データのバックアップ</h1>

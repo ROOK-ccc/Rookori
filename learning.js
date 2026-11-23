@@ -179,12 +179,14 @@ class LearningTracker {
     return this.data.days[date];
   }
 
-  observe(item, quality, { mistakes = 0, hints = 0 } = {}) {
+  observe(item, quality, { mistakes = 0, hints = 0, firstTryCorrect } = {}) {
     const date = this.clock();
     const day = localDay(date);
     const plan = this.day();
     const previous = this.data.items[item.id] ?? { ...item, due: day, level: -1, interval: 0, reviewedDay: null };
-    this.data.items[item.id] = scheduleReview(previous, quality, day, date, mistakes, hints);
+    const updated = scheduleReview(previous, quality, day, date, mistakes, hints);
+    if (previous.reviewedDay !== day && typeof firstTryCorrect === 'boolean') updated.firstTryCorrect = firstTryCorrect;
+    this.data.items[item.id] = updated;
     if (quality !== 'interrupted' && plan.reviewIds.includes(item.id) && !plan.reviewed.includes(item.id)) {
       plan.reviewed.push(item.id);
     }
@@ -197,6 +199,8 @@ class LearningTracker {
     const day = localDay(this.clock());
     const plan = this.day();
     const stats = Object.hasOwn(this.data.questions, id) ? this.data.questions[id] : { errors: 0, solved: null };
+    plan.questionAttempts ??= [...plan.correct];
+    if (!plan.questionAttempts.includes(id)) plan.questionAttempts.push(id);
     if (!correct) stats.errors += 1;
     else {
       stats.solved = day;
@@ -213,30 +217,16 @@ class LearningTracker {
     const plan = this.day();
     if (!this.data.explained.includes(id)) this.data.explained.push(id);
     if (plan.target?.type === 'opening' && plan.target.id === id) plan.newDone = true;
-    if (type === 'study') this.data.last = { type, id };
+    if (type === 'study') {
+      plan.explanations ??= [];
+      if (!plan.explanations.includes(id)) plan.explanations.push(id);
+      this.data.last = { type, id };
+    }
     this.save();
   }
 
   activity() {
-    const rows = new Map();
-    function row(day) {
-      if (!rows.has(day)) rows.set(day, { day, attempts: 0, moves: 0, first: 0, hints: 0, questions: 0, due: null });
-      return rows.get(day);
-    }
-    for (const record of this.history()) {
-      const current = row(localDay(new Date(record.date)));
-      current.attempts++;
-      current.moves += Number(record.trained) || 0;
-      current.first += Number(record.firstCorrect) || 0;
-      current.hints += Number(record.hints) || 0;
-    }
-    for (const [day, plan] of Object.entries(this.data.days)) {
-      if (!plan.correct.length && !plan.newDone && !plan.reviewed.length && plan.reviewRemaining === null) continue;
-      const current = row(day);
-      current.questions = plan.correct.length;
-      current.due = plan.reviewRemaining;
-    }
-    return [...rows.values()].sort((a, b) => a.day.localeCompare(b.day));
+    return summarizeLearningDays(this.history(), this.data.days);
   }
 }
 
@@ -269,9 +259,11 @@ function validLearning(value) {
       && learningDate(item.due) && (item.reviewedDay === null || learningDate(item.reviewedDay))
       && learningDateTime(item.lastAt) && [0, ...reviewIntervals].includes(item.interval) && learningCount(item.mistakes) && learningCount(item.hints)
       && Number.isInteger(item.level) && item.level >= -1 && item.level < reviewIntervals.length
+      && (item.firstTryCorrect === undefined || typeof item.firstTryCorrect === 'boolean')
       && ['clean', 'retry', 'hint', 'interrupted', 'legacy'].includes(item.outcome))
     && Object.entries(value.days).every(([date, plan]) => learningDate(date) && learningObject(plan)
       && ['reviewIds', 'questions', 'correct', 'checked', 'reviewed'].every(key => learningIds(plan[key]))
+      && ['questionAttempts', 'explanations'].every(key => plan[key] === undefined || learningIds(plan[key]))
       && plan.questions.length <= practiceLimit && plan.checked.every(id => plan.questions.includes(id))
       && plan.reviewed.every(id => plan.reviewIds.includes(id)) && learningTarget(plan.target)
       && typeof plan.newDone === 'boolean' && (plan.reviewRemaining === null || learningCount(plan.reviewRemaining)));
@@ -301,6 +293,8 @@ function validateLearningBackup(backup) {
       && typeof row.lineId === 'string' && ['w', 'b'].includes(row.color)
       && ['trained', 'firstCorrect', 'unassistedFirstCorrect', 'hints', 'mistakes'].every(key => learningCount(row[key]))
       && row.unassistedFirstCorrect <= row.firstCorrect && row.firstCorrect <= row.trained && typeof row.complete === 'boolean'
+      && (row.activityAt == null || learningDateTime(row.activityAt))
+      && (row.answerEvents === undefined || validFirstAnswers(row.answerEvents))
       && Array.isArray(row.errors) && row.errors.every(error => learningObject(error) && learningCount(error.ply)
         && learningUci(error.expected) && (error.played === null || learningUci(error.played))))));
 }

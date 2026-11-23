@@ -28,11 +28,13 @@ const learningPages = (() => {
     const block = section('今日の復習', byId(id));
     if (!due.length) {
       const hasItems = Object.values(learningTracker.data.items).some(item => learningTracker.item(item.id));
-      block.append(element('p', hasItems ? '今日の復習は完了しています。' : 'まずはオープニングを学んでみましょう。'));
-      block.append(link('オープニング一覧', '#openings'));
+      block.append(element('p', hasItems ? '今日の復習は完了しています。' : '今日の復習対象はありません。'));
+      block.append(link(hasItems ? '今日の練習問題へ' : 'オープニングを学ぶ', hasItems ? '#daily' : '#openings'));
       return;
     }
-    block.append(element('p', '今日の復習が' + due.length + '件あります。'),
+    const subjects = [...new Set(due.map(item => findStudyOpening(item.variationId ?? item.openingId).name))];
+    block.append(element('p', due.length + '手', 'dashboard-review-count'),
+      element('p', subjects.slice(0, 3).join('、') + (subjects.length > 3 ? ' ほか' : '')),
       link('復習を始める', reviewLink(due[0].id), 'button primary'));
     if (showList) {
       const list = element('ol', null, 'daily-list');
@@ -63,34 +65,44 @@ const learningPages = (() => {
   function dashboard() {
     todayReview('dashboard-review');
     const plan = learningTracker.day();
-    const doneReview = learningTracker.due().length === 0;
-    const donePractice = plan.checked.length === plan.questions.length;
-    const newLink = targetLink(plan.target);
-    const planBlock = section('今日の学習計画', byId('dashboard-plan'));
-    const steps = element('ol', null, 'daily-list');
-    for (const [label, action] of [
-      [doneReview ? (plan.reviewed.length ? '今日の復習が完了しました' : '期限が来た復習はありません') : '期限が来た手を復習しましょう', link('今日の復習', '#review', 'text-button')],
-      [plan.newDone ? '新しい学習が完了しました' : '新しい内容をひとつ学びましょう', newLink],
-      ['今日の練習問題 ' + plan.checked.length + ' / ' + plan.questions.length + '問', link('練習問題を開く', '#daily', 'text-button')],
-    ]) {
-      const li = element('li', label);
-      if (action) li.append(action);
-      steps.append(li);
-    }
-    planBlock.append(steps);
-    if (doneReview && plan.newDone && donePractice) planBlock.append(element('p', '今日の学習計画が完了しました。'));
-    const progress = section('学習進捗', byId('dashboard-progress'));
-    progress.append(values([
-      ['完了した入門レッスン', learningTracker.intro().completed.length + ' / ' + introLessons.length],
-      ['学習したオープニング', learningTracker.learned().size + '件'],
-    ]));
-    const resume = section('前回の学習の続き', byId('dashboard-continue'));
-    const previousLesson = learningTracker.intro().lesson;
+    const reviewDone = learningTracker.due().length === 0;
+    const questionsDone = plan.checked.length === plan.questions.length;
+    const planBlock = section('今日の学習メニュー', byId('dashboard-plan'));
+    const cards = element('div', null, 'dashboard-menu-cards');
+    const study = element('article', null, 'dashboard-task');
+    const target = targetLink(plan.target);
+    const intro = learningTracker.intro();
+    const isLesson = plan.target?.type === 'lesson';
+    study.append(element('h3', isLesson ? '入門レッスン' : '新しいオープニング'),
+      element('p', plan.newDone ? '今日の学習は完了しました。' : isLesson
+        ? '完了済み ' + intro.completed.length + ' / ' + introLessons.length + 'レッスン'
+        : '解説を読みながら盤上で基本手順を覚えましょう。'),
+      target ?? link('オープニング一覧', '#openings'));
     const lastRound = learningTracker.history().sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0];
     const last = learningTracker.data.last ?? (lastRound
       ? { type: 'practice', id: lastRound.variationId ?? lastRound.openingId, color: lastRound.color }
-      : { type: 'lesson', id: previousLesson });
-    resume.append(targetLink(last) ?? element('p', 'はじめてのチェスや戦法一覧から学習を始められます。'));
+      : { type: 'lesson', id: intro.lesson });
+    const resume = targetLink(last);
+    if (resume && resume.hash !== target?.hash) {
+      resume.textContent = '前回の続き：' + resume.textContent;
+      resume.className = 'text-button dashboard-resume';
+      study.append(resume);
+    } else if (resume) {
+      target.textContent = '前回の続き：' + target.textContent;
+    }
+    const questions = element('article', null, 'dashboard-task');
+    questions.append(element('h3', '今日の10問'),
+      element('p', plan.checked.length + ' / ' + plan.questions.length + '問 正解済み'),
+      link(questionsDone ? '今日の問題を振り返る' : '今日の10問を解く', '#daily'));
+    cards.append(study, questions);
+    planBlock.append(cards);
+    const progress = section('今週の学習状況', byId('dashboard-progress'));
+    const today = localDay();
+    const week = weekStart(today);
+    const days = learningTracker.activity().filter(row => row.day >= week && row.day <= today && activeLearningDay(row)).length;
+    const completed = Number(reviewDone) + Number(plan.newDone) + Number(questionsDone);
+    progress.append(values([['今週の学習日数', days + '日'], ['今日の学習計画', completed + ' / 3項目']]),
+      link('上達記録を見る', '#progress', 'text-button'));
   }
 
   function daily() {
@@ -159,48 +171,7 @@ const learningPages = (() => {
   }
 
   function progress() {
-    const rows = learningTracker.activity();
-    const history = learningTracker.history();
-    const done = learningTracker.intro().completed.length;
-    const target = byId('progress-summary');
-    target.replaceChildren(values([
-      ['記録のある学習日数', rows.length + '日'], ['学習したオープニング', learningTracker.learned().size + '件'],
-      ['暗記練習の回数', history.filter(row => row.kind !== 'review').length + '回'],
-      ['完了した入門レッスン', done + '件'], ['期限が来た復習', learningTracker.due().length + '件'],
-    ]));
-    const chart = byId('progress-activity');
-    if (!rows.length) {
-      chart.replaceChildren(element('p', '日付のある学習記録がたまると、練習成績の推移を確認できます。'));
-      return;
-    }
-    const table = element('table');
-    table.append(element('caption', '日ごとの学習記録'));
-    const header = element('tr');
-    for (const title of ['日付', '練習回数', '初回正解率', 'ヒント', '練習問題の正解', '復習の残り']) {
-      const cell = element('th', title);
-      cell.scope = 'col';
-      header.append(cell);
-    }
-    const head = element('thead'); head.append(header); table.append(head);
-    const body = element('tbody');
-    for (const row of rows.slice(-30).reverse()) {
-      const line = element('tr');
-      const date = element('th', row.day); date.scope = 'row'; line.append(date);
-      line.append(element('td', String(row.attempts)));
-      const rate = row.moves ? Math.round(row.first / row.moves * 100) : null;
-      const cell = element('td', rate === null ? '―' : rate + '%');
-      if (rate !== null && rows.length >= 2) {
-        const meter = element('meter');
-        meter.min = 0; meter.max = 100; meter.value = rate;
-        meter.setAttribute('aria-label', row.day + 'の初回正解率 ' + rate + '%');
-        cell.append(meter);
-      }
-      line.append(cell, element('td', String(row.hints)), element('td', String(row.questions)),
-        element('td', row.due === null ? '―' : String(row.due)));
-      body.append(line);
-    }
-    table.append(body);
-    chart.replaceChildren(table);
+    progressReport(learningTracker);
   }
 
   for (const id of ['catalog-search', 'catalog-color', 'catalog-level']) {

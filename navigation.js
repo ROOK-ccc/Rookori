@@ -29,8 +29,9 @@ function readSiteRoute(address, state) {
   if (Object.hasOwn(siteHeadings, path)) return { path };
   if (path === 'intro' || path === 'intro-summary') return { path };
   if (path === 'review') return { path };
-  if (path.startsWith('review-item/')) {
-    try { return { path, reviewId: decodeURIComponent(path.slice(12)) }; }
+  const review = /^(review|retry)-item\/(.+)$/.exec(path);
+  if (review) {
+    try { return { path, reviewId: decodeURIComponent(review[2]), retry: review[1] === 'retry' }; }
     catch { return { path: 'review' }; }
   }
   const practice = /^practice\/([a-z0-9-]+)\/([wb])$/.exec(path);

@@ -55,8 +55,8 @@ function renderQuestion() {
   byId('quiz-mode').textContent = openingQuiz ? 'オープニング診断' : modes[currentMode].name;
   byId('opening-quiz-intro').hidden = !openingQuiz || questionIndex !== 0;
   byId('question-number').textContent = `${questionIndex + 1} / ${questions.length} 問`;
-  byId('progress').max = questions.length;
-  byId('progress').value = questionIndex + 1;
+  byId('quiz-progress').max = questions.length;
+  byId('quiz-progress').value = questionIndex + 1;
   byId('question-title').textContent = question.prompt;
   byId('answers').replaceChildren(...question.choices.map((choice, index) => {
     const button = element('button', null, 'answer');
@@ -213,7 +213,8 @@ function renderSite() {
   }
 
   if (route.reviewId) {
-    const item = learningTracker.due().find(item => item.id === route.reviewId);
+    const item = route.retry ? learningTracker.item(route.reviewId)
+      : learningTracker.due().find(item => item.id === route.reviewId);
     if (item) openingMemoryScreen.open(findStudyOpening(item.variationId ?? item.openingId), item.color, item);
     else {
       openingMemoryScreen.review();

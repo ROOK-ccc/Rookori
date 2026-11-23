@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>問題作成エディター | ChessPath</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
+  <script src="vendor/chess.js" defer></script>
+  <script src="opening-study.js" defer></script>
+  <script src="intro-data.js" defer></script>
+  <script src="problem-data.js" defer></script>
+  <script src="course-problems.js" defer></script>
+  <script src="chess-board.js" defer></script>
+  <script src="editor.js" defer></script>
+</head>
+<body>
+  <header class="site-header"><div class="shell header-inner">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">♜</span>ChessPath<span class="brand-dot" aria-hidden="true">.</span></a>
+    <p>教材制作用</p>
+  </div></header>
+  <main class="shell editor">
+    <h1>問題作成エディター</h1>
+    <p>局面を作り、正解手と解説を登録します。保存した問題をJSONで書き出してバックアップできます。</p>
+    <details class="editor-card">
+      <summary>保存済みの問題・JSONを管理</summary>
+      <div class="editor-row">
+        <label>保存済みの問題<select id="saved-problems"></select></label>
+        <button class="button secondary" id="load-saved">開く</button>
+        <button class="text-button" id="delete-problem">削除</button>
+        <button class="button secondary" id="new-problem">新しい問題</button>
+      </div>
+      <div class="editor-row">
+        <label>既存の入門教材<select id="base-problems"></select></label>
+        <button class="button secondary" id="load-base">教材を編集</button>
+        <button class="text-button" id="duplicate-problem">作業中の問題を複製</button>
+      </div>
+      <div class="editor-row">
+        <label>JSONを読み込む<input id="import-problems" type="file" accept=".json,application/json"></label>
+      </div>
+      <p class="editor-note">同じIDの保存済み問題は、読み込んだ内容で更新されます。</p>
+    </details>
+    <div class="editor-grid">
+      <section class="editor-card" aria-labelledby="position-title">
+        <h2 id="position-title">1. 局面を作る</h2>
+        <p>置く駒を選んでマスを押します。「移動」では駒から移動先、「削除」では消したいマスを押します。</p>
+        <div class="editor-palette" id="piece-palette" role="group" aria-label="配置する駒"></div>
+        <div class="editor-row">
+          <button class="button secondary" id="position-move" aria-pressed="true">移動</button>
+          <button class="button secondary" id="position-remove" aria-pressed="false">削除</button>
+          <button class="text-button" id="position-flip">盤を回転する</button>
+        </div>
+        <div class="study-board editor-board" id="edit-board" role="group" aria-label="局面編集盤"></div>
+        <div class="editor-row">
+          <button class="text-button" id="position-empty">盤を空にする</button>
+          <button class="text-button" id="position-start">初期配置に戻す</button>
+        </div>
+        <div class="editor-fields" id="position-fields">
+          <label>手番<select id="position-turn"><option value="w">白</option><option value="b">黒</option></select></label>
+          <label>アンパッサン対象マス<select id="position-ep"></select></label>
+          <label>50手ルール用の手数<input id="position-halfmove" type="number" min="0" step="1" required></label>
+          <label>現在の手数<input id="position-fullmove" type="number" min="1" step="1" required></label>
+          <fieldset class="editor-wide">
+            <legend>キャスリング権</legend>
+            <label><input type="checkbox" data-castling="K">白のキング側</label>
+            <label><input type="checkbox" data-castling="Q">白のクイーン側</label>
+            <label><input type="checkbox" data-castling="k">黒のキング側</label>
+            <label><input type="checkbox" data-castling="q">黒のクイーン側</label>
+          </fieldset>
+        </div>
+        <label for="fen-input">FENを入力</label>
+        <input type="text" id="fen-input" spellcheck="false" autocomplete="off">
+        <button class="text-button" id="load-fen">FENから読み込む</button>
+        <label for="fen-output">現在のFEN</label>
+        <input type="text" id="fen-output" readonly>
+        <button class="text-button" id="copy-fen">FENをコピーする</button>
+        <p id="position-status" role="status"></p>
+      </section>
+      <section class="editor-card" aria-labelledby="details-title">
+        <h2 id="details-title">2. 問題文と解説</h2>
+        <form id="problem-form" class="editor-fields">
+          <label>問題ID<input name="id" readonly></label>
+          <label>タイトル<input name="title" required></label>
+          <label>章<select name="chapter"></select></label>
+          <label>難易度<select name="difficulty"></select></label>
+          <label>問題形式<select name="kind"></select></label>
+          <label>練習モード<select name="mode"><option value="standard">通常のチェス</option><option value="piece">指定の駒だけで練習</option></select></label>
+          <label id="practice-field" hidden>駒の開始マス<input name="practiceSquare" maxlength="2" placeholder="g1"></label>
+          <label>目的の確認<select name="goal"><option value="match">登録した手と照合</option><option value="mate">最後がチェックメイトか確認</option></select></label>
+          <label class="editor-wide">問題文<textarea name="prompt" required></textarea></label>
+          <label class="editor-wide">前置きの説明（任意）<textarea name="description"></textarea></label>
+          <label class="editor-wide">ヒント<textarea name="hint" required></textarea></label>
+          <label class="editor-wide">正解解説<textarea name="correct" required></textarea></label>
+          <label class="editor-wide">不正解解説<textarea name="incorrect" required></textarea></label>
+          <label class="editor-wide">タグ（読点で区切る）<input name="tags" placeholder="ナイト、フォーク"></label>
+        </form>
+      </section>
+    </div>
+    <section class="editor-card" aria-labelledby="answers-title">
+      <h2 id="answers-title">3. 正解手を登録</h2>
+      <p>局面を確認し、盤上で指してください。単手は1手ずつ、複数手の場合は自分・相手・自分の順で登録します。</p>
+      <button class="button secondary" id="start-route">盤で新しい正解を指す</button>
+      <ol id="registered-routes" class="editor-list"></ol>
+      <div id="route-builder" class="editor-grid" hidden>
+        <div class="study-board editor-board" id="answer-board" role="group" aria-label="正解手入力盤"></div>
+        <div>
+          <p id="route-turn"></p>
+          <p id="route-notation"></p>
+          <div class="editor-row">
+            <button class="text-button" id="undo-route">一手戻す</button>
+            <button class="button primary" id="commit-route">この手順を登録</button>
+            <button class="text-button" id="cancel-route">取り消す</button>
+          </div>
+        </div>
+      </div>
+      <p id="answer-status" role="status"></p>
+    </section>
+    <section class="editor-card" aria-labelledby="export-title">
+      <h2 id="export-title">4. 試す・保存する</h2>
+      <div class="editor-row">
+        <button class="button secondary" id="preview-problem">プレビュー</button>
+        <button class="button primary" id="save-problem">問題を保存</button>
+        <button class="text-button" id="export-one">この問題のJSON</button>
+        <button class="text-button" id="export-all">保存済みの一括JSON</button>
+        <button class="text-button" id="export-course">公開教材ファイルを書き出す</button>
+      </div>
+      <p class="editor-note">下書きはこのブラウザーに保存されます。別途JSONファイルでバックアップしてください。</p>
+      <p id="editor-edit-state"></p>
+      <p id="draft-status" role="status" class="editor-note"></p>
+      <p id="editor-export-state" role="status"></p>
+      <p class="editor-note">保存した問題を実際の教材に反映するには、公開教材ファイルを書き出し、ChessPathフォルダー内のcourse-problems.jsを置き換える必要があります。</p>
+      <ol id="editor-export-steps" hidden>
+        <li>ダウンロード先の course-problems.js を確認します。</li>
+        <li>ChessPathフォルダーにある同名ファイルをバックアップしてから、ダウンロードしたファイルで置き換えます。</li>
+        <li>index.htmlを開き直し、指定した章に問題が表示されることを確認します。</li>
+      </ol>
+      <p id="editor-status" role="status" tabindex="-1"></p>
+      <div id="practice-preview" class="editor-grid" hidden>
+        <div class="study-board editor-board" id="preview-board" role="group" aria-label="問題プレビュー盤"></div>
+        <section class="study-explanation">
+          <h3 id="preview-title"></h3>
+          <p id="preview-description"></p>
+          <p class="lesson-goal" id="preview-prompt"></p>
+          <p id="preview-turn"></p>
+          <p id="preview-feedback" role="status"></p>
+          <p id="preview-hint" class="lesson-hint" hidden></p>
+          <div class="editor-row">
+            <button class="text-button" id="preview-show-hint">ヒントを見る</button>
+            <button class="text-button" id="preview-undo">前の課題手に戻る</button>
+            <button class="text-button" id="preview-reset">最初からやり直す</button>
+          </div>
+        </section>
+      </div>
+    </section>
+      <dialog id="editor-promotion" class="promotion-dialog" aria-labelledby="editor-promotion-title">
+        <form method="dialog">
+          <h2 id="editor-promotion-title">どの駒に昇格しますか？</h2>
+          <div class="study-promotion-options">
+            <button class="button secondary" value="q" type="submit" autofocus>クイーン</button>
+            <button class="button secondary" value="r" type="submit">ルーク</button>
+            <button class="button secondary" value="b" type="submit">ビショップ</button>
+            <button class="button secondary" value="n" type="submit">ナイト</button>
+          </div>
+          <button class="text-button" value="" type="submit">キャンセル</button>
+        </form>
+      </dialog>
+  </main>
+  <footer class="site-footer"><div class="shell">ChessPath · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></div></footer>
+</body>
+</html>

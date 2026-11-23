@@ -20,6 +20,7 @@ class OpeningPractice {
     this.target = target;
     for (let ply = 0; target && ply < target.ply; ply++) this.study.advance();
     this.errors = [];
+    this.answerEvents = [];
     this.trained = 0;
     this.firstCorrect = 0;
     this.unassistedFirstCorrect = 0;
@@ -29,6 +30,7 @@ class OpeningPractice {
     this.total = target ? 1 : opening.moves.filter((_, ply) => (ply % 2 ? 'b' : 'w') === color).length;
     this.id = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
     this.date = new Date().toISOString();
+    this.activityAt = null;
   }
 
   get complete() { return this.target ? this.trained === 1 : this.study.complete; }
@@ -40,8 +42,16 @@ class OpeningPractice {
     return false;
   }
 
+  firstAnswer(ply, correct) {
+    if (this.missed) return;
+    const at = new Date().toISOString();
+    this.activityAt ??= at;
+    this.answerEvents.push({ ply, at, correct, hinted: Boolean(this.hintLevel) });
+  }
+
   wrong(move = null) {
     if (!this.learnerTurn) return;
+    this.firstAnswer(this.study.step, false);
     this.errors.push({ ply: this.study.step, expected: this.expected, played: move });
     this.missed = true;
   }
@@ -49,11 +59,13 @@ class OpeningPractice {
   play(from, to, promotion) {
     if (!this.learnerTurn) return false;
     const uci = from + to + (promotion ?? '');
+    const ply = this.study.step;
     const answers = this.target?.answers ?? [this.expected];
     if (!answers.includes(uci) || !this.study.play(from, to, promotion)) {
       this.wrong(uci);
       return false;
     }
+    this.firstAnswer(ply, true);
     this.trained++;
     if (!this.missed) {
       this.firstCorrect++;
@@ -66,6 +78,7 @@ class OpeningPractice {
 
   revealHint() {
     if (this.learnerTurn && this.hintLevel < 3) {
+      this.activityAt ??= new Date().toISOString();
       this.hintLevel++;
       this.hints++;
     }
@@ -78,6 +91,8 @@ class OpeningPractice {
       id, date, kind: this.target ? 'review' : 'practice', openingId: opening.parentId ?? opening.id, variationId: opening.parentId ? opening.id : null,
       lineId: opening.id + ':main-v1', color, trained, firstCorrect, unassistedFirstCorrect, hints, complete,
       mistakes: this.errors.length, errors: this.errors.map(error => ({ ...error })),
+      activityAt: this.activityAt,
+      answerEvents: this.answerEvents.map(answer => ({ ...answer })),
     };
   }
 }

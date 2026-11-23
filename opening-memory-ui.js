@@ -18,12 +18,13 @@ const openingMemoryScreen = (() => {
     hints: () => practice.hintLevel === 3 && practice.learnerTurn ? [practice.expected] : [],
     play(from, to, promotion) {
       const item = currentItem();
+      const firstTryCorrect = !practice.missed;
       const quality = practice.hintLevel ? 'hint' : practice.missed ? 'retry' : 'clean';
       if (!practice.play(from, to, promotion)) {
         incorrect();
         return false;
       }
-      learningTracker.observe(item, quality);
+      learningTracker.observe(item, quality, { firstTryCorrect });
       return true;
     },
     onMove() {
