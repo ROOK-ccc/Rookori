@@ -6,7 +6,7 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 
-test('公開用ビルドに学習レポートと自作問題が入り、エディターを含まない', t => {
+test('公開用ビルドに学習レポート・自作問題・対局復習が入り、エディターを含まない', t => {
   const scratch = mkdtempSync(join(tmpdir(), 'chesspath-publish-test-'));
   t.after(() => rmSync(scratch, { recursive: true, force: true }));
   for (const file of readdirSync(__dirname).filter(name => /\.(cjs|css|html|js)$/.test(name))) {
@@ -31,7 +31,11 @@ test('公開用ビルドに学習レポートと自作問題が入り、エデ�
   assert.equal(ids.length, new Set(ids).size, '画面内のIDは重複しない');
   assert.match(html, /src="learning-insights\.js"/);
   assert.match(html, /src="learning-progress-ui\.js"/);
+  for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css']) {
+    assert.ok(artifacts.includes(file));
+  }
   assert.ok(!artifacts.some(file => file.startsWith('editor.')));
+  assert.ok(!artifacts.some(file => file.endsWith('.test.cjs')));
   const pack = folder => runInNewContext(readFileSync(join(folder, 'course-problems.js'), 'utf8')
     + '\nJSON.stringify(publishedProblemPack)');
   assert.deepEqual(JSON.parse(pack(published)), JSON.parse(pack(__dirname)));

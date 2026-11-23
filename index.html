@@ -6,6 +6,7 @@
   <meta name="description" content="初めての一手から、もっと強くなるための学習まで。診断で自分に合う戦法を見つけ、チェス盤で学べます。">
   <title>ChessPath | チェスの旅を、共に。</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="game-review.css">
   <script src="data.js" defer></script>
   <script src="scoring.js" defer></script>
   <script src="card-data.js" defer></script>
@@ -32,6 +33,9 @@
   <script src="learning-insights.js" defer></script>
   <script src="learning-progress-ui.js" defer></script>
   <script src="learning-ui.js" defer></script>
+  <script src="game-review.js" defer></script>
+  <script src="game-library.js" defer></script>
+  <script src="game-review-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
 <body>
@@ -58,6 +62,11 @@
           <a href="#dashboard"><span aria-hidden="true">☀</span>今日の学習</a>
           <a href="#review"><span aria-hidden="true">↻</span>今日の復習</a>
           <a href="#progress"><span aria-hidden="true">▥</span>上達記録</a>
+        </section>
+        <section class="menu-group">
+          <h3>対局</h3>
+          <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
+          <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
         </section>
         <section class="menu-group">
           <h3>チェスを学ぶ</h3>
@@ -121,6 +130,11 @@
             <span aria-hidden="true">→</span>
           </a>
         </div>
+      </section>
+      <section class="home-section" aria-labelledby="home-game-review-title">
+        <h2 id="home-game-review-title">対局を振り返る</h2>
+        <p>自分が指した手を盤に並べて、気になった場面をもう一度考えてみましょう。</p>
+        <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a></div>
       </section>
       <section class="home-section home-diagnostics" aria-labelledby="diagnostics-title">
         <h2 id="diagnostics-title">診断から始める</h2>
@@ -201,6 +215,7 @@
         <li>
           <h2>学習の記録は準備中</h2>
           <p>練習した戦法や気づきを記録できるチェス日記帳は、今後追加予定です。</p>
+          <a class="button secondary" href="#game-review">対局を振り返る</a>
         </li>
         <li>
           <h2>次の学習へ</h2>
@@ -516,8 +531,132 @@
       <div id="review-list"></div>
       <a class="button secondary" href="#openings">戦法一覧を見る</a>
     </section>
+    <section id="game-review" class="screen inner-screen guide-screen game-page" hidden>
+      <nav class="study-navigation" aria-label="対局のメニュー">
+        <a class="text-button" href="#game-library">対局履歴を見る</a>
+      </nav>
+      <h1 id="game-review-title" tabindex="-1">対局を振り返る</h1>
+      <p>指した手を盤に並べて、気になったところをもう一度考えてみましょう。</p>
+      <div class="study-complete">
+        <h2>サンプル対局で試す</h2>
+        <p>棋譜を持っていなくても、短い対局で盤の動かし方やメモの残し方を試せます。</p>
+        <div class="study-complete-actions"><a class="button primary" href="#game-review/sample">サンプル対局を開く</a></div>
+      </div>
+      <form id="game-import-form" class="game-card">
+        <h2>自分の対局を開く</h2>
+        <p>棋譜（対局で指した手の記録）を貼り付けるか、棋譜ファイルを選んでください。</p>
+        <details>
+          <summary>棋譜はどこで見つかる？</summary>
+          <p>対局したサイトやアプリで対局の詳細を開き、「棋譜をコピー」や「PGNをダウンロード」を探します。PGNは対局の手順を記録したテキスト形式です。</p>
+        </details>
+        <label for="game-pgn">棋譜を貼り付ける</label>
+        <textarea id="game-pgn" rows="5" spellcheck="false"></textarea>
+        <div class="study-actions">
+          <button class="button primary" id="game-load-pgn" type="submit">貼り付けた棋譜を開く</button>
+          <label class="button secondary game-file-label" for="game-pgn-file">棋譜ファイルを選ぶ<span class="game-file-extension">（.pgn）</span></label>
+          <input class="game-file-input" id="game-pgn-file" type="file" accept=".pgn,application/x-chess-pgn">
+        </div>
+        <p id="game-import-error" class="game-error" role="alert"></p>
+        <div id="game-import-choice" hidden>
+          <label for="game-import-select">振り返る対局を選ぶ</label>
+          <select id="game-import-select"></select>
+          <button class="button primary" id="game-open-choice" type="button">選んだ対局を開く</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="game-player" class="screen inner-screen game-player" hidden>
+      <nav class="study-navigation" aria-label="対局のメニュー">
+        <a class="text-button" href="#game-review">棋譜の取り込みへ</a>
+        <a class="text-button" href="#game-library">対局履歴を見る</a>
+      </nav>
+      <h1 id="game-player-title" tabindex="-1">対局を振り返る</h1>
+      <p id="game-player-status" role="status" class="game-status"></p>
+      <div id="game-player-content" hidden>
+        <p id="game-player-summary" class="game-summary"></p>
+        <div class="study-layout">
+          <div class="study-board-area">
+            <div class="study-board-bar">
+              <p id="game-turn" class="study-turn"></p>
+              <button class="text-button" id="game-flip" type="button">黒を手前にする</button>
+            </div>
+            <div id="game-board" class="study-board" aria-label="対局のチェス盤" role="group"></div>
+            <div class="game-move-controls" role="group" aria-label="盤面を進める・戻る">
+              <button class="button secondary" id="game-first" type="button">最初</button>
+              <button class="button secondary" id="game-prev" type="button">1手戻る</button>
+              <button class="button primary" id="game-next" type="button">1手進む</button>
+              <button class="button secondary" id="game-last" type="button">最後</button>
+            </div>
+            <p class="study-count" id="game-counter" aria-live="polite"></p>
+            <div class="study-actions">
+              <button class="button secondary" id="game-save" type="button">対局を履歴に保存</button>
+              <button class="text-button" id="game-download" type="button" hidden>棋譜を書き出す（PGN）</button>
+            </div>
+          </div>
+          <div class="game-side">
+            <section class="game-card" aria-labelledby="game-moves-title">
+              <h2 id="game-moves-title">指した手</h2>
+              <p>手を選ぶと、その直後の盤面に移動します。</p>
+              <ol class="game-moves" id="game-moves"></ol>
+              <details>
+                <summary>詳しい対局情報</summary>
+                <dl id="game-metadata" class="game-metadata"></dl>
+                <p>現在の駒の配置や手番を文字で表したもの（FEN）</p>
+                <output id="game-fen" class="game-fen"></output>
+              </details>
+            </section>
+            <section class="game-card" aria-labelledby="game-note-title">
+              <h2 id="game-note-title">気になった局面を保存する</h2>
+              <p id="game-note-position"></p>
+              <form id="game-note-form">
+                <label for="game-note">この局面のメモ（任意）</label>
+                <textarea id="game-note" rows="3" maxlength="4000" placeholder="このとき何を考えた？ 次はどんな手を試したい？"></textarea>
+                <p>同じ局面にはメモを1つ保存できます。</p>
+                <div class="study-actions">
+                  <button class="button primary" id="game-save-note" type="submit">この局面を保存</button>
+                  <button class="text-button" id="game-delete-note" type="button" hidden>この局面のメモを削除</button>
+                </div>
+              </form>
+              <p id="game-note-status" class="game-status" role="status"></p>
+              <h3>保存した振り返りポイント</h3>
+              <ul class="game-notes" id="game-notes"></ul>
+            </section>
+            <section class="study-complete" aria-labelledby="game-next-learning-title">
+              <h2 id="game-next-learning-title">次の学習</h2>
+              <p id="game-next-learning"></p>
+              <div class="study-complete-actions">
+                <a class="button primary" id="game-learning-link" href="#intro">序盤の基本を学ぶ</a>
+                <a class="text-button" href="#intro">駒の動きやルールを確認</a>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="game-library" class="screen inner-screen guide-screen game-page" hidden>
+      <nav class="study-navigation" aria-label="対局のメニュー"><a class="text-button" href="#game-review">対局を振り返る</a></nav>
+      <h1 id="game-library-title" tabindex="-1">対局履歴</h1>
+      <p>保存した対局とメモは、同じブラウザーで開き直せます。</p>
+      <label for="game-search">対局名・対局者・メモで検索</label>
+      <input type="search" id="game-search">
+      <p class="game-status" id="game-library-status" role="status"></p>
+      <ul class="game-history" id="game-history"></ul>
+      <details class="game-card">
+        <summary>対局とメモのバックアップ</summary>
+        <p>保存済みの対局とメモをまとめてファイルにできます。復元すると、現在の対局履歴がファイルの内容に置き換わります。</p>
+        <div class="study-actions">
+          <button class="button secondary" id="game-export-library" type="button">バックアップを保存</button>
+          <label class="button secondary game-file-label" for="game-restore-library">ファイルから復元</label>
+          <input class="game-file-input" type="file" id="game-restore-library" accept=".json,application/json">
+        </div>
+        <p class="game-status" id="game-backup-status" role="status"></p>
+      </details>
+    </section>
+
     <section id="dashboard" class="screen inner-screen guide-screen" hidden>
       <h1 id="dashboard-title" tabindex="-1">今日の学習</h1>
+      <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a></div>
       <section class="dashboard-priority" id="dashboard-review"></section>
       <div id="dashboard-plan"></div>
       <div id="dashboard-progress"></div>

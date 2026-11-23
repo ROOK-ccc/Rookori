@@ -8,6 +8,7 @@ const siteHeadings = {
   mode: 'mode-title',
   error: 'error-title', dashboard: 'dashboard-title', daily: 'daily-title',
   progress: 'progress-title', backup: 'backup-title', about: 'about-title', memorize: 'openings-title',
+  'game-review': 'game-review-title', 'game-library': 'game-library-title',
 };
 
 const quizModes = {
@@ -29,6 +30,8 @@ function readSiteRoute(address, state) {
   if (Object.hasOwn(siteHeadings, path)) return { path };
   if (path === 'intro' || path === 'intro-summary') return { path };
   if (path === 'review') return { path };
+  const game = /^game-review\/(sample|preview|[a-f0-9]{32})$/.exec(path);
+  if (game) return { path, game: game[1], gamePly: entry.gamePly, gamePreviewId: entry.gamePreviewId };
   const review = /^(review|retry)-item\/(.+)$/.exec(path);
   if (review) {
     try { return { path, reviewId: decodeURIComponent(review[2]), retry: review[1] === 'retry' }; }

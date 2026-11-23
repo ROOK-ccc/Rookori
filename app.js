@@ -212,7 +212,9 @@ function renderSite() {
     else link.removeAttribute('aria-current');
   }
 
-  if (route.reviewId) {
+  if (route.game || path === 'game-review' || path === 'game-library') {
+    gameReviewPages.open(route);
+  } else if (route.reviewId) {
     const item = route.retry ? learningTracker.item(route.reviewId)
       : learningTracker.due().find(item => item.id === route.reviewId);
     if (item) openingMemoryScreen.open(findStudyOpening(item.variationId ?? item.openingId), item.color, item);
