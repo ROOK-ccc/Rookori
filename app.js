@@ -81,6 +81,7 @@ function resultDetail(title, text, className) {
 }
 
 function renderResult(code, mode, fromLink = false) {
+  if (!fromLink && !migrationRead(savedTypeResultKey)) rememberDiagnosis(savedTypeResultKey, { code, mode });
   const type = types[code];
   byId('result-mode').textContent = modes[mode].name;
   byId('result-code').textContent = code;
@@ -115,6 +116,7 @@ function renderResult(code, mode, fromLink = false) {
 }
 
 function renderOpeningResult(resultAnswers, studyId) {
+  if (!migrationRead(savedOpeningResultKey)) rememberDiagnosis(savedOpeningResultKey, resultAnswers);
   lastOpeningAnswers = resultAnswers;
   const ratingLabel = (value) => ['低', '低', '中', '中', '高'][value - 1];
   byId('opening-results').replaceChildren(...scoreOpenings(resultAnswers).map(({ candidate, reason }) => {
@@ -195,6 +197,7 @@ function showWithReturnFocus(screen, heading, buttonId) {
 }
 
 function renderSite() {
+  updateMigrationLink();
   const previous = displayedRoute;
   const route = readSiteRoute(location.href, history.state);
   const { path } = route;
@@ -344,10 +347,12 @@ byId('previous').addEventListener('click', () => {
 byId('next').addEventListener('click', () => {
   if (questionIndex === questions.length - 1) {
     if (currentMode === 'opening') {
+      rememberDiagnosis(savedOpeningResultKey, answers);
       goTo('opening-result', { openingAnswers: answers });
       return;
     }
     const code = scoreAnswers(questions, answers);
+    rememberDiagnosis(savedTypeResultKey, { code, mode: currentMode });
     goTo('result', { code, mode: currentMode });
     return;
   }

@@ -16,6 +16,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   }
   for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
   const configFile = join(scratch, 'site-config.json');
+  copyFileSync(join(__dirname, 'site-config.cloudflare.json'), join(scratch, 'site-config.cloudflare.json'));
   writeFileSync(configFile, JSON.stringify({ ...siteConfig, googleSearchVerification: '', ga4MeasurementId: '' }));
   // Keep an earlier build in place to verify that CI receives the new directory.
   const manualResult = execFileSync(process.execPath, ['publish.cjs'], { cwd: scratch, encoding: 'utf8' });
@@ -28,11 +29,12 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.1\.1/);
+  assert.match(html, /Rookori v4\.2\.1/);
   assert.match(html, /id="external-title"/);
   assert.match(html, /id="lichess-form"[^>]*data-browser-api-approved="false"[^>]*\bhidden\b/);
   assert.match(html, /id="lichess-api-paused"/);
   assert.match(html, /Rookori プライバシーポリシー/);
+  assert.doesNotMatch(html, /www\.cloudflare\.com\/privacypolicy/);
   assert.match(html, /rel="icon"[^>]*href="brand\/rookori\.png"/);
   const site = new URL(siteConfig.siteUrl);
   assert.ok(html.includes(`rel="canonical" href="${site}"`));
@@ -101,4 +103,22 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.ok(head.includes('name="rookori-ga4-measurement-id" content="G-TEST000000"'));
   assert.ok(head.includes('rel="canonical" href="https://example.test/preview/"'));
   assert.ok(head.includes('property="og:image" content="https://example.test/preview/brand/rookori-share.jpg"'));
+
+  const cloudflareBuild = target => execFileSync(process.execPath, ['publish.cjs', '--target', target, '--print-output'], {
+    cwd: scratch, encoding: 'utf8',
+  }).trim();
+  const preview = cloudflareBuild('cloudflare-preview');
+  const previewHtml = readFileSync(join(preview, 'index.html'), 'utf8');
+  assert.match(previewHtml, /name="robots" content="noindex"/);
+  assert.match(previewHtml, /www\.cloudflare\.com\/privacypolicy/);
+  assert.match(previewHtml, /rel="canonical" href="https:\/\/example\.test\/preview\/"/);
+  assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id/);
+  assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
+  assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\*\.nnue\n  Content-Type: application\/octet-stream/);
+  assert.match(readFileSync(join(preview, '_redirects'), 'utf8'), /^\/Rookori\/ \/ 301/m);
+  assert.equal(cloudflareBuild('cloudflare-live'), preview);
+  assert.doesNotMatch(readFileSync(join(preview, '_headers'), 'utf8'), /noindex/);
+  assert.match(readFileSync(join(preview, 'sitemap.xml'), 'utf8'), /<loc>https:\/\/rookori\.com\/<\/loc>/);
+  assert.match(readFileSync(join(preview, 'index.html'), 'utf8'), /rel="canonical" href="https:\/\/rookori\.com\/"/);
+  assert.ok(!readdirSync(preview).includes('wrangler.jsonc'));
 });

@@ -170,5 +170,29 @@ function createStudyStore() {
   return {
     get: key => access('readonly', store => store.get(key)),
     put: (key, record) => access('readwrite', store => store.put(record, key)),
+    all: () => {
+      const rows = [];
+      return access('readonly', store => {
+        const cursor = store.openCursor();
+        cursor.onsuccess = () => {
+          if (!cursor.result) return;
+          rows.push([cursor.result.key, cursor.result.value]);
+          cursor.result.continue();
+        };
+      }).then(() => rows);
+    },
+    merge: rows => {
+      let added = 0;
+      return access('readwrite', store => {
+        for (const [key, record] of rows) {
+          const current = store.getKey(key);
+          current.onsuccess = () => {
+            if (current.result !== undefined) return;
+            store.add(record, key);
+            added++;
+          };
+        }
+      }).then(() => added);
+    },
   };
 }

@@ -1,0 +1,6 @@
+/chesspath-public-*/
+/.rookori-cloudflare-assets/
+/.wrangler/
+/node_modules/
+/.dev.vars*
+/.env*

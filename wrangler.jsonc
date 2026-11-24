@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "rookori-preview",
+  "compatibility_date": "2026-11-24",
+  "assets": {
+    "directory": "./.rookori-cloudflare-assets",
+    "not_found_handling": "none"
+  },
+  "observability": { "enabled": false },
+  "env": {
+    "production": {
+      "name": "rookori",
+      "workers_dev": false,
+      "preview_urls": false,
+      "assets": { "directory": "./.rookori-cloudflare-assets", "not_found_handling": "none" },
+      "routes": [{ "pattern": "rookori.com", "custom_domain": true }],
+      "observability": { "enabled": false }
+    }
+  }
+}

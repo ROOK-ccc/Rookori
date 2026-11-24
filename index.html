@@ -62,6 +62,7 @@
   <script src="game-study-ui.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
+  <script src="migration.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
 <body>
@@ -122,6 +123,10 @@
       <button class="button secondary" type="button" data-analytics-choice="granted">同意する</button>
       <button class="button secondary" type="button" data-analytics-choice="denied">同意しない</button>
     </div>
+  </aside>
+  <aside class="shell analytics-notice" id="site-migration-notice" aria-label="公開URLの変更" hidden>
+    <p>Rookoriは新しいURLに移転しました。このブラウザーの学習記録を使う方は、先に<a href="#backup">一括バックアップ</a>を保存してください。</p>
+    <a class="button secondary" id="site-migration-link" href="https://rookori.com/" rel="noreferrer">新しいRookoriを開く</a>
   </aside>
   <main class="shell" id="main">
     <section id="home" class="screen">
@@ -1080,6 +1085,23 @@
     <section id="backup" class="screen inner-screen guide-screen" hidden>
       <h1 id="backup-title" tabindex="-1">学習データのバックアップ</h1>
       <p class="guide-intro">学習データは現在のブラウザーに保存され、別の端末には自動で同期されません。端末を変えるときはJSONを保存して、移動先で復元できます。</p>
+      <section class="opening-card" aria-labelledby="migration-title">
+        <h2 id="migration-title">新しいサイト・端末へデータを移す</h2>
+        <p>学習記録、保存済みの診断結果、対局・メモ、中断した対局、解析・検討、設定をまとめて保存します。ファイルはこの端末で読み書きします。アクセス解析への同意は移行先で選べます。</p>
+        <p>移行先で学習や対局を始める前に復元してください。移行先ですでに保存した項目や同じ対局がある場合は、その記録を優先します。</p>
+        <div class="study-mode-links">
+          <button class="button primary" id="migration-export" type="button">一括バックアップをダウンロード</button>
+          <label>一括バックアップを選ぶ <input id="migration-file" type="file" accept=".json,application/json"></label>
+          <button class="button primary" id="migration-restore" type="button" hidden>既存データを残して追加する</button>
+          <button class="button secondary" id="migration-refresh" type="button" hidden>再読み込みして反映する</button>
+        </div>
+        <p id="migration-status" role="status"></p>
+        <div class="study-mode-links">
+          <button class="text-button" id="migration-type-result" type="button" hidden>保存した16タイプ診断結果を見る</button>
+          <button class="text-button" id="migration-opening-result" type="button" hidden>保存したオープニング診断結果を見る</button>
+        </div>
+      </section>
+      <h2>従来の学習バックアップ</h2>
       <div class="study-mode-links"><button class="button primary" id="backup-export" type="button">JSONをダウンロード</button>
         <label>バックアップJSONを選ぶ <input type="file" id="backup-import" accept=".json,application/json"></label></div>
       <p id="backup-status" role="status"></p>
@@ -1147,12 +1169,14 @@
       <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>
       <p class="guide-intro">Rookori プライバシーポリシー</p>
       <p>改訂日 <time datetime="2026-11-24">2026年11月24日</time></p>
+      <!-- CLOUDFLARE_PRIVACY -->
       <h2>Lichessの公開棋譜と外部通信</h2>
       <p>公開対局を復習するための直接取得機能は、利用条件の確認のため休止中です。直接取得を利用できる場合、取得ボタンを押すと、入力したユーザー名と取得件数・対局形式がブラウザーからLichessの公式APIに送られます。送信先には通信に伴いIPアドレスやブラウザー情報も伝わります。</p>
       <p>対象は終了した通常ルールの公開対局です。棋譜、対局ID、日時、結果、両プレイヤーの公開ユーザー名・レーティング、持ち時間、オープニングなどを復習に使います。RookoriではLichessへのログインや本人確認を行わず、パスワードやメールアドレスは求めません。手動で取り込んだ棋譜は、このブラウザー内で読み取ります。</p>
       <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
       <h2>このブラウザーに保存される情報と削除方法</h2>
-      <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。Stockfishによる解析もブラウザー内で実行します。Rookoriのサーバーへのアップロードや、端末間の同期は行いません。</p>
+      <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。オープニング診断は、結果の再表示に必要な選択肢番号を端末に保存します。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
+      <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。ファイルには棋譜やメモ、診断記録も含まれるため、ご自身で管理してください。</p>
       <ul>
         <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
         <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
@@ -1171,7 +1195,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.1.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.2.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

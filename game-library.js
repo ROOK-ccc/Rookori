@@ -165,5 +165,25 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
         for (const game of games) store.add(game);
       });
     },
+    merge(games) {
+      return access('readwrite', (store, read, result) => {
+        read(store.getAll(), existing => {
+          const ids = new Set(existing.map(game => game.id));
+          const pgns = new Set(existing.map(game => game.pgn));
+          const lichess = new Set(existing.map(game => lichessPgnId(game.pgn)).filter(Boolean));
+          let added = 0;
+          for (const game of games) {
+            const external = lichessPgnId(game.pgn);
+            if (ids.has(game.id) || pgns.has(game.pgn) || (external && lichess.has(external))) continue;
+            store.add(game);
+            ids.add(game.id);
+            pgns.add(game.pgn);
+            if (external) lichess.add(external);
+            added++;
+          }
+          result(added);
+        });
+      });
+    },
   };
 }
