@@ -20,6 +20,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="game-review.css">
+  <link rel="stylesheet" href="game-study.css">
   <link rel="stylesheet" href="cpu-game.css">
   <script src="data.js" defer></script>
   <script src="scoring.js" defer></script>
@@ -54,9 +55,11 @@
   <script src="game-review.js" defer></script>
   <script src="opening-classification.js" defer></script>
   <script src="game-library.js" defer></script>
+  <script src="game-study.js" defer></script>
   <script src="lichess-api.js" defer></script>
   <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
+  <script src="game-study-ui.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
@@ -588,7 +591,7 @@
           <fieldset><legend>コンピューターの難易度</legend><div id="cpu-levels" class="cpu-choices cpu-levels"></div></fieldset>
           <div class="cpu-setup-row">
             <label for="cpu-color">自分の駒の色
-              <select id="cpu-color" name="color"><option value="random">ランダム</option><option value="w">白番（先手）</option><option value="b">黒番（後手）</option></select>
+              <select id="cpu-color" name="color"><option id="cpu-choose-color" value="" disabled hidden>色を選ぶ</option><option value="random">ランダム</option><option value="w">白番</option><option value="b">黒番</option></select>
             </label>
             <label for="cpu-time">持ち時間 <select id="cpu-time" name="time" aria-describedby="cpu-time-help"><option value="unlimited">時間無制限</option></select></label>
           </div>
@@ -598,6 +601,13 @@
             <label for="cpu-seconds">1手ごとの加算（0〜60秒）<input id="cpu-seconds" name="seconds" inputmode="numeric" value="0"></label>
           </div>
           <p id="cpu-summary"></p>
+          <p id="cpu-start-position" hidden></p>
+          <details id="cpu-start-preview" hidden>
+            <summary>開始局面の盤面を確認</summary>
+            <div id="cpu-start-board"></div>
+            <p data-chess-terms>盤面の記録（FEN）</p>
+            <output id="cpu-start-fen" class="game-fen"></output>
+          </details>
           <fieldset class="cpu-display-settings">
             <legend>盤の横に表示する情報</legend>
             <label><input type="checkbox" id="cpu-show-captures"> 取った駒</label>
@@ -644,6 +654,7 @@
                 <button class="button secondary" id="cpu-continue" type="button" hidden>時間無制限で続きを指す</button>
                 <button class="button secondary" id="cpu-rematch" type="button">同じ設定でもう一局</button>
                 <button class="button secondary" id="cpu-change" type="button">対局設定を変更</button>
+                <button class="text-button" id="cpu-origin-return" type="button" hidden>元の対局に戻る</button>
                 <a class="text-button" href="#home">ホームに戻る</a>
               </div>
             </section>
@@ -730,6 +741,7 @@
         <a class="text-button" href="#game-library">対局履歴を見る</a>
       </nav>
       <h1 id="game-player-title" tabindex="-1">対局を振り返る</h1>
+      <button class="text-button" id="game-origin" type="button" hidden>元の対局に戻る</button>
       <p id="game-player-status" role="status" class="game-status"></p>
       <div id="game-player-content" hidden>
         <p id="game-player-summary" class="game-summary"></p>
@@ -740,6 +752,7 @@
               <button class="text-button" id="game-flip" type="button">黒を手前にする</button>
             </div>
             <div id="game-board" class="study-board" aria-label="対局のチェス盤" role="group"></div>
+            <meter id="game-study-advantage" min="0" max="1000" value="500" aria-label="白側から見た局面評価" hidden></meter>
             <div class="game-move-controls" role="group" aria-label="盤面を進める・戻る">
               <button class="button secondary" id="game-first" type="button">最初</button>
               <button class="button secondary" id="game-prev" type="button">1手戻る</button>
@@ -747,12 +760,69 @@
               <button class="button secondary" id="game-last" type="button">最後</button>
             </div>
             <p class="study-count" id="game-counter" aria-live="polite"></p>
+            <p id="game-study-board-feedback" class="game-status" role="status"></p>
+            <div class="study-mode-links">
+              <button class="button primary" id="game-study-fork" type="button">別の手を試す</button>
+              <button class="button secondary" id="game-study-cpu" type="button">この局面からCPUと対戦する</button>
+            </div>
+            <div class="game-card study-branch-controls">
+              <label for="game-study-variations">保存した変化</label>
+              <select id="game-study-variations" disabled></select>
+              <div id="game-study-branch-panel" hidden>
+                <h2>自由検討中</h2>
+                <p>白・黒のどちらも指せます。元の対局はそのまま残ります。</p>
+                <div class="study-mode-links">
+                  <button class="text-button" id="game-study-branch-root" type="button">分岐元に戻る</button>
+                  <button class="text-button" id="game-study-return" type="button">本譜へ戻る</button>
+                </div>
+                <ol class="study-branch-moves" id="game-study-branch-moves" aria-label="変化の着手"></ol>
+                <p id="game-study-compare"></p>
+                <label for="game-study-branch-name">変化の名前</label>
+                <input id="game-study-branch-name" type="text" maxlength="80" placeholder="例　先にキャスリングを試す">
+                <div class="study-mode-links">
+                  <button class="button secondary" id="game-study-branch-save" type="button">変化を保存する</button>
+                  <button class="text-button" id="game-study-branch-delete" type="button">保存した変化を削除</button>
+                </div>
+              </div>
+            </div>
             <div class="study-actions">
               <button class="button secondary" id="game-save" type="button">対局を履歴に保存</button>
               <button class="text-button" id="game-download" type="button" hidden>棋譜を書き出す（PGN）</button>
             </div>
           </div>
           <div class="game-side">
+            <section class="game-card" aria-labelledby="game-study-analysis-title">
+              <h2 id="game-study-analysis-title">Stockfishで振り返る</h2>
+              <p id="game-study-assessment">この局面は未解析</p>
+              <p id="game-study-your-color"></p>
+              <p id="game-study-grade"></p>
+              <div class="study-mode-links">
+                <button class="button secondary" id="game-study-position" type="button">現在の局面を解析する</button>
+                <button class="button secondary" id="game-study-stop" type="button" disabled>解析を停止する</button>
+              </div>
+              <label for="game-study-analysis-mode">対局全体の解析方法</label>
+              <select id="game-study-analysis-mode"><option value="analysis-quick">クイック解析</option><option value="analysis-detail">詳細解析（時間がかかります）</option></select>
+              <button class="button secondary" id="game-study-batch" type="button">この対局を解析する</button>
+              <p class="game-status" id="game-study-status" role="status"></p>
+              <p class="game-status" id="game-study-storage" role="status"></p>
+              <details>
+                <summary>評価値と候補手の詳細</summary>
+                <p>白に有利なほどプラスです。Mはメイトまでの手数です。駒の配置や戦術も含めた目安で、勝敗は指し手によって変わります。</p>
+                <label for="game-study-candidates">局面解析の候補数</label>
+                <select id="game-study-candidates"><option value="1">1候補</option><option value="2">2候補</option><option value="3" selected>3候補</option><option value="5">5候補</option></select>
+                <label><input id="game-study-auto" type="checkbox"> 局面を変えたら自動で解析する</label>
+                <ol id="game-study-lines"></ol>
+                <p id="game-study-depth"></p>
+                <div id="game-study-results" hidden>
+                  <h3>評価値グラフ</h3>
+                  <p>上は白、下は黒が有利です。点のない箇所は未解析です。±5を超える評価やメイトはグラフの端に表示します。</p>
+                  <canvas id="game-study-graph" width="560" height="150" aria-label="評価値グラフ。下のスライダーで局面を選べます。"></canvas>
+                  <label for="game-study-graph-position">グラフの局面</label>
+                  <input id="game-study-graph-position" type="range" min="0" step="1" value="0">
+                  <p id="game-study-source-conditions"></p>
+                </div>
+              </details>
+            </section>
             <section class="game-card game-opening" aria-labelledby="game-opening-title">
               <h2 id="game-opening-title" data-chess-terms>棋譜のオープニング</h2>
               <p id="game-opening-name"></p>
@@ -775,7 +845,7 @@
                 <output id="game-fen" class="game-fen"></output>
               </details>
             </section>
-            <section class="game-card" aria-labelledby="game-note-title">
+            <section class="game-card" id="game-note-section" aria-labelledby="game-note-title">
               <h2 id="game-note-title">気になった局面を保存する</h2>
               <p id="game-note-position"></p>
               <form id="game-note-form">
@@ -801,6 +871,23 @@
             </section>
           </div>
         </div>
+        <section class="game-card study-highlights-section" id="game-study-highlights-section" aria-labelledby="game-study-highlights-title" hidden>
+          <h2 id="game-study-highlights-title">対局のハイライト</h2>
+          <p id="game-study-overview"></p>
+          <ul id="game-study-highlights" class="game-history"></ul>
+        </section>
+        <dialog id="game-study-promotion" class="promotion-dialog" aria-labelledby="game-study-promotion-title">
+          <form method="dialog">
+            <h2 id="game-study-promotion-title">どの駒に昇格しますか？</h2>
+            <div class="study-promotion-options">
+              <button class="button secondary" value="q" autofocus>クイーン</button>
+              <button class="button secondary" value="r">ルーク</button>
+              <button class="button secondary" value="b">ビショップ</button>
+              <button class="button secondary" value="n">ナイト</button>
+            </div>
+            <button class="text-button" value="">キャンセル</button>
+          </form>
+        </dialog>
       </div>
     </section>
 
@@ -1005,7 +1092,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.0.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.1.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

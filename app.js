@@ -206,6 +206,7 @@ function renderSite() {
   if (previous?.lesson) introScreen.close();
   if (previous?.path === 'cpu' && path !== 'cpu') cpuPage.close();
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
+  if (previous?.game && previous.path !== path) gameReviewPages.close();
 
   let menuPath = 'learn';
   if (path === 'home') menuPath = 'home';
@@ -228,7 +229,7 @@ function renderSite() {
         const { cpuReplay, ...entry } = history.state;
         history.replaceState(entry, '');
       }
-      cpuPage.open(route.cpuReplay);
+      cpuPage.open(route.cpuReplay, route.cpuPosition);
     }
   } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);

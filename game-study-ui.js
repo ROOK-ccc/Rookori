@@ -1,0 +1,451 @@
+function studyMiniature(fen) {
+  const board = element('div', null, 'study-mini-board');
+  board.setAttribute('aria-hidden', 'true');
+  const cells = new chessRules.Chess(fen).board().flat();
+  for (const [i, piece] of cells.entries()) {
+    const square = element('span', null, (i % 2 + Math.floor(i / 8)) % 2 ? 'study-mini-dark' : '');
+    if (piece) {
+      const img = element('img');
+      img.src = `pieces/cburnett/${piece.color}${piece.type.toUpperCase()}.svg`;
+      img.alt = '';
+      square.append(img);
+    }
+    board.append(square);
+  }
+  return board;
+}
+
+function createGameStudyUI({ current, goToPly, repaint }) {
+  const el = name => byId('game-study-' + name);
+  const store = createStudyStore();
+  const memory = new Map();
+  let view, record, key, branch, job, debounce, cachedPosition;
+  let write = Promise.resolve();
+  let loading = false;
+
+  function button(text, onClick, classes = 'text-button') {
+    const node = element('button', text, classes);
+    node.type = 'button';
+    node.addEventListener('click', onClick);
+    return node;
+  }
+
+  function note(text) { el('status').textContent = text; }
+  function outputPosition() {
+    cachedPosition ??= studyPosition(view.game, view.position.ply, branch ? branch.moves.slice(0, branch.step) : []);
+    return cachedPosition;
+  }
+  function sourceColor(game) {
+    return game.cpu?.player ?? (game.source?.color === 'white' ? 'w' : game.source?.color === 'black' ? 'b' : null);
+  }
+  function positionKey() {
+    return view.position.ply + ':' + (branch?.moves.slice(0, branch.step).join(' ') ?? '');
+  }
+
+  function activeScore() {
+    return record?.single[positionKey()]?.value ?? (!branch?.step ? record?.scores[view.position.ply] : null);
+  }
+  function canStartCpu() {
+    if (!view || (!branch?.step && view.position.ply === view.game.positions.length - 1
+      && ['1-0', '0-1', '1/2-1/2'].includes(view.game.metadata.result))) return false;
+    return !outputPosition().ended;
+  }
+  function startCpu() {
+    if (!canStartCpu()) return;
+    const { game, fen, moves } = outputPosition();
+    goTo('cpu', { cpuPosition: { fen: game.fen(), initialFen: fen, moves, gameId: view.game.id ?? null,
+      ply: view.position.ply, color: sourceColor(view.game) } });
+  }
+
+  function persist() {
+    if (!key) return;
+    const snapshot = structuredClone({ ...record, gameId: view.game.id ?? null });
+    const savedKey = key;
+    const owner = view;
+    memory.set(savedKey, snapshot);
+    write = write.catch(() => {}).then(() => store.put(savedKey, snapshot)).catch(() => {
+      if (view === owner) el('storage').textContent = 'このブラウザーに解析や変化を保存できませんでした。このタブ内では利用できます。';
+    });
+  }
+
+  function stop(message) {
+    clearTimeout(debounce);
+    if (!job) return;
+    const running = job;
+    job = null;
+    running.engine.close();
+    if (running.mode === 'batch') persist();
+    if (message) note(message);
+  }
+
+  function close() {
+    stop();
+    view = record = key = branch = cachedPosition = null;
+    loading = false;
+  }
+
+  async function open(next) {
+    close();
+    view = next;
+    record = { scores: [], single: {}, variations: [], version: null, mode: null, analyzed: null };
+    el('auto').checked = false;
+    el('storage').textContent = '';
+    note('');
+    el('analysis-mode').value = 'analysis-quick';
+    el('highlights-section').hidden = true;
+    el('highlights').replaceChildren();
+    loading = true;
+    try {
+      const id = await studyContentKey(next.game);
+      if (view !== next) return;
+      key = id;
+      const saved = memory.get(id) ?? await store.get(id);
+      if (view !== next) return;
+      if (saved) {
+        record.variations = studyVariations(next.game, saved.variations);
+        if (Array.isArray(saved.scores)) {
+          Object.assign(record, { scores: saved.scores.slice(0, next.game.positions.length),
+            version: saved.version, mode: saved.mode, analyzed: saved.analyzed });
+        }
+        if (['analysis-quick', 'analysis-detail'].includes(record.mode)) el('analysis-mode').value = record.mode;
+        if (saved.single && typeof saved.single === 'object') record.single = saved.single;
+      }
+    } catch {
+      if (view === next) el('storage').textContent = 'この環境では解析と変化をブラウザーに保存できません。';
+    } finally {
+      if (view === next) {
+        loading = false;
+        if (next.position) { render(); highlights(); }
+      }
+    }
+  }
+
+  function changed() {
+    if (!view) return;
+    if (job?.mode === 'position') stop();
+    clearTimeout(debounce);
+    cachedPosition = null;
+    if (!job) note('');
+    render();
+    if (el('auto').checked && !job && !activeScore()) debounce = setTimeout(() => analyzePosition(), 200);
+  }
+
+  function newBranch() {
+    branch = { id: newCpuGameId(), name: '', ply: view.position.ply, moves: [], step: 0 };
+    el('branch-name').value = '';
+    changed();
+    repaint();
+  }
+
+  function resetBranch() { branch = null; }
+
+  function branchStep(step) {
+    if (!branch) return;
+    branch.step = Math.max(0, Math.min(branch.moves.length, step));
+    changed();
+    repaint();
+  }
+
+  function play(from, to, promotion) {
+    if (!branch || branch.step >= 300) return false;
+    const code = from + to + (promotion ?? '');
+    try { studyPlay(new chessRules.Chess(outputPosition().game.fen()), code); }
+    catch { return false; }
+    if (branch.step < branch.moves.length) {
+      branch = { ...branch, id: newCpuGameId(), name: '', moves: branch.moves.slice(0, branch.step) };
+      el('branch-name').value = '';
+    }
+    branch.moves.push(code);
+    branch.step++;
+    return true;
+  }
+
+  function selectVariation(id) {
+    const saved = record.variations.find(entry => entry.id === id);
+    if (!saved) return;
+    goToPly(saved.ply);
+    branch = { ...saved, moves: saved.moves.slice(), step: saved.moves.length };
+    el('branch-name').value = saved.name;
+    changed();
+    repaint();
+  }
+
+  function tryMove(ply, code, keepBranch = false) {
+    if (!keepBranch) {
+      goToPly(ply);
+      newBranch();
+    }
+    if (play(code.slice(0, 2), code.slice(2, 4), code[4])) {
+      changed();
+      repaint();
+    }
+  }
+
+  function renderBranch() {
+    el('branch-panel').hidden = !branch;
+    el('fork').hidden = Boolean(branch);
+    el('branch-save').disabled = loading || !branch?.moves.length;
+    el('branch-delete').disabled = !branch || !record.variations.some(entry => entry.id === branch.id);
+    const select = el('variations');
+    const options = record.variations.map(entry => {
+      const option = element('option', `${entry.ply}手目の直後 · ${entry.name}`);
+      option.value = entry.id;
+      return option;
+    });
+    select.replaceChildren(element('option', '保存した変化を選ぶ'), ...options);
+    select.options[0].value = '';
+    select.value = options.some(option => option.value === branch?.id) ? branch.id : '';
+    select.disabled = !options.length;
+    if (!branch) return;
+    const board = new chessRules.Chess(view.position.fen);
+    const moves = branch.moves.map(code => studyPlay(board, code).san);
+    el('branch-moves').replaceChildren(...moves.map((move, i) => {
+      const item = element('li');
+      const link = button(move, () => branchStep(i + 1));
+      if (i + 1 === branch.step) link.setAttribute('aria-current', 'step');
+      item.append(link);
+      return item;
+    }));
+    const first = record.scores[branch.ply + 1];
+    el('compare').textContent = branch.step === 1 && first
+      ? `本譜の手 ${view.game.positions[branch.ply + 1]?.move.san ?? ''} ${studyScoreText(first.score)} ／ 試した手 ${activeScore() ? studyScoreText(activeScore().score) : '未解析'}。解析条件が異なる参考値です。` : '';
+  }
+
+  function drawGraph() {
+    const canvas = el('graph');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width, h = canvas.height;
+    const count = Math.max(1, view.game.positions.length - 1);
+    const x = ply => 8 + ply / count * (w - 16);
+    const y = score => h / 2 - studyGraphValue(score) / studyGraphLimit * (h / 2 - 10);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#f5f1e7';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#8c907d';
+    ctx.beginPath();
+    ctx.moveTo(0, h / 2);
+    ctx.lineTo(w, h / 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#356054';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    let adjacent = false;
+    for (let ply = 0; ply <= count; ply++) {
+      const point = record.scores[ply];
+      if (!point) { adjacent = false; continue; }
+      if (adjacent) ctx.lineTo(x(ply), y(point.score));
+      else ctx.moveTo(x(ply), y(point.score));
+      adjacent = true;
+    }
+    ctx.stroke();
+    ctx.fillStyle = '#775c2b';
+    for (const [ply, point] of record.scores.entries()) {
+      if (point) ctx.fillRect(x(ply) - 2, y(point.score) - 2, 4, 4);
+    }
+    ctx.fillRect(x(view.position.ply) - 1, 0, 2, h);
+    el('graph-position').value = view.position.ply;
+    el('graph-position').setAttribute('aria-valuetext', `${view.position.ply}手、${studyScoreText(record.scores[view.position.ply]?.score)}`);
+  }
+
+  function highlights() {
+    if (!view?.position || !current(view)) return;
+    el('highlights-section').hidden = !record.scores.some(Boolean);
+    const known = sourceColor(view.game);
+    const positions = view.game.positions;
+    const totals = { positive: 0, mistakes: 0, blunders: 0 };
+    const events = studyReviewGrades(view.game, record.scores, known);
+    for (const { grade } of events) {
+      if (grade.kind === 'blunder') totals.blunders++;
+      if (grade.kind === 'mistake') totals.mistakes++;
+      if (['best', 'excellent', 'good'].includes(grade.kind)) totals.positive++;
+    }
+    const negative = events.filter(event => event.grade.loss >= studyGradeRules.mistake).sort((a, b) => b.grade.loss - a.grade.loss).slice(0, 4);
+    const positive = events.filter(event => ['best', 'excellent'].includes(event.grade.kind))
+      .sort((a, b) => Number(b.move.san.endsWith('#')) - Number(a.move.san.endsWith('#'))).slice(0, 2);
+    const outcome = gameResults[view.game.metadata.result] ?? '結果未記録';
+    const opening = view.game.source?.opening ?? byId('game-opening-name').textContent;
+    el('overview').textContent = `${outcome} · ${positions.length - 1}手 · ${known ? chessColorNames[known] + 'の手' : '白黒両方'} · ${opening}。良かった手 ${totals.positive}、ミス ${totals.mistakes}、大きなミス ${totals.blunders}（判定できた手のみ）`;
+    el('highlights').replaceChildren(...[...negative, ...positive].map(({ ply, grade, before, after, move }) => {
+      const card = element('li', null, 'game-card study-highlight');
+      const body = element('div');
+      const points = `${studyScoreText(before.score)} → ${studyScoreText(after?.score)}`;
+      let why = grade.mate ? '解析ではメイトの可能性が変わりました。候補手の続きを比べてみましょう。'
+        : grade.loss >= studyGradeRules.mistake ? 'この手の後、指した側から見た評価が下がりました。推奨手の続きを比べてみましょう。'
+          : move.san.endsWith('#') ? 'この手でチェックメイトになりました。'
+            : grade.kind === 'best' ? 'エンジンの第一候補と一致しました。実際の続きも振り返ってみましょう。'
+              : '解析では、良い評価を保てた手です。';
+      if (after?.move && grade.loss >= studyGradeRules.mistake) {
+        try {
+          const reply = studyPlay(new chessRules.Chess(positions[ply].fen), after.move);
+          const piece = cpuPieceLabels[reply.captured];
+          if (piece && cpuPieceValues[reply.captured] >= 3) why += ` 推奨される相手の応手 ${reply.san} では${piece}を取られます。`;
+        } catch { /* Only mention moves that can be verified on this board. */ }
+      }
+      const actions = element('div', null, 'study-mode-links');
+      actions.append(button('実際の手を見る', () => goToPly(ply)), button('自分で考える', () => { goToPly(ply - 1); newBranch(); }),
+        button('ここからCPU対戦', () => { goToPly(ply - 1); startCpu(); }));
+      if (before.move) actions.append(button('推奨手を試す', () => tryMove(ply - 1, before.move)));
+      body.append(element('h3', `${move.number}${move.color === 'w' ? '.' : '…'} ${move.san} · ${grade.label}`),
+        element('p', `推奨手 ${before.san[0] ?? '—'} ／ ${points}`), element('p', why), actions);
+      card.append(studyMiniature(positions[ply - 1].fen), body);
+      return card;
+    }));
+  }
+
+  function render() {
+    if (!view?.position || !current(view)) return;
+    const evaluation = activeScore();
+    const label = evaluation ? studyScoreSummary(evaluation.score) : 'この局面は未解析';
+    const known = sourceColor(view.game);
+    el('assessment').textContent = evaluation ? `${label} · 白基準 ${studyScoreText(evaluation.score)}` : label;
+    el('advantage').hidden = !evaluation;
+    if (evaluation) {
+      el('advantage').value = studyGraphLimit + studyGraphValue(evaluation.score);
+      const own = studyGraphValue(evaluation.score) * (known === 'w' ? 1 : -1);
+      el('your-color').textContent = known ? `使用色 ${chessColorNames[known]} · ${own > 39 ? '有利' : own < -39 ? '不利' : 'ほぼ互角'}` : '';
+    } else el('your-color').textContent = '';
+    const single = record.single[positionKey()];
+    el('depth').textContent = evaluation
+      ? `探索深度 ${evaluation.depth} · Stockfish ${single?.version ?? record.version ?? stockfishEngine.version}` : '';
+    const ply = view.position.ply;
+    const actual = !branch && ply ? view.position.move : null;
+    const before = record.scores[ply - 1];
+    const grade = actual && before ? studyMoveGrade(before, record.scores[ply], actual, {
+      forced: new chessRules.Chess(view.game.positions[ply - 1].fen).moves().length === 1,
+      terminalWinner: actual.san.endsWith('#') ? actual.color : null,
+    }) : null;
+    el('grade').textContent = actual && (before || record.scores[ply]) ? `${actual.san} · ${grade?.label ?? '判定は未確定'}` : '';
+    el('lines').replaceChildren(...(evaluation?.candidates ?? []).filter(line => line.move).map((line, index) => {
+      const li = element('li');
+      const name = `${line.san[0]} ${studyScoreText(line.score)}`;
+      li.append(button(index ? name : '第一候補 ' + name, () => tryMove(view.position.ply, line.move, Boolean(branch))),
+        element('p', `深さ ${line.depth} · ${line.san.join(' ')}`));
+      return li;
+    }));
+    const partial = record.scores.some(Boolean);
+    el('results').hidden = !partial;
+    el('batch').disabled = loading || Boolean(job);
+    el('position').disabled = loading || Boolean(job);
+    el('stop').disabled = !job;
+    el('cpu').disabled = !canStartCpu();
+    el('graph-position').max = view.game.positions.length - 1;
+    el('source-conditions').textContent = partial
+      ? `Stockfish ${record.version} · ${record.mode === 'analysis-detail' ? '詳細' : 'クイック'} · ${record.scores.filter(Boolean).length} / ${view.game.positions.length}局面${record.analyzed ? ' · ' + new Date(record.analyzed).toLocaleString('ja-JP') : ''}` : '';
+    renderBranch();
+    if (partial) drawGraph();
+  }
+
+  function begin(mode) {
+    if (job || !view || loading) return null;
+    const work = { mode, engine: createStockfishSession(), view };
+    job = work;
+    note('Stockfishを準備しています…');
+    render();
+    return work;
+  }
+
+  async function analyzePosition() {
+    if (!view || !current(view)) return;
+    const work = begin('position');
+    if (!work) return;
+    const { fen, moves, game } = outputPosition();
+    try {
+      await work.engine.start();
+      if (job !== work) return;
+      note('現在の局面を解析しています…');
+      const result = await work.engine.search(branch ? 'analysis-branch' : 'analysis', { fen, moves },
+        { candidates: Number(el('candidates').value) });
+      if (job !== work) return;
+      const value = studyEngineResult(result, game.turn(), game.fen());
+      if (value) {
+        record.single[positionKey()] = { value, version: stockfishEngine.version, date: new Date().toISOString() };
+        const keys = Object.keys(record.single);
+        if (keys.length > 120) delete record.single[keys[0]];
+        persist();
+      }
+      note(value ? '局面解析が完了しました。' : 'この局面の評価値を取得できませんでした。');
+    } catch { if (job === work) note('Stockfishで解析できませんでした。もう一度お試しください。'); }
+    finally {
+      if (job === work) {
+        stop();
+        render();
+        repaint();
+      }
+    }
+  }
+
+  async function analyzeGame() {
+    const work = begin('batch');
+    if (!work) return;
+    const { game } = view;
+    const mode = el('analysis-mode').value;
+    if (record.mode !== mode || record.version !== stockfishEngine.version) record.scores = [];
+    record.mode = mode;
+    record.version = stockfishEngine.version;
+    record.analyzed = new Date().toISOString();
+    const count = game.positions.length;
+    const prefix = game.cpu?.origin?.moves ?? [];
+    const moves = [...prefix, ...studyMainMoves(game, count - 1)];
+    try {
+      await work.engine.start();
+      for (let ply = 0; ply < count && job === work; ply++) {
+        if (record.scores[ply]) continue;
+        const fen = game.positions[ply].fen;
+        const turn = fen.split(' ')[1];
+        note(`解析中 ${ply + 1} / ${count}局面 · ${ply}手の直後`);
+        const result = await work.engine.search(mode, { fen: game.cpu?.origin?.initialFen ?? game.initialFen,
+          moves: moves.slice(0, prefix.length + ply) });
+        if (job !== work) return;
+        record.scores[ply] = studyEngineResult(result, turn, fen);
+        if ((ply + 1) % 10 === 0) persist();
+        render();
+      }
+      if (job === work) note('対局解析が完了しました。');
+    } catch { if (job === work) note('解析を続けられませんでした。完了した局面は確認できます。'); }
+    finally {
+      if (job === work) {
+        stop();
+        render();
+        highlights();
+        repaint();
+      }
+    }
+  }
+
+  el('fork').addEventListener('click', newBranch);
+  el('return').addEventListener('click', () => goToPly(view.position.ply));
+  el('branch-root').addEventListener('click', () => branchStep(0));
+  el('variations').addEventListener('change', event => selectVariation(event.currentTarget.value));
+  el('branch-save').addEventListener('click', () => {
+    const existing = record.variations.findIndex(entry => entry.id === branch.id);
+    if (existing < 0 && record.variations.length >= 100) { note('保存できる変化は1局につき100件です。'); return; }
+    branch.name = el('branch-name').value.trim() || `変化 ${record.variations.length + 1}`;
+    const saved = { id: branch.id, ply: branch.ply, name: branch.name, moves: branch.moves.slice() };
+    if (existing < 0) record.variations.push(saved);
+    else record.variations[existing] = saved;
+    el('branch-name').value = branch.name;
+    persist();
+    render();
+  });
+  el('branch-delete').addEventListener('click', () => {
+    if (!window.confirm('保存した変化を削除しますか？')) return;
+    record.variations = record.variations.filter(entry => entry.id !== branch.id);
+    persist();
+    goToPly(view.position.ply);
+  });
+  el('position').addEventListener('click', analyzePosition);
+  el('batch').addEventListener('click', analyzeGame);
+  el('stop').addEventListener('click', () => { stop('解析を停止しました。'); render(); highlights(); });
+  el('auto').addEventListener('change', () => { if (el('auto').checked && !job) analyzePosition(); else clearTimeout(debounce); });
+  el('graph-position').addEventListener('change', event => goToPly(Number(event.target.value)));
+  el('graph').addEventListener('click', event => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const canvasX = (event.clientX - bounds.left) / bounds.width * event.currentTarget.width;
+    goToPly(Math.round((canvasX - 8) / (event.currentTarget.width - 16) * (view.game.positions.length - 1)));
+  });
+  el('cpu').addEventListener('click', startCpu);
+  window.addEventListener('pagehide', () => { stop(); if (view) render(); });
+  return { open, close, changed, play, branchStep, resetBranch, outputPosition, render, highlights,
+    branch: () => branch, hints: () => activeScore()?.move ? [activeScore().move] : [] };
+}

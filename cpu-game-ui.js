@@ -6,6 +6,8 @@ const cpuPage = (() => {
   const recordLimit = 50;
   const owner = newCpuGameId();
   let settings = normalizeCpuSettings(readStorage(cpuSettingsKey));
+  let startPosition;
+  let chooseStartingColor = false;
   const materialSettings = normalizeCpuMaterialDisplay(readStorage(cpuMaterialKey));
   let match, engine, job, timer, confirmation, interrupted, archive;
   let ready = false;
@@ -77,6 +79,15 @@ const cpuPage = (() => {
 
   function showSettings() {
     for (const [key, value] of Object.entries(settings)) form.elements.namedItem(key).value = String(value);
+    node('choose-color').hidden = !chooseStartingColor;
+    if (chooseStartingColor) node('color').value = '';
+    node('start-position').hidden = !startPosition;
+    node('start-preview').hidden = !startPosition;
+    if (startPosition) {
+      node('start-position').textContent = `復習からの局面指定 · 本譜 ${startPosition.ply}手の直後を基点 · ${chessColorNames[startPosition.fen.split(' ')[1]]}の手番`;
+      node('start-board').replaceChildren(studyMiniature(startPosition.fen));
+      node('start-fen').textContent = startPosition.fen;
+    }
     updateSettings();
     node('session').hidden = true;
     node('setup').hidden = false;
@@ -102,7 +113,7 @@ const cpuPage = (() => {
     node('form-error').textContent = '';
     for (const field of [node('minutes'), node('seconds')]) field.removeAttribute('aria-invalid');
     const time = valid ? cpuTimeLabel(normalizeCpuSettings({ ...value, level: Number(value.level) })) : '持ち時間を入力してください';
-    node('summary').textContent = `${cpuLabels[value.mode]} · ${cpuLevelLabel(Number(value.level))} · ${cpuLabels[value.color]} · ${time}`;
+    node('summary').textContent = `${cpuLabels[value.mode]} · ${cpuLevelLabel(Number(value.level))} · ${cpuLabels[value.color] ?? '駒の色を選択'} · ${time}`;
     node('show-captures').checked = materialSettings[value.mode].captures;
     node('show-material').checked = materialSettings[value.mode].score;
     return value;
@@ -121,6 +132,11 @@ const cpuPage = (() => {
     event.preventDefault();
     if (match) return;
     const value = updateSettings();
+    if (!value.color) {
+      node('form-error').textContent = '自分が使う駒の色を選んでください。';
+      node('color').focus();
+      return;
+    }
     if (value.time === 'custom' && !validCpuTime(value.minutes, value.seconds)) {
       node('form-error').textContent = '初期時間は1〜180分、加算は0〜60秒を整数で入力してください。';
       let firstInvalid;
@@ -136,7 +152,8 @@ const cpuPage = (() => {
     const selected = normalizeCpuSettings({ ...value, level: Number(value.level) });
     const begin = () => {
       settings = selected;
-      writeStorage(cpuSettingsKey, settings);
+      chooseStartingColor = false;
+      if (!startPosition) writeStorage(cpuSettingsKey, settings);
       start();
     };
     if (readStorage(cpuResumeKey)) ask('中断した対局の代わりに、新しい対局を始めますか？', '新しい対局を始める', begin);
@@ -227,7 +244,8 @@ const cpuPage = (() => {
     const request = job = { kind, fen, id: match.id };
     try {
       const result = await engine.search(purpose,
-        { fen: match.initialFen, moves: match.turns.map(({ move }) => cpuMoveCode(move)) },
+        { fen: match.origin?.initialFen ?? match.initialFen,
+          moves: [...(match.origin?.moves ?? []), ...match.turns.map(({ move }) => cpuMoveCode(move))] },
         { level: match.settings.level, remaining, increment });
       if (job === request && match.id === request.id) acceptMove(result);
     } catch {
@@ -274,7 +292,9 @@ const cpuPage = (() => {
 
   function start(restored = null) {
     close();
-    match = restored ?? new CpuMatch(settings);
+    match = restored ?? new CpuMatch(settings, { origin: startPosition });
+    startPosition = match.origin;
+    chooseStartingColor = false;
     settings = match.settings;
     remember(true);
     node('setup').hidden = true;
@@ -303,14 +323,24 @@ const cpuPage = (() => {
     node('export-status').textContent = '';
   }
 
-  function open(replay) {
+  function open(replay, position) {
+    startPosition = null;
+    chooseStartingColor = false;
+    settings = normalizeCpuSettings(readStorage(cpuSettingsKey) ?? settings);
     node('resume-status').textContent = '';
+    if (position) {
+      try {
+        startPosition = cpuStartingPosition(position).origin;
+        chooseStartingColor = !startPosition.color && !replay;
+        settings = normalizeCpuSettings({ ...settings, mode: 'practice', time: 'unlimited', color: startPosition.color ?? 'random' });
+      } catch { node('resume-status').textContent = '指定した局面から対局を始められません。'; }
+    }
     showSettings();
     showScreen('cpu', 'cpu-title');
-    if (!replay) return;
+    if (!replay || (position && !startPosition)) return;
     const begin = () => {
       settings = normalizeCpuSettings(replay);
-      writeStorage(cpuSettingsKey, settings);
+      if (!startPosition) writeStorage(cpuSettingsKey, settings);
       start();
     };
     if (readStorage(cpuResumeKey)) ask('中断した対局の代わりに、履歴と同じ設定で対局しますか？', '新しい対局を始める', begin);
@@ -330,12 +360,15 @@ const cpuPage = (() => {
 
   function renderMoves() {
     const rows = [];
-    for (let i = 0; i < match.turns.length; i += 2) {
-      const white = match.turns[i].move.san;
-      const black = match.turns[i + 1]?.move.san ?? '';
-      const row = element('li');
-      row.append(element('span', black ? white + ' ' : white), element('span', black));
-      rows.push(row);
+    for (const { move } of match.turns) {
+      const number = Number(move.before.split(' ')[5]);
+      if (rows.at(-1)?.value !== number) {
+        const row = element('li');
+        row.value = number;
+        row.append(element('span'), element('span'));
+        rows.push(row);
+      }
+      rows.at(-1).children[move.color === 'w' ? 0 : 1].textContent = move.san + ' ';
     }
     moves.replaceChildren(...rows);
     moves.scrollTop = moves.scrollHeight;
@@ -385,6 +418,7 @@ const cpuPage = (() => {
       : match.continued ? '時間切れ後の継続練習として記録します。' : '';
     node('pgn').value = cpuPgn(match);
     node('review').hidden = !match.turns.length;
+    node('origin-return').hidden = !match.origin?.gameId;
     node('review').disabled = false;
     if (match.turns.length) {
       try {
@@ -516,6 +550,9 @@ const cpuPage = (() => {
   node('restart').addEventListener('click', () => ask('今の対局を終了し、同じ設定で新しい対局を始めます。', '再戦する', () => start()));
   node('settings-back').addEventListener('click', () => leave(backToSettings));
   node('rematch').addEventListener('click', () => start());
+  node('origin-return').addEventListener('click', () => {
+    if (match?.origin?.gameId) goTo(`game-review/${match.origin.gameId}`, { gamePly: match.origin.ply });
+  });
   node('change').addEventListener('click', backToSettings);
   node('continue').addEventListener('click', () => {
     if (!match.continuePractice()) return;

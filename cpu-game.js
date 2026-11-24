@@ -89,10 +89,34 @@ function cpuMaterial(match) {
   return { captures, difference: remaining.w - remaining.b };
 }
 
+function cpuStartingPosition(origin) {
+  if (typeof origin?.fen !== 'string' || typeof origin.initialFen !== 'string'
+    || !Array.isArray(origin.moves) || origin.moves.length > 12000
+    || !Number.isSafeInteger(origin.ply) || origin.ply < 0 || origin.ply > origin.moves.length
+    || (origin.gameId !== null && !validCpuId(origin.gameId)) || !['w', 'b', null].includes(origin.color)) {
+    throw new Error('開始局面を確認できません。');
+  }
+  const game = new chessRules.Chess(origin.initialFen);
+  const positions = [game.fen().split(' ').slice(0, 4).join(' ')];
+  for (const code of origin.moves) {
+    if (typeof code !== 'string' || !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(code)) throw new Error('開始局面の手順を確認できません。');
+    game.move({ from: code.slice(0, 2), to: code.slice(2, 4), promotion: code[4] });
+    positions.push(game.fen().split(' ').slice(0, 4).join(' '));
+  }
+  if (game.fen() !== origin.fen || game.isCheckmate() || game.isStalemate() || game.isInsufficientMaterial()
+    || Number(origin.fen.split(' ')[4]) >= 150 || positions.filter(key => key === positions.at(-1)).length >= 5) {
+    throw new Error('この局面からは対局できません。');
+  }
+  const { fen, initialFen, moves, ply, gameId, color } = origin;
+  return { origin: { fen, initialFen, moves: moves.slice(), ply, gameId, color }, game, positions };
+}
+
 class CpuMatch {
   constructor(settings, { fen, now = () => performance.now(), random = Math.random, started = new Date(),
-    id = newCpuGameId(), player } = {}) {
-    this.game = new chessRules.Chess(fen);
+    id = newCpuGameId(), player, origin } = {}) {
+    const setup = origin ? cpuStartingPosition(origin) : null;
+    this.origin = setup?.origin ?? null;
+    this.game = setup?.game ?? new chessRules.Chess(fen);
     this.initialFen = this.game.fen();
     this.settings = normalizeCpuSettings(settings);
     this.id = id;
@@ -104,7 +128,7 @@ class CpuMatch {
     this.anchor = null;
     this.turnStart = { ...this.remaining };
     this.turns = [];
-    this.positions = [this.positionKey()];
+    this.positions = setup?.positions ?? [this.positionKey()];
     this.outcome = null;
     this.continued = false;
     this.parentId = null;
@@ -228,6 +252,7 @@ function cpuSnapshot(match, updatedAt = new Date()) {
   return {
     id: match.id, started: match.started.toISOString(), updatedAt: updatedAt.toISOString(),
     settings: match.settings, player: match.player, initialFen: match.initialFen, fen: match.game.fen(), turn: match.game.turn(),
+    ...(match.origin && { origin: match.origin }),
     remaining: encodeClock(match.clocks()), turnStart: encodeClock(match.turnStart),
     moves: match.turns.map(({ move, start }) => ({ code: cpuMoveCode(move), start: encodeClock(start) })),
     continued: match.continued, parentId: match.parentId, hintCount: match.hintCount,
@@ -258,7 +283,8 @@ function restoreCpuSnapshot(snapshot, now) {
     throw new Error('中断した対局のデータを確認できません。');
   }
   const match = new CpuMatch(settings, { id: snapshot.id, player: snapshot.player, fen: snapshot.initialFen,
-    started: new Date(snapshot.started), now: () => 0 });
+    origin: snapshot.origin, started: new Date(snapshot.started), now: () => 0 });
+  if (match.initialFen !== snapshot.initialFen) throw new Error('開始局面が一致しません。');
   match.start();
   const timed = Boolean(match.time);
   for (const entry of snapshot.moves) {
@@ -288,6 +314,7 @@ function cpuReviewGame(match, engine) {
     engine: { name: engine.name, version: engine.version, distribution: engine.distribution },
     reason: match.outcome.reason, continued: match.continued, parentId: match.parentId,
     hints: match.hintCount, undos: match.undoCount, resumes: match.resumeCount,
+    ...(match.origin && { origin: match.origin }),
   };
   return game;
 }
@@ -303,9 +330,11 @@ function validateCpuGameDetails(details) {
     || (details.continued ? settings.mode !== 'practice' || !validCpuId(details.parentId) : details.parentId !== null)
     || Object.keys(settings).some(key => settings[key] !== details.settings?.[key])
     || (settings.color !== 'random' && settings.color !== details.player)) throw new Error('CPU対局の記録を確認してください。');
+  const origin = details.origin ? cpuStartingPosition(details.origin).origin : null;
   return { settings, engine: { name: engine.name, version: engine.version, distribution: engine.distribution },
     player: details.player, started: details.started, reason: details.reason, continued: details.continued,
-    parentId: details.parentId, hints: details.hints, undos: details.undos, resumes: details.resumes };
+    parentId: details.parentId, hints: details.hints, undos: details.undos, resumes: details.resumes,
+    ...(origin && { origin }) };
 }
 
 function cpuResultCode(outcome) {
@@ -318,7 +347,8 @@ function cpuPgn(match) {
   const time = match.continued ? '?' : match.time ? `${match.time.initial / 1000}+${match.time.increment / 1000}` : '-';
   const date = match.started.toISOString().slice(0, 10).replaceAll('-', '.');
   const tags = {
-    Event: match.continued ? 'Rookori Practice Continuation' : match.settings.mode === 'practice' ? 'Rookori Practice' : 'Rookori Match',
+    Event: match.continued ? 'Rookori Practice Continuation' : match.origin ? 'Rookori Position Practice'
+      : match.settings.mode === 'practice' ? 'Rookori Practice' : 'Rookori Match',
     Site: 'Rookori', Date: date, Round: '-',
     White: match.player === 'w' ? 'Player' : opponent, Black: match.player === 'b' ? 'Player' : opponent,
     Result: cpuResultCode(match.outcome), TimeControl: time,

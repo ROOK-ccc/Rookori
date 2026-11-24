@@ -221,6 +221,7 @@ function validateGameBackup(backup) {
     if (entry.cpu !== undefined) {
       if (!game.metadata.result || game.metadata.result === '*') throw new Error(invalid);
       game.cpu = validateCpuGameDetails(entry.cpu);
+      if (game.cpu.origin && game.cpu.origin.fen !== game.initialFen) throw new Error(invalid);
     }
     if (entry.source !== undefined) {
       if (entry.cpu !== undefined) throw new Error(invalid);

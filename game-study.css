@@ -1,0 +1,22 @@
+#game-study-advantage, #game-study-graph, #game-study-graph-position { display: block; width: 100%; }
+#game-study-advantage { height: 14px; margin-top: 4px; }
+#game-study-graph { height: auto; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+#game-study-graph-position { min-height: 42px; accent-color: var(--green); }
+#game-study-board-feedback:empty, #game-study-status:empty, #game-study-storage:empty { display: none; }
+.study-branch-controls, .study-highlights-section { margin-top: 14px; }
+.study-branch-controls input, .study-branch-controls select, #game-study-analysis-mode, #game-study-candidates {
+  display: block; min-height: 44px; max-width: 100%; margin-block: 4px; font: inherit;
+}
+.study-branch-moves { display: flex; flex-wrap: wrap; max-height: 155px; overflow: auto; gap: 3px 14px; padding-left: 22px; }
+.study-branch-moves [aria-current] { color: var(--green); font-weight: 800; }
+.study-highlight { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 12px; align-items: start; }
+.study-mini-board { display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1; border: 1px solid var(--line); }
+.study-mini-board span { min-width: 0; aspect-ratio: 1; background: #e9ddc0; }
+.study-mini-board .study-mini-dark { background: #74836a; }
+.study-mini-board img { display: block; width: 100%; height: 100%; }
+#cpu-start-preview { min-width: 0; max-width: 100%; }
+#cpu-start-preview summary { min-height: 44px; cursor: pointer; }
+#cpu-start-board { width: min(100%, 184px); margin-bottom: 8px; }
+@media (max-width: 420px) {
+  .study-highlight { grid-template-columns: 64px minmax(0, 1fr); }
+}

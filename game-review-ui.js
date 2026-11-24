@@ -13,7 +13,7 @@ const gameReviewPages = (() => {
   let restorePending = false;
 
   function title(game) {
-    if (game.cpu) return `コンピューター対戦 · ${cpuLevelLabel(game.cpu.settings.level)}`;
+    if (game.cpu) return `${game.cpu.origin ? '局面指定CPU対戦' : 'コンピューター対戦'} · ${cpuLevelLabel(game.cpu.settings.level)}`;
     const { event, white, black } = game.metadata;
     if (event && event !== '?') return event;
     if (white && black) return `${white} 対 ${black}`;
@@ -125,13 +125,17 @@ const gameReviewPages = (() => {
     if (game) openPreview(game);
   });
 
-  const board = createChessBoard(byId('game-board'), null, {
-    position: () => ({
+  const study = createGameStudyUI({ current: activeView, goToPly, repaint: renderPosition });
+  const board = createChessBoard(byId('game-board'), byId('game-study-promotion'), {
+    position: () => study.branch() ? study.outputPosition() : ({
       game: new chessRules.Chess(viewer.position.fen), lastMove: viewer.position.move,
     }),
-    canPlay: () => false,
+    canPlay: () => Boolean(study.branch()),
+    play: study.play,
+    onMove() { study.changed(); renderPosition(); },
     isFlipped: () => viewer.flipped,
-    feedback: () => {},
+    hints: study.hints,
+    feedback: message => { byId('game-study-board-feedback').textContent = message; },
   });
 
   function activeView(view) {
@@ -180,18 +184,31 @@ const gameReviewPages = (() => {
 
   function goToPly(ply) {
     const view = viewer;
+    study.resetBranch();
+    board.reset();
     view.position = reviewPosition(view.game, ply);
+    updateEntry({ gamePly: view.position.ply });
+    study.changed();
+    renderPosition();
+  }
+
+  function renderPosition() {
+    const view = viewer;
     const { position, game } = view;
     const last = game.positions.length - 1;
+    const branch = study.branch();
+    const fen = branch ? study.outputPosition().game.fen() : position.fen;
     board.render();
-    const turn = position.fen.split(' ')[1];
+    const turn = fen.split(' ')[1];
     const turnText = byId('game-turn');
     turnText.dataset.color = turn;
-    turnText.textContent = position.ply === last ? '最後の局面' : `${chessColorNames[turn]}の番`;
-    byId('game-counter').textContent = `${position.ply} / ${last}手 · ${moveLabel(position)}`;
-    byId('game-fen').textContent = position.fen;
-    byId('game-first').disabled = byId('game-prev').disabled = position.ply === 0;
-    byId('game-next').disabled = byId('game-last').disabled = position.ply === last;
+    turnText.textContent = !branch && position.ply === last ? '最後の局面' : `${chessColorNames[turn]}の番`;
+    byId('game-counter').textContent = branch ? `自由検討 · ${branch.step} / ${branch.moves.length}手（本譜 ${position.ply}手の直後から）`
+      : `${position.ply} / ${last}手 · ${moveLabel(position)}`;
+    byId('game-fen').textContent = fen;
+    byId('game-first').disabled = byId('game-prev').disabled = (branch ? branch.step : position.ply) === 0;
+    byId('game-next').disabled = byId('game-last').disabled = branch ? branch.step === branch.moves.length : position.ply === last;
+    byId('game-note-section').hidden = Boolean(branch);
     moveList.querySelector('[aria-current]')?.removeAttribute('aria-current');
     const selected = moveList.children[position.ply].firstElementChild;
     selected.setAttribute('aria-current', 'step');
@@ -227,6 +244,7 @@ const gameReviewPages = (() => {
   function showGame(view, start) {
     const { game } = view;
     byId('game-player-title').textContent = title(game);
+    byId('game-origin').hidden = !game.cpu?.origin?.gameId;
     const summary = describe(game);
     byId('game-player-summary').textContent = game.metadata.hasEndMarker ? summary
       : `${summary} ／ 終了記号がないため、記録されている手まで表示`;
@@ -254,6 +272,7 @@ const gameReviewPages = (() => {
     moveList.scrollTop = 0;
     byId('game-player-content').hidden = false;
     board.reset();
+    study.open(view);
     renderNotes(view);
     goToPly(start);
   }
@@ -322,11 +341,12 @@ const gameReviewPages = (() => {
     }
   }
 
-  const moveBy = amount => goToPly(viewer.position.ply + amount);
-  byId('game-first').addEventListener('click', () => goToPly(0));
+  const moveBy = amount => study.branch() ? study.branchStep(study.branch().step + amount) : goToPly(viewer.position.ply + amount);
+  byId('game-first').addEventListener('click', () => study.branch() ? study.branchStep(0) : goToPly(0));
   byId('game-prev').addEventListener('click', () => moveBy(-1));
   byId('game-next').addEventListener('click', () => moveBy(1));
-  byId('game-last').addEventListener('click', () => goToPly(viewer.game.positions.length - 1));
+  byId('game-last').addEventListener('click', () => study.branch() ? study.branchStep(study.branch().moves.length)
+    : goToPly(viewer.game.positions.length - 1));
   byId('game-flip').addEventListener('click', event => {
     viewer.flipped = !viewer.flipped;
     event.currentTarget.textContent = viewer.flipped ? '白を手前にする' : '黒を手前にする';
@@ -347,6 +367,10 @@ const gameReviewPages = (() => {
   }, true);
   noteField.addEventListener('input', () => updateDraft(viewer, noteField.value));
   byId('game-save').addEventListener('click', saveGame);
+  byId('game-origin').addEventListener('click', () => {
+    const origin = viewer.game.cpu?.origin;
+    if (origin?.gameId) goTo(`game-review/${origin.gameId}`, { gamePly: origin.ply });
+  });
   byId('game-download').addEventListener('click', () =>
     download('rookori-game.pgn', viewer.game.pgn + '\n', 'application/x-chess-pgn;charset=utf-8'));
   byId('game-note-form').addEventListener('submit', event => {
@@ -368,12 +392,12 @@ const gameReviewPages = (() => {
       && (sourceFilter === 'all' || origin(game) === sourceFilter)
       && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
         .some(text => text?.toLocaleLowerCase().includes(query))));
-    const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習' };
+    const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習', positioned: '局面指定' };
     const counts = Object.fromEntries(Object.keys(types).map(key => [key, { 勝利: 0, 敗北: 0, 引き分け: 0 }]));
     for (const game of page.games) {
       const { cpu } = game;
       if (!cpu) continue;
-      const group = cpu.continued ? 'continued' : cpu.settings.mode === 'match' && cpu.resumes ? 'resumed' : cpu.settings.mode;
+      const group = cpu.origin ? 'positioned' : cpu.continued ? 'continued' : cpu.settings.mode === 'match' && cpu.resumes ? 'resumed' : cpu.settings.mode;
       counts[group][cpuHistoryResult(game)]++;
     }
     byId('game-history-counts').textContent = Object.keys(types)
@@ -442,6 +466,7 @@ const gameReviewPages = (() => {
         replay.type = 'button';
         replay.addEventListener('click', () => goTo('cpu', {
           cpuReplay: cpu.continued ? { ...cpu.settings, time: 'unlimited' } : cpu.settings,
+          cpuPosition: cpu.origin,
         }));
         actions.append(replay);
       }
@@ -557,6 +582,7 @@ const gameReviewPages = (() => {
     const view = { flipped: false, busy: false };
     viewer = view;
     byId('game-player-title').textContent = '対局を振り返る';
+    byId('game-origin').hidden = true;
     byId('game-player-content').hidden = true;
     const status = byId('game-player-status');
     status.textContent = '対局を開いています。';
@@ -576,6 +602,6 @@ const gameReviewPages = (() => {
     }
   }
 
-  return { open, openSavedOrPreview, saveCpu: (game, id) => library.save(game, undefined, id),
+  return { open, close: () => { study.close(); board.close(); }, openSavedOrPreview, saveCpu: (game, id) => library.save(game, undefined, id),
     saveExternal: library.saveExternal, lichessIds: library.lichessIds };
 })();
