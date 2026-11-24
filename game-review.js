@@ -131,6 +131,31 @@ function reviewPosition(game, ply) {
   return game.positions[Math.max(0, Math.min(ply, game.positions.length - 1))];
 }
 
+function reviewRecentDate(game) {
+  const date = game.cpu?.started ?? game.source?.date;
+  if (date && Number.isFinite(Date.parse(date))) return { value: date, time: true, isSaved: false };
+  const raw = game.metadata.date;
+  if (/^\d{4}\.\d{2}\.\d{2}$/.test(raw ?? '')) {
+    const value = raw.replaceAll('.', '-') + 'T00:00:00';
+    if (Number.isFinite(Date.parse(value))) return { value, time: false, isSaved: false };
+  }
+  return { value: game.savedAt, time: true, isSaved: true };
+}
+
+function reviewRecentTime(game) {
+  if (game.cpu) return game.cpu.continued ? '時間無制限の継続練習' : cpuTimeLabel(game.cpu.settings);
+  const time = game.source?.time;
+  if (time?.days) return `1手につき ${time.days}日`;
+  const tag = reviewPgnTag(game.pgn, 'TimeControl');
+  if (!time && tag === '-') return '時間無制限';
+  const parts = /^(\d+)\+(\d+)$/.exec(tag ?? '');
+  const initial = time?.initial ?? (parts ? Number(parts[1]) : null);
+  const increment = time?.increment ?? (parts ? Number(parts[2]) : null);
+  if (initial === null || !Number.isSafeInteger(initial) || !Number.isSafeInteger(increment)) return '持ち時間の記録なし';
+  const start = initial % 60 === 0 ? `${initial / 60}分` : `${initial}秒`;
+  return `${start}＋${increment}秒`;
+}
+
 function reviewPgnTag(pgn, name) {
   const header = pgn.slice(0, 16000).trimStart().split(/\r?\n\s*\r?\n/, 1)[0];
   return header.match(new RegExp('^\\s*\\[' + name + '\\s+"([^"\\r\\n]*)"\\s*\\]', 'im'))?.[1] ?? null;

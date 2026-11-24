@@ -19,6 +19,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   const el = name => byId('game-study-' + name);
   const store = createStudyStore();
   const memory = new Map();
+  const tabs = [...byId('review-tabs').querySelectorAll('[role="tab"]')];
   let view, record, key, branch, job, debounce, cachedPosition;
   let write = Promise.resolve();
   let loading = false;
@@ -31,6 +32,27 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   }
 
   function note(text) { el('status').textContent = text; }
+
+  function selectTab(name, focus = false) {
+    for (const tab of tabs) {
+      const selected = tab.id === 'review-tab-' + name;
+      const panel = byId(tab.getAttribute('aria-controls'));
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      panel.hidden = !selected;
+      if (selected && focus) tab.focus({ preventScroll: true });
+    }
+    if (name === 'moves') {
+      const list = byId('game-moves');
+      const move = list.querySelector('[aria-current]');
+      if (move) {
+        const viewport = list.getBoundingClientRect();
+        const position = move.getBoundingClientRect();
+        if (position.top < viewport.top) list.scrollTop -= viewport.top - position.top;
+        if (position.bottom > viewport.bottom) list.scrollTop += position.bottom - viewport.bottom;
+      }
+    }
+  }
   function outputPosition() {
     cachedPosition ??= studyPosition(view.game, view.position.ply, branch ? branch.moves.slice(0, branch.step) : []);
     return cachedPosition;
@@ -43,7 +65,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   }
 
   function activeScore() {
-    return record?.single[positionKey()]?.value ?? (!branch?.step ? record?.scores[view.position.ply] : null);
+    return branch?.step ? record?.single[positionKey()]?.value : studyTimelineScore(record, view.position.ply);
   }
   function canStartCpu() {
     if (!view || (!branch?.step && view.position.ply === view.game.positions.length - 1
@@ -93,7 +115,9 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     note('');
     el('analysis-mode').value = 'analysis-quick';
     el('highlights-section').hidden = true;
+    el('highlights-empty').hidden = false;
     el('highlights').replaceChildren();
+    selectTab('analysis');
     loading = true;
     try {
       const id = await studyContentKey(next.game);
@@ -133,6 +157,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   function newBranch() {
     branch = { id: newCpuGameId(), name: '', ply: view.position.ply, moves: [], step: 0 };
     el('branch-name').value = '';
+    selectTab('branch', true);
     changed();
     repaint();
   }
@@ -184,6 +209,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   function renderBranch() {
     el('branch-panel').hidden = !branch;
     el('fork').hidden = Boolean(branch);
+    el('return').hidden = !branch;
     el('branch-save').disabled = loading || !branch?.moves.length;
     el('branch-delete').disabled = !branch || !record.variations.some(entry => entry.id === branch.id);
     const select = el('variations');
@@ -206,7 +232,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
       item.append(link);
       return item;
     }));
-    const first = record.scores[branch.ply + 1];
+    const first = studyTimelineScore(record, branch.ply + 1);
     el('compare').textContent = branch.step === 1 && first
       ? `本譜の手 ${view.game.positions[branch.ply + 1]?.move.san ?? ''} ${studyScoreText(first.score)} ／ 試した手 ${activeScore() ? studyScoreText(activeScore().score) : '未解析'}。解析条件が異なる参考値です。` : '';
   }
@@ -223,6 +249,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     ctx.fillStyle = '#f5f1e7';
     ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = '#8c907d';
+    ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, h / 2);
     ctx.lineTo(w, h / 2);
@@ -232,25 +259,52 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     ctx.beginPath();
     let adjacent = false;
     for (let ply = 0; ply <= count; ply++) {
-      const point = record.scores[ply];
+      const point = studyTimelineScore(record, ply);
       if (!point) { adjacent = false; continue; }
       if (adjacent) ctx.lineTo(x(ply), y(point.score));
       else ctx.moveTo(x(ply), y(point.score));
       adjacent = true;
     }
     ctx.stroke();
-    ctx.fillStyle = '#775c2b';
-    for (const [ply, point] of record.scores.entries()) {
-      if (point) ctx.fillRect(x(ply) - 2, y(point.score) - 2, 4, 4);
+    for (let ply = 0; ply <= count; ply++) {
+      const point = studyTimelineScore(record, ply);
+      if (!point) continue;
+      const previous = ply > 0 ? studyTimelineScore(record, ply - 1) : null;
+      const sx = x(ply), sy = y(point.score);
+      ctx.fillStyle = '#775c2b';
+      if (point.score.unit === 'mate') {
+        ctx.fillRect(sx - 3.5, sy - 3.5, 7, 7);
+      } else if (previous && Math.abs(studyGraphValue(point.score) - studyGraphValue(previous.score)) >= studyGradeRules.mistake) {
+        ctx.beginPath();
+        ctx.moveTo(sx, sy - 5);
+        ctx.lineTo(sx + 5, sy);
+        ctx.lineTo(sx, sy + 5);
+        ctx.lineTo(sx - 5, sy);
+        ctx.fill();
+      } else ctx.fillRect(sx - 2, sy - 2, 4, 4);
     }
+    ctx.fillStyle = '#775c2b';
     ctx.fillRect(x(view.position.ply) - 1, 0, 2, h);
+    const current = studyTimelineScore(record, view.position.ply);
+    if (current) {
+      ctx.beginPath();
+      ctx.arc(x(view.position.ply), y(current.score), 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#211e19';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
     el('graph-position').value = view.position.ply;
-    el('graph-position').setAttribute('aria-valuetext', `${view.position.ply}手、${studyScoreText(record.scores[view.position.ply]?.score)}`);
+    const description = `${branch ? '本譜の分岐元' : '本譜'} ${view.position.ply}手の直後 · ${current ? studyScoreText(current.score) : '未解析'}`;
+    el('graph-current').textContent = description;
+    el('graph-position').setAttribute('aria-valuetext', description);
   }
 
   function highlights() {
     if (!view?.position || !current(view)) return;
-    el('highlights-section').hidden = !record.scores.some(Boolean);
+    const hasBatch = record.scores.some(Boolean);
+    el('highlights-section').hidden = !hasBatch;
+    el('highlights-empty').hidden = hasBatch;
+    if (!hasBatch) return;
     const known = sourceColor(view.game);
     const positions = view.game.positions;
     const totals = { positive: 0, mistakes: 0, blunders: 0 };
@@ -299,9 +353,13 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     const label = evaluation ? studyScoreSummary(evaluation.score) : 'この局面は未解析';
     const known = sourceColor(view.game);
     el('assessment').textContent = evaluation ? `${label} · 白基準 ${studyScoreText(evaluation.score)}` : label;
-    el('advantage').hidden = !evaluation;
+    const advantage = el('advantage');
+    advantage.dataset.evaluated = String(Boolean(evaluation));
+    advantage.dataset.flipped = String(view.flipped);
+    advantage.setAttribute('aria-label', evaluation ? `局面評価（白視点） ${studyScoreText(evaluation.score)}、${label}` : '局面評価は未解析');
+    el('board-eval').textContent = evaluation ? studyScoreText(evaluation.score) : '未解析';
     if (evaluation) {
-      el('advantage').value = studyGraphLimit + studyGraphValue(evaluation.score);
+      advantage.style.setProperty('--white-share', (studyWhiteShare(evaluation.score) * 100) + '%');
       const own = studyGraphValue(evaluation.score) * (known === 'w' ? 1 : -1);
       el('your-color').textContent = known ? `使用色 ${chessColorNames[known]} · ${own > 39 ? '有利' : own < -39 ? '不利' : 'ほぼ互角'}` : '';
     } else el('your-color').textContent = '';
@@ -316,6 +374,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
       terminalWinner: actual.san.endsWith('#') ? actual.color : null,
     }) : null;
     el('grade').textContent = actual && (before || record.scores[ply]) ? `${actual.san} · ${grade?.label ?? '判定は未確定'}` : '';
+    el('move-grade').textContent = el('grade').textContent;
     el('lines').replaceChildren(...(evaluation?.candidates ?? []).filter(line => line.move).map((line, index) => {
       const li = element('li');
       const name = `${line.san[0]} ${studyScoreText(line.score)}`;
@@ -325,9 +384,11 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     }));
     const partial = record.scores.some(Boolean);
     el('results').hidden = !partial;
+    el('graph-empty').hidden = partial;
     el('batch').disabled = loading || Boolean(job);
     el('position').disabled = loading || Boolean(job);
     el('stop').disabled = !job;
+    el('stop').hidden = el('stop-local').hidden = !job;
     el('cpu').disabled = !canStartCpu();
     el('graph-position').max = view.game.positions.length - 1;
     el('source-conditions').textContent = partial
@@ -414,7 +475,10 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   }
 
   el('fork').addEventListener('click', newBranch);
-  el('return').addEventListener('click', () => goToPly(view.position.ply));
+  el('return').addEventListener('click', () => {
+    goToPly(view.position.ply);
+    el('fork').focus({ preventScroll: true });
+  });
   el('branch-root').addEventListener('click', () => branchStep(0));
   el('variations').addEventListener('change', event => selectVariation(event.currentTarget.value));
   el('branch-save').addEventListener('click', () => {
@@ -436,7 +500,14 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   });
   el('position').addEventListener('click', analyzePosition);
   el('batch').addEventListener('click', analyzeGame);
-  el('stop').addEventListener('click', () => { stop('解析を停止しました。'); render(); highlights(); });
+  function cancel(event) {
+    stop('解析を停止しました。');
+    render();
+    highlights();
+    el(event.currentTarget === el('stop-local') ? 'position' : 'batch').focus({ preventScroll: true });
+  }
+  el('stop').addEventListener('click', cancel);
+  el('stop-local').addEventListener('click', cancel);
   el('auto').addEventListener('change', () => { if (el('auto').checked && !job) analyzePosition(); else clearTimeout(debounce); });
   el('graph-position').addEventListener('change', event => goToPly(Number(event.target.value)));
   el('graph').addEventListener('click', event => {
@@ -445,7 +516,25 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     goToPly(Math.round((canvasX - 8) / (event.currentTarget.width - 16) * (view.game.positions.length - 1)));
   });
   el('cpu').addEventListener('click', startCpu);
+  for (const tab of tabs) {
+    const select = (index, focus) => selectTab(tabs[index].id.slice('review-tab-'.length), focus);
+    tab.addEventListener('click', () => select(tabs.indexOf(tab), false));
+    tab.addEventListener('keydown', event => {
+      const index = tabs.indexOf(tab);
+      const targets = { ArrowLeft: (index + tabs.length - 1) % tabs.length, ArrowRight: (index + 1) % tabs.length,
+        Home: 0, End: tabs.length - 1 };
+      if (!Object.hasOwn(targets, event.key)) return;
+      event.preventDefault();
+      select(targets[event.key], true);
+    });
+  }
   window.addEventListener('pagehide', () => { stop(); if (view) render(); });
+  async function savedProgress(game) {
+    try {
+      const id = await studyContentKey(game);
+      return studyProgressLabel(memory.get(id) ?? await store.get(id), game.positions.length);
+    } catch { return '解析状況を確認できません'; }
+  }
   return { open, close, changed, play, branchStep, resetBranch, outputPosition, render, highlights,
-    branch: () => branch, hints: () => activeScore()?.move ? [activeScore().move] : [] };
+    savedProgress, branch: () => branch, hints: () => activeScore()?.move ? [activeScore().move] : [] };
 }

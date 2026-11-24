@@ -74,6 +74,14 @@ const studyGraphLimit = 500;
 const studyGraphValue = score => score.unit === 'mate' ? (score.winner === 'w' ? 1 : -1) * studyGraphLimit
   : Math.max(-studyGraphLimit, Math.min(studyGraphLimit, score.value));
 
+function studyTimelineScore(record, ply) {
+  return record?.single?.[ply + ':']?.value ?? record?.scores?.[ply] ?? null;
+}
+
+function studyWhiteShare(score) {
+  return (studyGraphLimit + studyGraphValue(score)) / (2 * studyGraphLimit);
+}
+
 function studyMoveGrade(before, after, move, { forced = false, terminalWinner = null } = {}) {
   if (forced) return { label: '強制手', kind: 'forced', loss: 0 };
   if (!before || before.depth < studyGradeRules.minimumDepth || !move) return null;
@@ -129,6 +137,13 @@ async function studyContentKey(game) {
   const data = new TextEncoder().encode(JSON.stringify([game.pgn, game.cpu?.origin?.initialFen, game.cpu?.origin?.moves]));
   const hash = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function studyProgressLabel(record, count) {
+  const batch = Array.isArray(record?.scores) ? record.scores.slice(0, count).filter(row => row?.score).length : 0;
+  if (batch && batch === count) return '対局解析済み';
+  if (batch) return `解析途中（${batch} / ${count}局面）`;
+  return Object.values(record?.single ?? {}).some(entry => entry?.value?.score) ? '局面解析済み' : '未解析';
 }
 
 function createStudyStore() {

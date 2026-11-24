@@ -1,4 +1,3 @@
-.game-player { max-width: 1040px; }
 .game-player h1 { margin: 8px 0; }
 .game-summary, .game-status, .game-note-text, .game-history p { overflow-wrap: anywhere; }
 .game-status:not(:empty) { margin-block: 8px; }
@@ -37,7 +36,6 @@
 .game-file-label:has(+ input:focus-visible) { outline: 3px solid var(--rust); outline-offset: 4px; }
 .game-file-input { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
 
-.game-player .study-layout { grid-template-columns: minmax(0, 1fr) minmax(0, .88fr); }
 .game-side > :first-child { margin-top: 0; }
 .game-opening { border-top: 3px solid var(--gold-dark); }
 .game-opening #game-opening-name { font-weight: 700; margin-bottom: 4px; }
@@ -80,9 +78,16 @@
 .game-history h2 a { min-height: 44px; }
 .game-notes > li { padding: 5px 0; border-bottom: 1px solid var(--line); }
 .game-note-text { white-space: pre-wrap; }
+.review-entry-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.review-entry-grid .game-card { margin-top: 0; display: grid; align-content: start; justify-items: start; gap: 6px; }
+.review-entry-grid .button { margin-top: 6px; }
+.review-import > summary { min-height: 44px; padding-block: 8px; }
+.review-recent { margin-top: 28px; }
+.review-recent .game-card { margin-top: 8px; }
+.review-recent .game-card > p { color: var(--muted); }
 
-@media (max-width: 760px) {
-  .game-player .study-layout { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 520px) {
+  .review-entry-grid { grid-template-columns: minmax(0, 1fr); }
 }
 .lichess-form, #lichess-results { margin-top: 16px; }
 .lichess-form input[type="text"], .lichess-filters select, #game-history-source {

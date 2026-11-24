@@ -28,7 +28,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.1\.0/);
+  assert.match(html, /Rookori v4\.1\.1/);
   assert.match(html, /id="external-title"/);
   assert.match(html, /rel="icon"[^>]*href="brand\/rookori\.png"/);
   const site = new URL(siteConfig.siteUrl);
@@ -46,14 +46,20 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   }
   for (const [, reference] of html.matchAll(/<(?:script|link|img|a)\b[^>]*\b(?:src|href)="([^"]+)"/g)) {
     if (reference.startsWith('#') || /^https?:\/\//.test(reference)) continue;
-    const { pathname } = new URL(reference, site);
+    const { pathname, searchParams } = new URL(reference, site);
     assert.ok(pathname.startsWith(site.pathname), reference);
-    assert.ok(readFileSync(join(published, pathname.slice(site.pathname.length))).length, reference);
+    const bytes = readFileSync(join(published, pathname.slice(site.pathname.length)));
+    assert.ok(bytes.length, reference);
+    if (/\.(js|css)$/.test(pathname)) {
+      assert.equal(searchParams.get('v'), createHash('sha256').update(bytes).digest('hex').slice(0, 12), reference);
+    }
   }
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(([, id]) => id);
   assert.equal(ids.length, new Set(ids).size, '画面内のIDは重複しない');
-  assert.match(html, /src="learning-insights\.js"/);
-  assert.match(html, /src="learning-progress-ui\.js"/);
+  assert.match(html, /src="learning-insights\.js\?v=/);
+  assert.match(html, /src="learning-progress-ui\.js\?v=/);
+  assert.doesNotMatch(html, /class="site-nav"/);
+  assert.match(html, /id="review-tabs"[^>]*role="tablist"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'opening-classification.js', 'chess-terms.js', 'chess-glossary.js',
     'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js', 'lichess-api.js', 'lichess-ui.js',

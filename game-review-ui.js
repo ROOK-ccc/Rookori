@@ -11,6 +11,7 @@ const gameReviewPages = (() => {
   let viewer;
   let historyPage;
   let restorePending = false;
+  let recentRequest = 0;
 
   function title(game) {
     if (game.cpu) return `${game.cpu.origin ? '局面指定CPU対戦' : 'コンピューター対戦'} · ${cpuLevelLabel(game.cpu.settings.level)}`;
@@ -27,6 +28,41 @@ const gameReviewPages = (() => {
   function cpuHistoryResult(game) {
     if (game.metadata.result === '1/2-1/2') return '引き分け';
     return game.metadata.result === (game.cpu.player === 'w' ? '1-0' : '0-1') ? '勝利' : '敗北';
+  }
+
+  async function loadRecent() {
+    const request = ++recentRequest;
+    const active = () => request === recentRequest && !byId('game-review').hidden;
+    const status = byId('review-recent-status');
+    const list = byId('review-recent-list');
+    const empty = byId('review-recent-empty');
+    list.replaceChildren();
+    empty.hidden = true;
+    status.textContent = '最近の対局を読み込んでいます。';
+    try {
+      const games = await library.all();
+      if (!active()) return;
+      const newest = games.map(game => ({ game, date: reviewRecentDate(game) }))
+        .sort((a, b) => Date.parse(b.date.value) - Date.parse(a.date.value)).slice(0, 4);
+      status.textContent = '';
+      empty.hidden = newest.length > 0;
+      for (const { game, date } of newest) {
+        const item = element('li', null, 'game-card');
+        const source = game.cpu ? 'Rookori CPU対戦' : game.source?.provider === 'lichess' ? 'Lichess' : '手動取り込み';
+        const opponent = game.cpu ? cpuLevelLabel(game.cpu.settings.level)
+          : game.source?.opponent ?? [game.metadata.white, game.metadata.black].filter(Boolean).join(' 対 ');
+        const result = game.cpu ? cpuHistoryResult(game)
+          : ({ win: '勝利', loss: '敗北', draw: '引き分け' })[game.source?.result] ?? resultText(game.metadata);
+        const played = date.time ? new Date(date.value).toLocaleString('ja-JP') : new Date(date.value).toLocaleDateString('ja-JP');
+        const progress = element('p', '解析状況を確認中');
+        const link = element('a', '復習する', 'text-button');
+        link.href = `#game-review/${game.id}`;
+        item.append(element('h3', opponent || title(game)), element('p',
+          [date.isSaved ? '保存 ' + played : played, result, reviewRecentTime(game), source].join(' · ')), progress, link);
+        list.append(item);
+        study.savedProgress(game).then(label => { if (active()) progress.textContent = label; });
+      }
+    } catch { if (active()) status.textContent = '最近の対局を読み込めませんでした。'; }
   }
 
   function describe(game) {
@@ -351,6 +387,7 @@ const gameReviewPages = (() => {
     viewer.flipped = !viewer.flipped;
     event.currentTarget.textContent = viewer.flipped ? '白を手前にする' : '黒を手前にする';
     board.render();
+    study.render();
   });
   moveList.addEventListener('click', event => {
     const button = event.target.closest('button[data-ply]');
@@ -359,7 +396,7 @@ const gameReviewPages = (() => {
   document.addEventListener('keydown', event => {
     if (!viewer?.position || !activeView(viewer) || event.altKey || event.ctrlKey || event.metaKey
       || document.querySelector('dialog[open]') || event.target.isContentEditable
-      || event.target.closest?.('input, textarea, select, #game-board')) return;
+      || event.target.closest?.('input, textarea, select, #game-board, #review-tabs')) return;
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     event.stopPropagation();
@@ -577,6 +614,7 @@ const gameReviewPages = (() => {
     if (!route.game) {
       reading++;
       showScreen('game-review', 'game-review-title');
+      loadRecent();
       return;
     }
     const view = { flipped: false, busy: false };

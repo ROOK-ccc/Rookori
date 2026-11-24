@@ -9,12 +9,29 @@ const source = ['vendor/chess.js', 'cpu-game.js', 'game-review.js', 'game-study.
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
 const { parseReviewGames, studyPosition, studyPlay, studyVariations, studyEngineResult, studyScoreText, studyGraphValue,
   studyMoveGrade, CpuMatch, cpuSnapshot, restoreCpuSnapshot, cpuPgn, cpuStartingPosition, studyContentKey,
-  cpuReviewGame, makeGameBackup, validateGameBackup } = runInNewContext(source + '\n({ parseReviewGames, studyPosition, studyPlay,'
+  cpuReviewGame, makeGameBackup, validateGameBackup, studyProgressLabel, studyTimelineScore, studyWhiteShare, reviewRecentTime } =
+runInNewContext(source + '\n({ parseReviewGames, studyPosition, studyPlay,'
   + 'studyVariations, studyEngineResult, studyScoreText, studyGraphValue, studyMoveGrade, CpuMatch, cpuSnapshot,'
-  + 'restoreCpuSnapshot,cpuPgn,cpuStartingPosition,studyContentKey,cpuReviewGame,makeGameBackup,validateGameBackup })',
+  + 'restoreCpuSnapshot,cpuPgn,cpuStartingPosition,studyContentKey,cpuReviewGame,makeGameBackup,validateGameBackup,'
+  + 'studyProgressLabel,studyTimelineScore,studyWhiteShare,reviewRecentTime })',
 { crypto: webcrypto, performance, TextEncoder });
 
 const [sample] = parseReviewGames('1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 *');
+
+test('盤とグラフが同じ局面評価を選び、空白と片側メイトを区別する', () => {
+  const batch = { score: { unit: 'cp', value: 10 } };
+  const refined = { score: { unit: 'cp', value: -225 } };
+  const record = { scores: [batch, null], single: { '0:': { value: refined }, '1:c7c5': { value: batch } } };
+  assert.equal(studyTimelineScore(record, 0), refined);
+  assert.equal(studyTimelineScore(record, 1), null);
+  assert.equal(studyWhiteShare(refined.score), .275);
+  assert.equal(studyWhiteShare({ unit: 'mate', winner: 'w' }), 1);
+  assert.equal(studyWhiteShare({ unit: 'mate', winner: 'b' }), 0);
+  assert.equal(studyProgressLabel(record, 2), '解析途中（1 / 2局面）');
+  assert.equal(studyProgressLabel({ single: record.single }, 2), '局面解析済み');
+  assert.equal(studyProgressLabel({ scores: [batch, batch] }, 2), '対局解析済み');
+  assert.equal(reviewRecentTime({ pgn: '[TimeControl "180+2"]' }), '3分＋2秒');
+});
 const seed = (game, ply, variation) => {
   const position = studyPosition(game, ply, variation);
   return { fen: position.game.fen(), initialFen: position.fen, moves: position.moves, gameId: 'a'.repeat(32), ply, color: 'w' };

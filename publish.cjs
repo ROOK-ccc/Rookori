@@ -1,8 +1,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 const { parseArgs } = require('node:util');
 const siteConfig = require('./site-config.json');
+
+function versionPublicAssets(html, folder) {
+  return html.replace(/\b(src|href)="([\w./-]+\.(?:js|css))"/g, (_, attr, file) => {
+    const bytes = fs.readFileSync(path.join(folder, file));
+    const version = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+    return `${attr}="${file}?v=${version}"`;
+  });
+}
 
 function publicSiteFiles(config) {
   const site = new URL(config.siteUrl);
@@ -77,8 +86,9 @@ try {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(path.join(__dirname, file), target);
   }
-  for (const [file, content] of Object.entries(generated)) fs.writeFileSync(path.join(output, file), content);
   fs.writeFileSync(path.join(output, 'course-problems.js'), courseScript);
+  generated['index.html'] = versionPublicAssets(generated['index.html'], output);
+  for (const [file, content] of Object.entries(generated)) fs.writeFileSync(path.join(output, file), content);
   console.log(values['print-output'] ? output : `公開用フォルダーを作成しました。 ${output}`);
 } catch (error) {
   console.error(error.message);

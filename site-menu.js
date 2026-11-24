@@ -15,7 +15,8 @@ const siteMenu = (() => {
     returnFocus = true;
     panel.showModal();
     toggle.setAttribute('aria-expanded', 'true');
-    (panel.querySelector('a[aria-current="page"]') ?? byId('site-menu-close')).focus();
+    panel.scrollTop = 0;
+    byId('site-menu-close').focus({ preventScroll: true });
   });
   byId('site-menu-close').addEventListener('click', () => close());
   panel.addEventListener('cancel', event => { event.preventDefault(); close(); });
@@ -41,13 +42,12 @@ const siteMenu = (() => {
       : route.lesson || path === 'intro-summary' ? 'intro'
       : path === 'result' || (route.mode && route.mode !== 'opening') ? 'mode'
       : path === 'opening-result' ? 'opening-quiz'
-      : path === 'daily' ? 'dashboard'
-      : ['learn', 'beginner', 'improve', 'journal'].includes(path) ? 'home' : path;
+      : ['beginner', 'improve', 'journal'].includes(path) ? 'learn' : path;
     for (const link of panel.querySelectorAll('a')) {
       if (link.hash === '#' + current) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
   }
 
-  return { close, mark, contains: node => panel.contains(node) };
+  return { close, mark };
 })();

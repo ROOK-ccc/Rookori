@@ -68,14 +68,6 @@
   <header class="site-header">
     <div class="shell header-inner">
       <a class="brand" href="#home" aria-label="Rookori（ルーコリ） ホーム"><img class="brand-mark" src="brand/rookori.png" width="36" height="36" alt="">Rookori</a>
-      <nav class="site-nav" aria-label="メインメニュー">
-        <a href="#home">ホーム</a>
-        <a href="#learn">学習を始める</a>
-        <a href="#cpu">コンピューター対戦</a>
-        <a href="#opening-quiz">オープニング診断</a>
-        <a href="#mode">16タイプ診断</a>
-        <a href="#review">復習する</a>
-      </nav>
       <button class="menu-toggle" id="site-menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-menu"><span aria-hidden="true">☰</span></button>
     </div>
   </header>
@@ -86,30 +78,39 @@
         <section class="menu-group">
           <h3>ホーム</h3>
           <a href="#home"><span aria-hidden="true">⌂</span>ホーム</a>
-          <a href="#dashboard"><span aria-hidden="true">☀</span>今日の学習</a>
-          <a href="#review"><span aria-hidden="true">↻</span>今日の復習</a>
+          <a href="#dashboard"><span aria-hidden="true">☀</span>今日の学習・ダッシュボード</a>
+        </section>
+        <section class="menu-group">
+          <h3>学ぶ</h3>
+          <a href="#learn"><span aria-hidden="true">→</span>学習を始める</a>
+          <a href="#intro"><span aria-hidden="true">♙</span>はじめてのチェス</a>
+          <a href="#openings"><span aria-hidden="true">▦</span>オープニング学習</a>
+          <a href="#memorize"><span aria-hidden="true">♘</span>定跡を暗記する</a>
+          <a href="#review"><span aria-hidden="true">↻</span>定跡を復習する</a>
+        </section>
+        <section class="menu-group">
+          <h3>対戦する</h3>
+          <a href="#cpu"><span aria-hidden="true">♞</span>コンピューター対戦</a>
+        </section>
+        <section class="menu-group">
+          <h3>成長する</h3>
+          <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
+          <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
+          <a href="#external"><span aria-hidden="true">↗</span>外部サイトとの連携（Lichess）</a>
+          <a href="#daily"><span aria-hidden="true">⊞</span>毎日の練習問題</a>
           <a href="#progress"><span aria-hidden="true">▥</span>上達記録</a>
         </section>
         <section class="menu-group">
-          <h3>対局</h3>
-          <a href="#cpu"><span aria-hidden="true">♞</span>コンピューター対戦</a>
-          <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
-          <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
-          <a href="#external"><span aria-hidden="true">↗</span>外部サイトとの連携</a>
-        </section>
-        <section class="menu-group">
-          <h3>チェスを学ぶ</h3>
-          <a href="#intro"><span aria-hidden="true">♙</span>はじめてのチェス</a>
-          <a href="#openings"><span aria-hidden="true">▦</span>オープニング一覧</a>
-          <a href="#memorize"><span aria-hidden="true">♘</span>オープニング暗記</a>
+          <h3>自分を知る</h3>
+          <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
           <a href="#opening-quiz"><span aria-hidden="true">◇</span>オープニング診断</a>
         </section>
         <section class="menu-group">
-          <h3>診断・その他</h3>
-          <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
-          <a href="#backup"><span aria-hidden="true">⇅</span>学習データのバックアップ</a>
+          <h3>その他</h3>
           <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
           <a href="#about"><span aria-hidden="true">ⓘ</span>Rookoriについて</a>
+          <a href="#backup"><span aria-hidden="true">⇅</span>設定・学習データのバックアップ</a>
+          <a href="#privacy"><span aria-hidden="true">⚙</span>アクセス解析とプライバシー</a>
         </section>
       </nav>
     </div>
@@ -172,10 +173,10 @@
             <p>問題を解き、覚えた手順や実際に指した対局を振り返りましょう。</p>
             <a class="text-button" href="#daily">今日の練習問題を解く</a>
             <a class="text-button" href="#review">今日の復習をする</a>
-            <a class="text-button" href="#game-review">対局を振り返る</a>
           </section>
         </div>
         <div class="study-mode-links home-more">
+          <a class="button secondary" href="#game-review">対局を振り返る</a>
           <a class="text-button" href="#glossary">チェス用語集</a>
         </div>
         <details class="home-settings">
@@ -701,19 +702,23 @@
     </section>
 
     <section id="game-review" class="screen inner-screen guide-screen game-page" hidden>
-      <nav class="study-navigation" aria-label="対局のメニュー">
-        <a class="text-button" href="#game-library">対局履歴を見る</a>
-      </nav>
       <h1 id="game-review-title" tabindex="-1">対局を振り返る</h1>
-      <a class="text-button" href="#external">Lichessの公開棋譜を取り込む</a>
-      <p>指した手を盤に並べて、気になったところをもう一度考えてみましょう。</p>
-      <div class="study-complete">
-        <h2>サンプル対局で試す</h2>
-        <p>棋譜を持っていなくても、短い対局で盤の動かし方やメモの残し方を試せます。</p>
-        <div class="study-complete-actions"><a class="button primary" href="#game-review/sample">サンプル対局を開く</a></div>
+      <p class="guide-intro">一局一局の経験を、次の一手につなげよう。</p>
+      <div class="review-entry-grid">
+        <section class="game-card">
+          <h2>過去の対局から選ぶ</h2>
+          <p>保存した棋譜を開き、指した手や別の手を盤で考えます。</p>
+          <a class="button primary" href="#game-library">対局履歴を開く</a>
+        </section>
+        <section class="game-card">
+          <h2>Lichessから取り込む</h2>
+          <p>Lichessで指した公開対局を選んで、Rookoriで振り返ります。</p>
+          <a class="button secondary" href="#external">Lichessの棋譜を取り込む</a>
+        </section>
       </div>
-      <form id="game-import-form" class="game-card">
-        <h2>自分の対局を開く</h2>
+      <details class="game-card review-import">
+        <summary>棋譜を直接入力する</summary>
+        <form id="game-import-form">
         <p data-chess-terms>対局で指した手の記録を貼り付けるか、棋譜ファイル（PGN）を選んでください。</p>
         <details>
           <summary>棋譜はどこで見つかる？</summary>
@@ -732,12 +737,26 @@
           <select id="game-import-select"></select>
           <button class="button primary" id="game-open-choice" type="button">選んだ対局を開く</button>
         </div>
-      </form>
+        </form>
+      </details>
+      <section class="review-recent" aria-labelledby="review-recent-title">
+        <h2 id="review-recent-title">最近の対局</h2>
+        <p id="review-recent-status" class="game-status" role="status"></p>
+        <div id="review-recent-empty" hidden>
+          <p>保存した対局があると、ここから続きを振り返れます。</p>
+          <div class="study-mode-links"><a class="text-button" href="#cpu">コンピューターと対戦する</a><a class="text-button" href="#external">Lichessから取り込む</a></div>
+        </div>
+        <ul id="review-recent-list" class="game-history"></ul>
+        <div class="study-mode-links">
+          <a class="text-button" href="#game-library">すべての対局履歴を見る</a>
+          <a class="text-button" href="#game-review/sample">サンプル対局で試す</a>
+        </div>
+      </section>
     </section>
 
     <section id="game-player" class="screen inner-screen game-player" hidden>
       <nav class="study-navigation" aria-label="対局のメニュー">
-        <a class="text-button" href="#game-review">棋譜の取り込みへ</a>
+        <a class="text-button" href="#game-review">対局を振り返るトップへ</a>
         <a class="text-button" href="#game-library">対局履歴を見る</a>
       </nav>
       <h1 id="game-player-title" tabindex="-1">対局を振り返る</h1>
@@ -749,10 +768,13 @@
           <div class="study-board-area">
             <div class="study-board-bar">
               <p id="game-turn" class="study-turn"></p>
+              <span id="game-study-board-eval">未解析</span>
               <button class="text-button" id="game-flip" type="button">黒を手前にする</button>
             </div>
-            <div id="game-board" class="study-board" aria-label="対局のチェス盤" role="group"></div>
-            <meter id="game-study-advantage" min="0" max="1000" value="500" aria-label="白側から見た局面評価" hidden></meter>
+            <div class="review-board-row">
+              <div id="game-study-advantage" class="review-evaluation" data-evaluated="false" role="img" aria-label="局面評価は未解析"></div>
+              <div id="game-board" class="study-board" aria-label="対局のチェス盤" role="group"></div>
+            </div>
             <div class="game-move-controls" role="group" aria-label="盤面を進める・戻る">
               <button class="button secondary" id="game-first" type="button">最初</button>
               <button class="button secondary" id="game-prev" type="button">1手戻る</button>
@@ -761,69 +783,88 @@
             </div>
             <p class="study-count" id="game-counter" aria-live="polite"></p>
             <p id="game-study-board-feedback" class="game-status" role="status"></p>
-            <div class="study-mode-links">
-              <button class="button primary" id="game-study-fork" type="button">別の手を試す</button>
-              <button class="button secondary" id="game-study-cpu" type="button">この局面からCPUと対戦する</button>
+            <div class="study-mode-links review-quick-actions">
+              <button class="text-button" id="game-study-fork" type="button">別の手を試す</button>
+              <button class="text-button" id="game-study-return" type="button" hidden>本譜へ戻る</button>
             </div>
-            <div class="game-card study-branch-controls">
-              <label for="game-study-variations">保存した変化</label>
-              <select id="game-study-variations" disabled></select>
-              <div id="game-study-branch-panel" hidden>
-                <h2>自由検討中</h2>
-                <p>白・黒のどちらも指せます。元の対局はそのまま残ります。</p>
-                <div class="study-mode-links">
-                  <button class="text-button" id="game-study-branch-root" type="button">分岐元に戻る</button>
-                  <button class="text-button" id="game-study-return" type="button">本譜へ戻る</button>
+            <section class="review-graph game-card" aria-labelledby="game-study-graph-title">
+              <h2 id="game-study-graph-title">評価値グラフ</h2>
+              <p id="game-study-graph-empty">対局全体を解析すると、ここに評価の推移が表示されます。現在の局面だけの解析は盤の左に表示されます。</p>
+              <div id="game-study-results" hidden>
+                <div class="review-plot">
+                  <div class="review-plot-labels" aria-hidden="true"><span>白有利</span><span>黒有利</span></div>
+                  <canvas id="game-study-graph" width="560" height="136" aria-label="横軸は対局の進行、縦軸は白視点の評価。中央線は互角です。"></canvas>
                 </div>
-                <ol class="study-branch-moves" id="game-study-branch-moves" aria-label="変化の着手"></ol>
-                <p id="game-study-compare"></p>
-                <label for="game-study-branch-name">変化の名前</label>
-                <input id="game-study-branch-name" type="text" maxlength="80" placeholder="例　先にキャスリングを試す">
-                <div class="study-mode-links">
-                  <button class="button secondary" id="game-study-branch-save" type="button">変化を保存する</button>
-                  <button class="text-button" id="game-study-branch-delete" type="button">保存した変化を削除</button>
-                </div>
+                <div class="review-graph-axis" aria-hidden="true"><span>最初</span><span>最後</span></div>
+                <label for="game-study-graph-position" class="review-graph-picker">グラフの局面
+                  <input id="game-study-graph-position" type="range" min="0" step="1" value="0">
+                </label>
+                <p id="game-study-graph-current"></p>
+                <details><summary>グラフの読み方と解析条件</summary>
+                  <p>中央は互角です。空白は未解析、四角はメイト、ひし形は大きく評価が変わった局面です。±5を超える評価は端に表示します。</p>
+                  <p id="game-study-source-conditions"></p>
+                </details>
               </div>
-            </div>
-            <div class="study-actions">
-              <button class="button secondary" id="game-save" type="button">対局を履歴に保存</button>
-              <button class="text-button" id="game-download" type="button" hidden>棋譜を書き出す（PGN）</button>
-            </div>
-          </div>
-          <div class="game-side">
-            <section class="game-card" aria-labelledby="game-study-analysis-title">
-              <h2 id="game-study-analysis-title">Stockfishで振り返る</h2>
-              <p id="game-study-assessment">この局面は未解析</p>
-              <p id="game-study-your-color"></p>
-              <p id="game-study-grade"></p>
-              <div class="study-mode-links">
-                <button class="button secondary" id="game-study-position" type="button">現在の局面を解析する</button>
-                <button class="button secondary" id="game-study-stop" type="button" disabled>解析を停止する</button>
+              <div class="review-analysis-actions">
+                <button class="button secondary" id="game-study-batch" type="button">対局全体を解析する</button>
+                <button class="text-button" id="game-study-stop" type="button" disabled hidden>解析を停止する</button>
               </div>
-              <label for="game-study-analysis-mode">対局全体の解析方法</label>
-              <select id="game-study-analysis-mode"><option value="analysis-quick">クイック解析</option><option value="analysis-detail">詳細解析（時間がかかります）</option></select>
-              <button class="button secondary" id="game-study-batch" type="button">この対局を解析する</button>
               <p class="game-status" id="game-study-status" role="status"></p>
               <p class="game-status" id="game-study-storage" role="status"></p>
-              <details>
-                <summary>評価値と候補手の詳細</summary>
-                <p>白に有利なほどプラスです。Mはメイトまでの手数です。駒の配置や戦術も含めた目安で、勝敗は指し手によって変わります。</p>
-                <label for="game-study-candidates">局面解析の候補数</label>
-                <select id="game-study-candidates"><option value="1">1候補</option><option value="2">2候補</option><option value="3" selected>3候補</option><option value="5">5候補</option></select>
-                <label><input id="game-study-auto" type="checkbox"> 局面を変えたら自動で解析する</label>
-                <ol id="game-study-lines"></ol>
-                <p id="game-study-depth"></p>
-                <div id="game-study-results" hidden>
-                  <h3>評価値グラフ</h3>
-                  <p>上は白、下は黒が有利です。点のない箇所は未解析です。±5を超える評価やメイトはグラフの端に表示します。</p>
-                  <canvas id="game-study-graph" width="560" height="150" aria-label="評価値グラフ。下のスライダーで局面を選べます。"></canvas>
-                  <label for="game-study-graph-position">グラフの局面</label>
-                  <input id="game-study-graph-position" type="range" min="0" step="1" value="0">
-                  <p id="game-study-source-conditions"></p>
+            </section>
+          </div>
+          <div class="game-side review-side">
+            <div id="review-tabs" class="review-tabs" role="tablist" aria-label="対局の詳しい振り返り">
+              <button id="review-tab-highlights" role="tab" type="button" aria-controls="review-panel-highlights" aria-selected="false" tabindex="-1">ハイライト</button>
+              <button id="review-tab-analysis" role="tab" type="button" aria-controls="review-panel-analysis" aria-selected="true">解析</button>
+              <button id="review-tab-moves" role="tab" type="button" aria-controls="review-panel-moves" aria-selected="false" tabindex="-1">棋譜</button>
+              <button id="review-tab-branch" role="tab" type="button" aria-controls="review-panel-branch" aria-selected="false" tabindex="-1">検討</button>
+            </div>
+            <div id="review-panel-highlights" role="tabpanel" aria-labelledby="review-tab-highlights" tabindex="0" hidden>
+              <p id="game-study-highlights-empty" class="game-card">対局全体を解析すると、振り返りたい指し手をここで確認できます。</p>
+              <section class="game-card study-highlights-section" id="game-study-highlights-section" aria-labelledby="game-study-highlights-title" hidden>
+                <h2 id="game-study-highlights-title">対局のハイライト</h2>
+                <p id="game-study-overview"></p>
+                <ul id="game-study-highlights" class="game-history"></ul>
+              </section>
+            </div>
+            <div id="review-panel-analysis" role="tabpanel" aria-labelledby="review-tab-analysis" tabindex="0">
+              <section class="game-card" aria-labelledby="game-study-analysis-title">
+                <h2 id="game-study-analysis-title">現在の局面</h2>
+                <p id="game-study-assessment">この局面は未解析</p>
+                <p id="game-study-your-color"></p>
+                <p id="game-study-grade"></p>
+                <div class="review-analysis-actions">
+                  <button class="button secondary" id="game-study-position" type="button" aria-describedby="game-study-status">現在の局面を解析する</button>
+                  <button class="text-button" id="game-study-stop-local" type="button" hidden>解析を停止する</button>
                 </div>
+                <ol id="game-study-lines"></ol>
+                <details>
+                  <summary>評価の見方・解析設定</summary>
+                  <p>評価値は駒の配置や戦術も含めた形勢の目安です。白が有利ならプラス、黒が有利ならマイナス。Mはメイトまでの手数です。</p>
+                  <p id="game-study-depth"></p>
+                  <label for="game-study-analysis-mode">対局全体の解析方法</label>
+                  <select id="game-study-analysis-mode"><option value="analysis-quick">クイック解析</option><option value="analysis-detail">詳細解析（時間がかかります）</option></select>
+                  <label for="game-study-candidates">局面解析の候補数</label>
+                  <select id="game-study-candidates"><option value="1">1候補</option><option value="2">2候補</option><option value="3" selected>3候補</option><option value="5">5候補</option></select>
+                  <label><input id="game-study-auto" type="checkbox"> 局面を変えたら自動で解析する</label>
+                </details>
+              </section>
+            </div>
+            <div id="review-panel-moves" role="tabpanel" aria-labelledby="review-tab-moves" tabindex="0" hidden>
+              <section class="game-card" aria-labelledby="game-moves-title">
+              <h2 id="game-moves-title">指した手</h2>
+              <p>手を選ぶと、その直後の盤面に移動します。</p>
+              <p id="game-study-move-grade"></p>
+              <ol class="game-moves" id="game-moves"></ol>
+              <details>
+                <summary>詳しい対局情報</summary>
+                <dl id="game-metadata" class="game-metadata"></dl>
+                <p data-chess-terms>現在の盤面の記録（FEN）</p>
+                <output id="game-fen" class="game-fen"></output>
               </details>
             </section>
-            <section class="game-card game-opening" aria-labelledby="game-opening-title">
+              <section class="game-card game-opening" aria-labelledby="game-opening-title">
               <h2 id="game-opening-title" data-chess-terms>棋譜のオープニング</h2>
               <p id="game-opening-name"></p>
               <p id="game-opening-description"></p>
@@ -834,18 +875,7 @@
                 <p data-chess-terms>手順前後でも一致する、棋譜の序盤の局面を照合しています。</p>
               </details>
             </section>
-            <section class="game-card" aria-labelledby="game-moves-title">
-              <h2 id="game-moves-title">指した手</h2>
-              <p>手を選ぶと、その直後の盤面に移動します。</p>
-              <ol class="game-moves" id="game-moves"></ol>
-              <details>
-                <summary>詳しい対局情報</summary>
-                <dl id="game-metadata" class="game-metadata"></dl>
-                <p data-chess-terms>現在の盤面の記録（FEN）</p>
-                <output id="game-fen" class="game-fen"></output>
-              </details>
-            </section>
-            <section class="game-card" id="game-note-section" aria-labelledby="game-note-title">
+              <section class="game-card" id="game-note-section" aria-labelledby="game-note-title">
               <h2 id="game-note-title">気になった局面を保存する</h2>
               <p id="game-note-position"></p>
               <form id="game-note-form">
@@ -861,7 +891,14 @@
               <h3>保存した振り返りポイント</h3>
               <ul class="game-notes" id="game-notes"></ul>
             </section>
-            <section class="study-complete" aria-labelledby="game-next-learning-title">
+              <details class="game-card">
+                <summary>対局データの保存・書き出し</summary>
+                <div class="study-actions">
+                  <button class="button secondary" id="game-save" type="button">対局を履歴に保存</button>
+                  <button class="text-button" id="game-download" type="button" hidden>棋譜を書き出す（PGN）</button>
+                </div>
+              </details>
+              <section class="study-complete" aria-labelledby="game-next-learning-title">
               <h2 id="game-next-learning-title">次の学習</h2>
               <p id="game-next-learning"></p>
               <div class="study-complete-actions">
@@ -869,13 +906,31 @@
                 <a class="text-button" href="#intro">駒の動きやルールを確認</a>
               </div>
             </section>
+            </div>
+            <div id="review-panel-branch" role="tabpanel" aria-labelledby="review-tab-branch" tabindex="0" hidden>
+              <div class="game-card study-branch-controls">
+              <label for="game-study-variations">保存した変化</label>
+              <select id="game-study-variations" disabled></select>
+              <div id="game-study-branch-panel" hidden>
+                <h2>自由検討中</h2>
+                <p>白・黒のどちらも指せます。元の対局はそのまま残ります。</p>
+                <div class="study-mode-links">
+                  <button class="text-button" id="game-study-branch-root" type="button">分岐元に戻る</button>
+                </div>
+                <ol class="study-branch-moves" id="game-study-branch-moves" aria-label="変化の着手"></ol>
+                <p id="game-study-compare"></p>
+                <label for="game-study-branch-name">変化の名前</label>
+                <input id="game-study-branch-name" type="text" maxlength="80" placeholder="例　先にキャスリングを試す">
+                <div class="study-mode-links">
+                  <button class="button secondary" id="game-study-branch-save" type="button">変化を保存する</button>
+                  <button class="text-button" id="game-study-branch-delete" type="button">保存した変化を削除</button>
+                </div>
+              </div>
+            </div>
+              <div class="study-mode-links"><button class="button secondary" id="game-study-cpu" type="button">この局面からCPUと対戦する</button></div>
+            </div>
           </div>
         </div>
-        <section class="game-card study-highlights-section" id="game-study-highlights-section" aria-labelledby="game-study-highlights-title" hidden>
-          <h2 id="game-study-highlights-title">対局のハイライト</h2>
-          <p id="game-study-overview"></p>
-          <ul id="game-study-highlights" class="game-history"></ul>
-        </section>
         <dialog id="game-study-promotion" class="promotion-dialog" aria-labelledby="game-study-promotion-title">
           <form method="dialog">
             <h2 id="game-study-promotion-title">どの駒に昇格しますか？</h2>
@@ -1092,7 +1147,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.1.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.1.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

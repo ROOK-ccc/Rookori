@@ -30,12 +30,9 @@ h1, h2, h3 { line-height: 1.35; }
 .shell { width: min(1160px, calc(100% - 64px)); margin-inline: auto; }
 
 .site-header { border-bottom: 1px solid var(--line); }
-.header-inner { min-height: 75px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.header-inner { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: inline-flex; align-items: center; color: var(--ink); font: bold 1.75rem/1 Georgia, serif; text-decoration: none; letter-spacing: -.055em; }
 .brand-mark { display: block; width: 36px; height: 36px; margin-right: 9px; border-radius: 50%; }
-.site-nav { display: flex; align-items: stretch; gap: clamp(10px, 2vw, 24px); }
-.site-nav a { display: grid; place-items: center; min-height: 44px; padding: 4px; color: var(--muted); text-align: center; text-decoration: none; font-size: .875rem; border-bottom: 2px solid transparent; }
-.site-nav a:hover, .site-nav a[aria-current='page'] { color: var(--charcoal); border-bottom-color: #a98649; }
 
 .hero {
   display: grid;
@@ -629,7 +626,6 @@ body:has(#site-menu[open]) { overflow: hidden; }
 .promotion-dialog { max-height: calc(100% - 24px); overflow: auto; }
 @media (max-width: 760px) {
   .site-header .header-inner { flex-wrap: nowrap; padding-block: 8px; }
-  .site-header .site-nav { display: none; }
   .report-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 520px) {

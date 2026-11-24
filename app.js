@@ -208,17 +208,6 @@ function renderSite() {
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
   if (previous?.game && previous.path !== path) gameReviewPages.close();
 
-  let menuPath = 'learn';
-  if (path === 'home') menuPath = 'home';
-  if (path === 'mode' || path === 'result' || route.mode && route.mode !== 'opening') menuPath = 'mode';
-  if (path === 'opening-quiz' || path === 'opening-result' || route.recommended) menuPath = 'opening-quiz';
-  if (path === 'review' || route.reviewId) menuPath = 'review';
-  if (path === 'cpu') menuPath = 'cpu';
-  for (const link of document.querySelectorAll('.site-nav a')) {
-    if (link.hash === `#${menuPath}` && path !== 'error') link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  }
-
   if (path === 'glossary' || route.termId) {
     chessGlossary.open(route.termId);
   } else if (path === 'external') {
@@ -321,10 +310,9 @@ byId('mode-options').replaceChildren(...Object.entries(modes).map(([key, mode]) 
 
 document.addEventListener('click', (event) => {
   const link = event.target.closest('a[href^="#"]');
-  if (!link || event.defaultPrevented || event.button !== 0
+  if (!link || event.defaultPrevented || event.button > 0
       || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
-  if (siteMenu.contains(link)) siteMenu.close(link.hash === '#' + displayedRoute.path);
   const path = link.getAttribute('href').slice(1);
   const route = displayedRoute;
   if (['study-back', 'study-more'].includes(link.id)) {
