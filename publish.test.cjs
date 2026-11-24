@@ -30,6 +30,9 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /<title>Rookori（ルーコリ）/);
   assert.match(html, /Rookori v4\.1\.1/);
   assert.match(html, /id="external-title"/);
+  assert.match(html, /id="lichess-form"[^>]*data-browser-api-approved="false"[^>]*\bhidden\b/);
+  assert.match(html, /id="lichess-api-paused"/);
+  assert.match(html, /Rookori プライバシーポリシー/);
   assert.match(html, /rel="icon"[^>]*href="brand\/rookori\.png"/);
   const site = new URL(siteConfig.siteUrl);
   assert.ok(html.includes(`rel="canonical" href="${site}"`));

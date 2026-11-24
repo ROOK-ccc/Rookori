@@ -67,10 +67,10 @@ function createLichessClient({ request = (...args) => fetch(...args), now = Date
     return `Lichessの利用制限に達しました。約${remaining()}秒お待ちください。`;
   }
 
-  async function requestOnce(url, accept, signal) {
+  async function fetchGames(url, count, signal) {
     if (remaining()) throw new Error(limitMessage());
-    const response = await request(url, { signal, headers: { Accept: accept },
-      credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error' });
+    const response = await request(url, { signal, headers: { Accept: 'application/x-ndjson' },
+      credentials: 'omit', referrerPolicy: 'no-referrer', redirect: 'error', cache: 'no-store' });
     if (response.status === 429) {
       const retry = response.headers.get('Retry-After');
       const at = retry && /^\d+$/.test(retry) ? now() + Number(retry) * 1000 : Date.parse(retry);
@@ -79,23 +79,13 @@ function createLichessClient({ request = (...args) => fetch(...args), now = Date
       await response.body?.cancel().catch(() => {});
       throw new Error(limitMessage());
     }
-    return response;
-  }
-
-  async function fetchGames(url, count, signal) {
-    const response = await requestOnce(url, 'application/x-ndjson', signal);
-    if (response.status === 404) {
-      // An account can exist even when Lichess returns 404 for its game export.
-      await response.body?.cancel().catch(() => {});
-      const profile = await requestOnce(new URL('/api/user/' + url.pathname.split('/').at(-1), url), 'application/json', signal);
-      await profile.body?.cancel().catch(() => {});
-      if (profile.status === 404) throw new Error('Lichessユーザーが見つかりません。ユーザー名を確認してください。');
-      if (profile.ok) return [];
-      throw new Error('Lichessから棋譜を取得できませんでした。時間をおいてお試しください。');
-    }
     if (!response.ok) await response.body?.cancel().catch(() => {});
+    if (response.status === 404) {
+      throw new Error('公開棋譜を取得できませんでした。ユーザー名と対局の公開状態を確認してください。');
+    }
     if (!response.ok) throw new Error(`Lichessから棋譜を取得できませんでした（HTTP ${response.status}）。`);
     if (!/^application\/(?:x-)?ndjson\b/i.test(response.headers.get('Content-Type') ?? '') || !response.body) {
+      await response.body?.cancel().catch(() => {});
       throw new Error('Lichessから棋譜の形式で応答を受け取れませんでした。');
     }
     try { return await readLichessGames(response, count); }

@@ -109,17 +109,22 @@ test('429以降は同じ分内のAPI送信を止め、サーバー指定が長�
   assert.equal(total, 2);
 });
 
-test('404はユーザーの存在を順に確認し、通信キャンセル時は並行取得を防ぐ', async () => {
-  for (const profile of [404, 200]) {
-    const calls = [];
-    const client = createLichessClient({ ...settings, request: async url => {
-      calls.push(url.pathname);
-      return new Response(null, { status: calls.length === 1 ? 404 : profile });
-    } });
-    if (profile === 404) await assert.rejects(client.games('Alice', 20, 'all', signal()), /ユーザーが見つかりません/);
-    else assert.equal((await client.games('Alice', 20, 'all', signal())).length, 0);
-    assert.deepEqual(calls, ['/api/games/user/alice', '/api/user/alice']);
-  }
+test('404でもプロフィールを照会せず、Cookie・認証情報・リファラーを送らない', async () => {
+  const calls = [];
+  const client = createLichessClient({ ...settings, request: async (url, options) => {
+    calls.push(url.pathname);
+    assert.equal(options.headers.Accept, 'application/x-ndjson');
+    assert.equal(options.headers.Authorization, undefined);
+    assert.equal(options.credentials, 'omit');
+    assert.equal(options.referrerPolicy, 'no-referrer');
+    assert.equal(options.cache, 'no-store');
+    return new Response(null, { status: 404 });
+  } });
+  await assert.rejects(client.games('Alice', 20, 'all', signal()), /公開棋譜を取得できません/);
+  assert.deepEqual(calls, ['/api/games/user/alice']);
+});
+
+test('通信キャンセル時は並行取得を防ぐ', async () => {
   const client = createLichessClient({ ...settings, request: (_url, { signal: requestSignal }) =>
     new Promise((_, reject) => requestSignal.addEventListener('abort', () => reject(requestSignal.reason))) });
   const cancel = new AbortController();
@@ -127,4 +132,19 @@ test('404はユーザーの存在を順に確認し、通信キャンセル時�
   await assert.rejects(client.games('Alice', 20, 'all', signal()), /取得中/);
   cancel.abort();
   await assert.rejects(pending, { name: 'AbortError' });
+});
+
+test('Retry-Afterが読めない場合も429から60秒間は別クライアントの取得を防ぐ', async () => {
+  let now = 1000;
+  let stored;
+  let requests = 0;
+  const options = { now: () => now, readCooldown: () => stored, writeCooldown: value => { stored = value; },
+    locks: { request: (_name, { ifAvailable }, action) => { assert.equal(ifAvailable, true); return action({}); } },
+    request: async () => ++requests === 1 ? new Response(null, { status: 429 }) : ndjson([game]) };
+  await assert.rejects(createLichessClient(options).games('Alice', 10, 'all', signal()), /60秒/);
+  now += 59999;
+  await assert.rejects(createLichessClient(options).games('Bob', 10, 'all', signal()), /1秒/);
+  assert.equal(requests, 1);
+  now++;
+  assert.equal((await createLichessClient(options).games('Bob', 10, 'all', signal())).length, 1);
 });

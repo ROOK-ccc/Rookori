@@ -39,7 +39,9 @@ CPUはポーンからキングまでの6段階です。持ち時間は無制限�
 
 対局履歴や「対局を振り返る」から「外部サイトとの連携」を開きます。Lichessユーザー名を入力し、終了済みの通常ルールの対局を10・20・50・100局から選んで取得します。「この対局を復習する」で棋譜をすぐに開けます。複数局を選んで保存でき、対局履歴では取得元で絞り込めます。
 
-取得ボタンを押すと、Lichessの公開APIにユーザー名と取得条件を送ります。ログイン、パスワード、トークンは不要です。ユーザー名はこのブラウザーに保存され、画面内のボタンで削除できます。取得結果はページを開いている間だけ保持し、保存した棋譜は既存の対局履歴とバックアップに含まれます。APIが429を返した場合は、1分またはサーバー指定の待機時間のうち長い方を待ちます。 [Lichess API仕様](https://lichess-org.github.io/api/#tag/Games/operation/apiGamesUser) · [Lichess API利用のヒント](https://lichess.org/page/api-tips)
+ブラウザーからLichess APIへの直接取得は休止中です。公式仕様が求める、アプリを識別できる `User-Agent` を確実に送れる方法、またはブラウザー直結への例外がLichessから確認できた場合に、公開設定の変更を検討します。CORSで応答が読めることはヘッダー要件の確認とは別です。代わりに、Lichessで保存した終了済みの棋譜を「対局を振り返る」から手動で取り込めます。過去にこのブラウザーに保存したユーザー名は「外部サイトとの連携」から削除できます。既存の取り込み済み棋譜は対局履歴に残ります。 [Lichess API仕様](https://lichess-org.github.io/api/#description/user-agent-header) · [Lichess API利用のヒント](https://lichess.org/page/api-tips)
+
+直接取得用の実装では、Web Locksに対応する同一オリジン内で取得を直列化し、読み取れたHTTP 429の後は1分または `Retry-After` の長い方を待ちます。Lichessに送信するのは取得時のユーザー名と条件で、プロフィールの追加取得は行いません。運営者向けの確認事項として、CORSで429が読み取れない場合の扱いも再開前に確認してください。
 
 ## v4.1.1の更新履歴
 
@@ -296,4 +298,4 @@ GitHub Desktopで `main` の **Changes** を確認し、**Commit to main → Pus
 3. `site-config.json` の `ga4MeasurementId` に実際の測定 ID を入力します。空欄の間は Google タグを読み込みません。ID を設定した場合も、公開先で「同意する」を選んだ後に限ってタグを読み込みます。
 4. 公開後に **リアルタイム** を開き、Rookori で同意・画面移動して `page_view` を確認します。拒否時は送信しないことも確認します。集計後は **レポート → 集客 → 集客の概要** などで「アクティブ ユーザー」「新規ユーザー」を確認できます。数値は同意した利用環境での推計です。 [Analytics の設定](https://support.google.com/analytics/answer/9304153?hl=ja) · [手動ページビュー](https://developers.google.com/analytics/devguides/collection/ga4/views?hl=ja) · [ユーザー指標](https://support.google.com/analytics/answer/12253918?hl=ja)
 
-計測には固定の画面名とURLだけを使います。Lichessユーザー名、棋譜、メモ、診断の回答・結果、学習履歴、元のURLのクエリや個別IDは渡しません。フッターの「アクセス解析とプライバシー」から同意の取り消しができます。
+手動ページビューには固定の画面名とURLを使います。Lichessユーザー名、棋譜、メモ、診断の回答・結果、学習履歴、元のURLのクエリや個別IDは渡しません。運営者は公開環境で、GA4管理画面の拡張計測（特に外部リンク、フォーム、履歴変更）とGoogleタグの自動イベント検出を確認し、開発者ツールのNetworkで同意前・同意後・撤回後の送信先と実際のパラメーターを確認してください。フッターの「アクセス解析とプライバシー」から同意の取り消しができます。 [Googleの拡張計測機能](https://support.google.com/analytics/answer/9216061?hl=ja)

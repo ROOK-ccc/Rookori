@@ -2,6 +2,9 @@ const lichessPage = (() => {
   const get = id => byId('lichess-' + id);
   const client = createLichessClient();
   const form = get('form');
+  const apiEnabled = form.dataset.browserApiApproved === 'true' && Boolean(navigator.locks);
+  form.hidden = !apiEnabled;
+  get('api-paused').hidden = apiEnabled;
   const user = get('username');
   const list = get('list');
   const chosen = new Set();
@@ -128,6 +131,7 @@ const lichessPage = (() => {
 
   async function fetchGames(event) {
     event.preventDefault();
+    if (!apiEnabled) return;
     if (controller || busy) return;
     const username = user.value.trim();
     if (!lichessUsername.test(username)) {
@@ -221,9 +225,19 @@ const lichessPage = (() => {
   user.addEventListener('change', storeUsername);
   get('forget').addEventListener('click', () => {
     user.value = '';
-    storeUsername();
-    user.focus();
-    status('保存したユーザー名を削除しました。');
+    const message = get('forget-status');
+    try {
+      localStorage.removeItem(lichessUsernameKey);
+      message.textContent = 'このブラウザーに保存したユーザー名を削除しました。';
+    } catch {
+      message.textContent = '保存設定にアクセスできませんでした。ブラウザーのサイトデータ設定をご確認ください。';
+    }
+    games = [];
+    chosen.clear();
+    loaded = false;
+    render();
+    status('');
+    if (apiEnabled) user.focus();
   });
   get('cancel').addEventListener('click', () => controller?.abort());
   get('filters').addEventListener('change', render);

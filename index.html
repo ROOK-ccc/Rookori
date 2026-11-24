@@ -953,9 +953,18 @@
       </nav>
       <h1 id="external-title" tabindex="-1">外部サイトとの連携</h1>
       <p class="guide-intro">いつもの対局を、Rookoriで振り返る。</p>
-      <form class="game-card lichess-form" id="lichess-form" novalidate>
+      <p>Rookoriは、Lichessとは独立した非公式サービスです。Lichessへのログインや、アカウントの本人確認は行いません。<a href="#privacy">プライバシーポリシー</a></p>
+      <section class="game-card" id="lichess-api-paused" aria-labelledby="lichess-manual-title">
+        <h2 id="lichess-manual-title">Lichessの棋譜を手動で取り込む</h2>
+        <p>利用条件の確認のため、公開対局の直接取得は休止中です。Lichessで終了した対局を開き、保存した棋譜ファイルを「対局を振り返る」の「棋譜を直接入力する」から読み込めます。</p>
+        <div class="study-mode-links">
+          <a class="button primary" href="#game-review">棋譜を取り込む</a>
+          <a class="text-button" href="https://lichess.org/" rel="noreferrer">Lichessを開く</a>
+        </div>
+      </section>
+      <form class="game-card lichess-form" id="lichess-form" data-browser-api-approved="false" novalidate hidden>
         <h2>Lichessの公開棋譜</h2>
-        <p id="lichess-help">ユーザー名だけで、終了した通常ルールの対局を取得できます。パスワード不要で、Lichessへのログインやアカウント連携を行わずに使えます。</p>
+        <p id="lichess-help">取得ボタンを押すと、入力したユーザー名と取得条件がブラウザーからLichessに直接送信され、終了した通常ルールの公開対局を取得します。パスワードの入力は不要です。入力したユーザー名は、このブラウザーに保存されます。</p>
         <label for="lichess-username">Lichessユーザー名</label>
         <input id="lichess-username" type="text" maxlength="30" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="lichess-help">
         <div class="lichess-filters">
@@ -965,11 +974,12 @@
         <div class="study-mode-links">
           <button type="submit" class="button primary" id="lichess-submit">対局を取得する</button>
           <button type="button" class="button secondary" id="lichess-cancel" hidden>取得を取り消す</button>
-          <button type="button" class="text-button" id="lichess-forget">保存したユーザー名を削除</button>
         </div>
         <p id="lichess-cooldown" class="game-status"></p>
         <p id="lichess-status" class="game-status" role="status"></p>
       </form>
+      <p><button type="button" class="text-button" id="lichess-forget">保存したユーザー名を削除</button></p>
+      <p id="lichess-forget-status" class="game-status" role="status"></p>
       <section id="lichess-results" class="game-review-tools" aria-labelledby="lichess-results-title" hidden>
         <h2 id="lichess-results-title">取得した対局</h2>
         <div class="lichess-filters" id="lichess-filters">
@@ -1135,15 +1145,29 @@
     </section>
     <section id="privacy" class="screen inner-screen guide-screen" hidden>
       <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>
-      <p class="guide-intro">Rookoriでは、利用状況を把握してサイトを改善するため、同意した方に Google Analytics 4 を使用します。</p>
-      <p>表示した画面の種類を計測します。Google はブラウザーを区別するための Cookie などを使用します。棋譜やメモ、診断の回答・結果、学習履歴は計測の対象に含めません。選択内容はこのブラウザーに保存し、いつでも変更できます。</p>
-      <p>Lichessの公開棋譜を取得するときは、入力したユーザー名と取得条件をLichessに送ります。ユーザー名・対局相手の名前・棋譜はアクセス解析に送りません。</p>
-      <p><a class="text-button" href="https://policies.google.com/technologies/partner-sites?hl=ja">Google によるデータの使用について</a></p>
+      <p class="guide-intro">Rookori プライバシーポリシー</p>
+      <p>改訂日 <time datetime="2026-11-24">2026年11月24日</time></p>
+      <h2>Lichessの公開棋譜と外部通信</h2>
+      <p>公開対局を復習するための直接取得機能は、利用条件の確認のため休止中です。直接取得を利用できる場合、取得ボタンを押すと、入力したユーザー名と取得件数・対局形式がブラウザーからLichessの公式APIに送られます。送信先には通信に伴いIPアドレスやブラウザー情報も伝わります。</p>
+      <p>対象は終了した通常ルールの公開対局です。棋譜、対局ID、日時、結果、両プレイヤーの公開ユーザー名・レーティング、持ち時間、オープニングなどを復習に使います。RookoriではLichessへのログインや本人確認を行わず、パスワードやメールアドレスは求めません。手動で取り込んだ棋譜は、このブラウザー内で読み取ります。</p>
+      <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
+      <h2>このブラウザーに保存される情報と削除方法</h2>
+      <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。Stockfishによる解析もブラウザー内で実行します。Rookoriのサーバーへのアップロードや、端末間の同期は行いません。</p>
+      <ul>
+        <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
+        <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
+        <li>解析結果を含むサイトデータをすべて消すには、ブラウザーの設定からこのサイトのデータを削除してください。この操作では学習記録や同意設定も消えます。同じホスト名の別サイトのデータに影響する場合があります。書き出したバックアップや棋譜ファイルは、保存先で別途削除してください。</li>
+      </ul>
+      <h2>Google Analytics 4 と同意の設定</h2>
+      <p>サイトの改善に役立てるため、公開サイトで同意した方の閲覧状況を Google Analytics 4 で計測します。画面の種類を送信し、GoogleはCookieなどを使ってブラウザーを区別します。Rookoriの計測タグは、元のURLのクエリや個別ID、ユーザー名、棋譜、メモ、診断の回答・結果、詳細な学習履歴をページビューに含めません。</p>
+      <p>同意はこのブラウザーに記録されます。「同意しない」を選ぶと以後の計測を停止できます。すでに送信された情報の削除やCookieの消去とは別の操作です。詳しくは<a href="https://policies.google.com/technologies/partner-sites?hl=ja" rel="noreferrer">Googleによるデータの使用</a>をご覧ください。</p>
       <p id="analytics-status" role="status">アクセス解析は無効です。</p>
       <div id="analytics-settings" class="analytics-actions" hidden>
         <button class="button secondary" type="button" data-analytics-choice="granted">同意する</button>
         <button class="button secondary" type="button" data-analytics-choice="denied">同意しない</button>
       </div>
+      <h2>お問い合わせ</h2>
+      <p><a href="https://github.com/ROOK-ccc/Rookori/issues" rel="noreferrer">RookoriのGitHub Issues</a>で、プライバシーに関する一般的なお問い合わせを受け付けます。投稿は公開されます。ユーザー名、棋譜やメモ、バックアップ、連絡先などは投稿しないでください。</p>
     </section>
   </main>
 
