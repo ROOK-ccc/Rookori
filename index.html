@@ -57,10 +57,12 @@
   <script src="game-library.js" defer></script>
   <script src="game-study.js" defer></script>
   <script src="lichess-api.js" defer></script>
+  <script src="personal-practice.js" defer></script>
   <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
   <script src="game-study-ui.js" defer></script>
   <script src="game-review-ui.js" defer></script>
+  <script src="personal-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
   <script src="migration.js" defer></script>
   <script src="site-menu.js" defer></script>
@@ -95,6 +97,7 @@
         </section>
         <section class="menu-group">
           <h3>成長する</h3>
+          <a href="#personal"><span aria-hidden="true">♘</span>自分だけの練習問題</a>
           <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
           <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
           <a href="#external"><span aria-hidden="true">↗</span>外部サイトとの連携（Lichess）</a>
@@ -139,6 +142,7 @@
             <a class="button hero-button" href="#intro">チェスの基本を学ぶ</a>
             <a class="button hero-secondary" href="#about">Rookoriについて</a>
           </div>
+          <div id="home-personal-progress" hidden></div>
         </div>
         <div class="hero-art" aria-hidden="true">
           <div class="board-frame">
@@ -839,6 +843,27 @@
                 <p id="game-study-assessment">この局面は未解析</p>
                 <p id="game-study-your-color"></p>
                 <p id="game-study-grade"></p>
+                <details id="personal-generate-panel">
+                  <summary>対局から練習問題を作る</summary>
+                  <div class="study-mode-links">
+                    <label>この対局での自分の色 <select id="personal-source-side"><option value="">色を選ぶ</option><option value="w">白番</option><option value="b">黒番</option></select></label>
+                    <label id="personal-ended-label" hidden><input id="personal-ended" type="checkbox"> 終了済みの対局です</label>
+                  </div>
+                  <div class="study-mode-links">
+                    <button type="button" id="personal-generate-one" class="button secondary">この局面を練習問題にする</button>
+                    <button type="button" id="personal-generate-many" class="text-button">対局全体から候補を探す</button>
+                    <button type="button" id="personal-generate-stop" class="text-button" hidden>問題の生成を中止</button>
+                  </div>
+                  <p id="personal-generate-status" role="status"></p>
+                  <ul id="personal-candidate-list" hidden></ul>
+                  <div id="personal-candidate-actions" class="study-mode-links" hidden>
+                    <button type="button" id="personal-add-all" class="button primary">すべて練習問題に追加する</button>
+                    <button type="button" id="personal-show-candidates" class="text-button">内容を確認して選択する</button>
+                    <button type="button" id="personal-add-selected" class="button secondary" hidden>選んだ局面を追加する</button>
+                    <button type="button" id="personal-dismiss-candidates" class="text-button">今回は追加しない</button>
+                  </div>
+                  <a class="text-button" href="#personal">自分だけの練習問題を開く</a>
+                </details>
                 <div class="review-analysis-actions">
                   <button class="button secondary" id="game-study-position" type="button" aria-describedby="game-study-status">現在の局面を解析する</button>
                   <button class="text-button" id="game-study-stop-local" type="button" hidden>解析を停止する</button>
@@ -1042,6 +1067,7 @@
       <section class="dashboard-priority" id="dashboard-review"></section>
       <div id="dashboard-plan"></div>
       <div id="dashboard-progress"></div>
+      <div id="dashboard-personal-progress" class="dashboard-task" hidden></div>
       <button class="text-button" id="home-intro-mode" type="button">紹介型ホームを使う</button>
       <button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button>
     </section>
@@ -1049,7 +1075,72 @@
       <h1 id="daily-title" tabindex="-1">今日の練習問題</h1>
       <a class="text-button" href="#dashboard">今日の学習へ戻る</a>
       <p class="guide-intro" id="daily-status"></p>
+      <label>出題する問題 <select id="personal-daily-mode"><option value="recommended">おすすめ</option><option value="general">一般問題のみ</option><option value="personal">自分の対局からの問題のみ</option></select></label>
+      <p><a class="text-button" href="#personal">自分だけの練習問題を見る</a></p>
       <ol class="daily-list" id="daily-list"></ol>
+    </section>
+    <section id="personal" class="screen inner-screen guide-screen" hidden>
+      <h1 id="personal-title" tabindex="-1">自分だけの練習問題</h1>
+      <p class="guide-intro">過去の一手を、未来の強さに。</p>
+      <p id="personal-counts" role="status"></p>
+      <div class="study-mode-links">
+        <a id="personal-start" class="button primary" href="#personal" hidden>今日の復習を始める</a>
+        <a class="text-button" href="#game-review">対局を振り返る</a>
+        <a class="text-button" href="#daily">毎日の練習問題へ</a>
+      </div>
+      <p id="personal-empty" hidden>対局を取り込むか、CPUとの対局を終えたら、振り返りの「対局から練習問題を作る」を開いてみましょう。</p>
+      <details class="opening-card" id="personal-settings">
+        <summary>問題の追加設定</summary>
+        <p><label><input id="personal-auto" type="checkbox"> 終了済み対局の全体解析後、候補を自動で追加する</label></p>
+        <p>問題と学習記録はこのブラウザーに保存され、一括バックアップで移せます。</p>
+      </details>
+      <section class="opening-card" aria-labelledby="personal-weakness-title">
+        <h2 id="personal-weakness-title">復習の傾向</h2>
+        <p id="personal-analysis-trend"></p><p id="personal-learning-trend"></p>
+        <details><summary>最近の学習履歴</summary><ul id="personal-recent-history"></ul></details>
+      </section>
+      <h2>登録した問題</h2>
+      <div class="glossary-controls">
+        <label>学習状況 <select id="personal-filter"><option value="all">すべて</option><option value="due">今日復習する問題</option><option value="new">未学習</option><option value="learning">学習中</option><option value="mastered">習得済み</option></select></label>
+        <label>分類 <select id="personal-tag"><option value="all">すべて</option></select></label>
+        <label>取得元 <select id="personal-source"><option value="all">すべて</option></select></label>
+      </div>
+      <ul id="personal-list" class="game-history"></ul>
+    </section>
+    <section id="personal-play" class="screen inner-screen game-page" hidden>
+      <nav class="study-navigation" aria-label="問題のメニュー"><a class="text-button" href="#personal">自分だけの練習問題へ</a><a class="text-button" href="#daily">毎日の練習問題へ</a></nav>
+      <h1 id="personal-play-title" tabindex="-1">次の一手を考える</h1>
+      <p id="personal-play-status" role="status"></p>
+      <div id="personal-play-layout" class="personal-play-layout" hidden>
+        <div>
+          <p id="personal-turn"></p>
+          <div id="personal-board" class="study-board" role="group" aria-label="練習問題のチェス盤"></div>
+          <p id="personal-feedback" role="status"></p>
+          <div class="study-mode-links">
+            <button class="button secondary" id="personal-hint" type="button">ヒント</button>
+            <button class="text-button" id="personal-skip" type="button">スキップ</button>
+            <button class="text-button" id="personal-stop-answer" type="button" hidden>判定を中止</button>
+          </div>
+        </div>
+        <section id="personal-answer" class="game-card" aria-labelledby="personal-verdict" hidden>
+          <h2 id="personal-verdict"></h2><p id="personal-answer-move"></p><p id="personal-answer-best"></p>
+          <p id="personal-answer-score"></p><p id="personal-answer-explanation"></p>
+          <p id="personal-answer-actual"></p><p id="personal-line-note" role="status"></p>
+          <div class="study-mode-links">
+            <button class="button secondary" id="personal-retry" type="button">もう一度考える</button>
+            <button class="button secondary" id="personal-line" type="button">推奨手の続きを見る</button>
+            <button class="text-button" id="personal-explore" type="button">自由検討する</button>
+            <button class="text-button" id="personal-original" type="button" hidden>元の対局を見る</button>
+            <button class="text-button" id="personal-cpu" type="button">この局面からCPUと対戦する</button>
+            <button class="button primary" id="personal-next" type="button">次の問題へ進む</button>
+          </div>
+        </section>
+      </div>
+      <dialog id="personal-promotion" class="promotion-dialog" aria-labelledby="personal-promotion-title">
+        <form method="dialog"><h2 id="personal-promotion-title">どの駒に昇格しますか？</h2>
+          <div class="study-mode-links"><button value="q">クイーン</button><button value="r">ルーク</button><button value="b">ビショップ</button><button value="n">ナイト</button><button value="cancel">キャンセル</button></div>
+        </form>
+      </dialog>
     </section>
     <section id="progress" class="screen inner-screen guide-screen" hidden>
       <h1 id="progress-title" tabindex="-1">上達記録</h1>
@@ -1087,7 +1178,7 @@
       <p class="guide-intro">学習データは現在のブラウザーに保存され、別の端末には自動で同期されません。端末を変えるときはJSONを保存して、移動先で復元できます。</p>
       <section class="opening-card" aria-labelledby="migration-title">
         <h2 id="migration-title">新しいサイト・端末へデータを移す</h2>
-        <p>学習記録、保存済みの診断結果、対局・メモ、中断した対局、解析・検討、設定をまとめて保存します。ファイルはこの端末で読み書きします。アクセス解析への同意は移行先で選べます。</p>
+        <p>学習記録、保存済みの診断結果、対局・メモ、中断した対局、解析・検討、個別練習問題とその履歴、設定をまとめて保存します。ファイルはこの端末で読み書きします。アクセス解析への同意は移行先で選べます。</p>
         <p>移行先で学習や対局を始める前に復元してください。移行先ですでに保存した項目や同じ対局がある場合は、その記録を優先します。</p>
         <div class="study-mode-links">
           <button class="button primary" id="migration-export" type="button">一括バックアップをダウンロード</button>
@@ -1176,7 +1267,7 @@
       <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
       <h2>このブラウザーに保存される情報と削除方法</h2>
       <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。オープニング診断は、結果の再表示に必要な選択肢番号を端末に保存します。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
-      <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。ファイルには棋譜やメモ、診断記録も含まれるため、ご自身で管理してください。</p>
+      <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。ファイルには棋譜、メモ、診断記録、個別練習問題とその履歴が含まれる場合があります。これらの情報はアクセス解析に送りません。</p>
       <ul>
         <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
         <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
@@ -1195,7 +1286,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.2.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.2.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

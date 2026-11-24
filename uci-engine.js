@@ -95,9 +95,10 @@ function createUciEngine(connect, { startupTimeout = 15000 } = {}) {
     });
   }
 
-  function search({ fen, moves = [], options = {}, depth, ms }) {
+  function search({ fen, moves = [], options = {}, depth, ms, onlyMove }) {
     if (state !== 'ready') return Promise.reject(new Error('エンジンは探索を受け付けられません。'));
     const valid = typeof fen === 'string' && /^[\w/ -]+$/.test(fen) && moves.every(move => uciMovePattern.test(move))
+      && (onlyMove === undefined || (typeof onlyMove === 'string' && uciMovePattern.test(onlyMove)))
       && Number.isInteger(ms) && ms > 0 && ms <= 60000 && Number.isInteger(depth) && depth > 0 && depth <= 99
       && Object.entries(options).every(([key, value]) => /^[\w ]+$/.test(key) && (Number.isInteger(value) || typeof value === 'boolean'));
     if (!valid) return Promise.reject(new Error('探索する局面または設定が正しくありません。'));
@@ -105,7 +106,7 @@ function createUciEngine(connect, { startupTimeout = 15000 } = {}) {
     return expect(ms + 10000, () => {
       for (const [key, value] of Object.entries(options)) transport.send(`setoption name ${key} value ${value}`);
       transport.send('position fen ' + fen + (moves.length ? ' moves ' + moves.join(' ') : ''));
-      transport.send(`go depth ${depth} movetime ${ms}`);
+      transport.send(`go depth ${depth} movetime ${ms}${onlyMove ? ' searchmoves ' + onlyMove : ''}`);
     });
   }
 
@@ -134,9 +135,9 @@ function createStockfishSession(provider = stockfishEngine, context = {}) {
         throw new Error('想定したStockfishのバージョンを確認できません。');
       }
     },
-    search(purpose, position, { level, remaining, increment, candidates } = {}) {
+    search(purpose, position, { level, remaining, increment, candidates, onlyMove } = {}) {
       if (!engineUseAllowed(purpose, context)) return Promise.reject(new Error('この対局ではエンジンを使用できません。'));
-      return client.search({ ...position, ...stockfishProfile(purpose, level, remaining, increment, candidates) });
+      return client.search({ ...position, ...stockfishProfile(purpose, level, remaining, increment, candidates), onlyMove });
     },
     close: client.close,
   };
@@ -156,6 +157,7 @@ const stockfishStudyProfiles = {
   'analysis-quick': { depth: 10, ms: 65, candidates: 1 },
   'analysis-detail': { depth: 16, ms: 260, candidates: 3 },
   'analysis-branch': { depth: 22, ms: 900, candidates: 3 },
+  'analysis-lesson': { depth: 17, ms: 600, candidates: 3 },
 };
 
 function stockfishProfile(purpose, level, remaining = Infinity, increment = 0, candidates) {

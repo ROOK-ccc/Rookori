@@ -10,6 +10,7 @@ const siteHeadings = {
   progress: 'progress-title', backup: 'backup-title', about: 'about-title', memorize: 'openings-title',
   'game-review': 'game-review-title', 'game-library': 'game-library-title',
   external: 'external-title',
+  personal: 'personal-title',
   glossary: 'glossary-title', privacy: 'privacy-title', cpu: 'cpu-title',
 };
 
@@ -30,6 +31,8 @@ function readSiteRoute(address, state) {
   // 履歴の各項目には、その画面の回答や学習の進行だけを保存します。
   const entry = state?.path === path ? state : {};
   if (path === 'cpu') return { path, cpuReplay: entry.cpuReplay, cpuPosition: entry.cpuPosition };
+  const personal = /^personal\/([a-f0-9]{64})(\/daily)?$/.exec(path);
+  if (personal) return { path, personalId: personal[1], personalDaily: Boolean(personal[2]) };
   if (Object.hasOwn(siteHeadings, path)) return { path };
   const term = /^glossary\/([a-z0-9-]+)$/.exec(path);
   if (term) return { path, termId: term[1] };

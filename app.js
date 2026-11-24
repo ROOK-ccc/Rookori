@@ -24,6 +24,7 @@ function element(tag, text, className) {
 }
 
 function showScreen(id, focusTarget) {
+  if (id === 'home' || id === 'dashboard') personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
     screen.hidden = screen.id !== id;
@@ -210,8 +211,13 @@ function renderSite() {
   if (previous?.path === 'cpu' && path !== 'cpu') cpuPage.close();
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
   if (previous?.game && previous.path !== path) gameReviewPages.close();
+  if (previous?.personalId && previous.path !== path) personalPages.close();
 
-  if (path === 'glossary' || route.termId) {
+  if (route.personalId) {
+    personalPages.openProblem(route);
+  } else if (path === 'personal') {
+    personalPages.openList();
+  } else if (path === 'glossary' || route.termId) {
     chessGlossary.open(route.termId);
   } else if (path === 'external') {
     lichessPage.open();

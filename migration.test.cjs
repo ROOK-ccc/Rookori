@@ -6,7 +6,7 @@ const { runInNewContext } = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
-  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'migration.js'];
+  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'migration.js'];
 const api = runInNewContext(scripts.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
   + '\n({ validateMigration, addMigrationSettings, learningBackup, makeGameBackup, parseReviewGames, reviewGameRecord, studyContentKey, studyEngineResult })',
 { window: { addEventListener() {} }, TextEncoder, crypto: webcrypto });

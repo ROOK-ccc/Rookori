@@ -43,7 +43,7 @@ test('UCI起動・探索・中断を順序通り扱い、破棄した探索結�
 test('接続失敗を呼び出し元に返し、オンライン対局中は探索用途を許可しない', async () => {
   const client = createUciEngine(() => { throw new Error('fetch'); });
   await assert.rejects(client.start(), /通信/);
-  for (const purpose of ['opponent', 'hint', 'analysis']) assert.equal(engineUseAllowed(purpose, { liveOnline: true }), false);
+  for (const purpose of ['opponent', 'hint', 'analysis', 'analysis-lesson']) assert.equal(engineUseAllowed(purpose, { liveOnline: true }), false);
 });
 
 test('配布されたStockfish WASMが6難易度で合法手を返し、弱体化を解除したヒントを返す', async t => {
@@ -79,4 +79,7 @@ test('配布されたStockfish WASMが6難易度で合法手を返し、弱体�
   assert.ok(hint.lines.some(line => line.score?.unit === 'mate'));
   assert.ok(commands.includes('setoption name UCI_LimitStrength value true'));
   assert.ok(commands.slice(-6).includes('setoption name UCI_LimitStrength value false'));
+  const restricted = await client.search({ fen, onlyMove: 'd2d4', ...stockfishProfile('analysis-lesson', 1, Infinity, 0, 1) });
+  assert.equal(restricted.move, 'd2d4');
+  assert.ok(restricted.lines.every(line => line.pv[0] === 'd2d4'));
 });

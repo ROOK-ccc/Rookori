@@ -116,6 +116,7 @@ const learningPages = (() => {
       if (plan.checked.includes(lesson.id)) row.append(element('span', '正解済み', 'learning-done'));
       return row;
     }));
+    personalPages.daily();
   }
 
   const normalize = value => value.normalize('NFKC').toLowerCase().trim();

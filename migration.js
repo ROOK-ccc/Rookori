@@ -21,6 +21,8 @@ const migrationSettings = new Map([
   [lichessUsernameKey, value => typeof value === 'string' && lichessUsername.test(value)],
   [savedTypeResultKey, validSavedTypeResult],
   [savedOpeningResultKey, validOpeningAnswers],
+  [personalAutoKey, value => typeof value === 'boolean'],
+  [personalDailyKey, value => ['recommended', 'general', 'personal'].includes(value)],
 ]);
 
 function migrationRead(key) {
@@ -93,7 +95,57 @@ async function validateMigration(backup) {
       || !validMigrationStudy(record, byHash.get(key))) throw invalid();
     keys.add(key);
   }
-  return { games, studies: backup.studies, values: { ...backup.learning.data, ...backup.settings } };
+  const personal = await validatePersonalBackup(backup.personal ?? []);
+  return { games, studies: backup.studies, personal, values: { ...backup.learning.data, ...backup.settings } };
+}
+
+async function validatePersonalBackup(rows) {
+  const invalid = () => new Error('個別練習問題または学習履歴の形式を確認してください。');
+  if (!Array.isArray(rows)) throw invalid();
+  const ids = new Set();
+  for (const row of rows) {
+    const question = row?.question;
+    const history = row?.history;
+    if (!learningObject(question) || !personalId.test(question.id ?? '') || ids.has(question.id)
+      || (question.gameId !== null && !validCpuId(question.gameId)) || !Object.hasOwn(personalSources, question.source)
+      || (question.sourceKey !== null && (typeof question.sourceKey !== 'string' || !personalId.test(question.sourceKey)))
+      || !learningCount(question.ply) || !['w', 'b'].includes(question.side) || !cpuTimestamp(question.created)
+      || typeof question.engine !== 'string' || question.engine.length > 32 || question.profile !== 'analysis-lesson'
+      || typeof question.fen !== 'string' || question.fen.length > 128 || typeof question.initialFen !== 'string' || question.initialFen.length > 128
+      || !Array.isArray(question.moves) || question.moves.length > 12000 || !question.moves.every(learningUci)
+      || !learningUci(question.best) || (question.actual !== null && !learningUci(question.actual))
+      || !Array.isArray(question.candidates) || !question.candidates.length || question.candidates.length > 5
+      || !question.candidates.every(validMigrationLine) || !question.candidates.some(line => line.move === question.best)
+      || !learningIds(question.accepted) || !question.accepted.includes(question.best)
+      || !question.accepted.every(code => question.candidates.some(line => line.move === code))
+      || !learningIds(question.tags) || !question.tags.length || !question.tags.every(tag => Object.hasOwn(personalTags, tag))
+      || !['board', 'line', 'engine'].includes(question.confidence) || typeof question.text !== 'string' || question.text.length > 500
+      || typeof question.memo !== 'string' || question.memo.length > 1000
+      || (question.sourceDate !== null && (typeof question.sourceDate !== 'string' || question.sourceDate.length > 40))
+      || (question.loss !== null && !Number.isSafeInteger(question.loss))) throw invalid();
+    const score = question.actualScore;
+    if (score !== null && (!Number.isSafeInteger(score?.value) || (score.unit !== 'cp'
+      && (score.unit !== 'mate' || score.value < 0 || !['w', 'b'].includes(score.winner))))) throw invalid();
+    const { game: board } = cpuStartingPosition({ fen: question.fen, initialFen: question.initialFen, moves: question.moves,
+      ply: question.ply, gameId: question.gameId, color: question.side });
+    if (board.turn() !== question.side || board.moves().length < 2
+      || await personalPositionId(question.fen) !== question.id) throw invalid();
+    if (question.actual) studyPlay(new chessRules.Chess(question.fen), question.actual);
+    for (const line of question.candidates) {
+      if (line.pv[0] !== line.move || studyPv(question.fen, line.pv).join(' ') !== line.san.join(' ')) throw invalid();
+    }
+    ids.add(question.id);
+    if (history === null) continue;
+    if (!learningObject(history) || !learningDate(history.due) || !learningDate(history.reviewedDay) || !cpuTimestamp(history.lastAt)
+      || !Number.isInteger(history.level) || history.level < -1 || history.level >= reviewIntervals.length
+      || !reviewIntervals.includes(history.interval) || !['clean', 'hint', 'retry'].includes(history.outcome)
+      || !['correct', 'wrong', 'streak', 'hints', 'mistakes'].every(key => learningCount(history[key]))
+      || !Array.isArray(history.events) || !history.events.length || history.events.length > personalRules.historyLimit
+      || history.events.length > history.correct + history.wrong
+      || !history.events.every(event => cpuTimestamp(event?.at) && learningDate(event.day)
+        && ['good', 'close', 'retry'].includes(event.kind) && learningCount(event.hints) && event.hints <= 2)) throw invalid();
+  }
+  return rows;
 }
 
 function addMigrationSettings(storage, values) {
@@ -112,6 +164,7 @@ function addMigrationSettings(storage, values) {
 function initializeMigration() {
   const library = createGameLibrary();
   const studies = createStudyStore();
+  const personalStore = createPersonalStore();
   const input = byId('migration-file');
   const download = byId('migration-export');
   const restore = byId('migration-restore');
@@ -123,14 +176,14 @@ function initializeMigration() {
   download.addEventListener('click', async () => {
     download.disabled = true;
     try {
-      const [games, analysis] = await Promise.all([library.all(), studies.all()]);
+      const [games, analysis, personal] = await Promise.all([library.all(), studies.all(), personalStore.all()]);
       const settings = {};
       for (const key of migrationSettings.keys()) {
         const text = localStorage.getItem(key);
         if (text !== null) settings[key] = key === lichessUsernameKey ? text : JSON.parse(text);
       }
       const backup = { type: migrationType, version: 1, learning: learningBackup(localStorage),
-        library: makeGameBackup(games), studies: analysis, settings };
+        library: makeGameBackup(games), studies: analysis, personal, settings };
       const json = new Blob([JSON.stringify(backup)], { type: 'application/json' });
       if (json.size > migrationLimit) throw new Error('一括バックアップの上限（64 MiB）を超えています。');
       await validateMigration(backup);
@@ -158,7 +211,7 @@ function initializeMigration() {
       const validated = await validateMigration(JSON.parse(await file.text()));
       if (current !== selection) return;
       staged = validated;
-      status.textContent = `棋譜 ${staged.games.length} 件・解析と検討 ${staged.studies.length} 件を確認しました。`;
+      status.textContent = `棋譜 ${staged.games.length} 件・解析と検討 ${staged.studies.length} 件・個別問題 ${staged.personal.length} 件を確認しました。`;
       restore.hidden = false;
     } catch {
       if (current === selection) status.textContent = '一括バックアップの形式または大きさを確認してください。';
@@ -173,9 +226,10 @@ function initializeMigration() {
     try {
       games = await library.merge(staged.games);
       analysis = await studies.merge(staged.studies);
+      const personal = await personalStore.merge(staged.personal);
       const settings = addMigrationSettings(localStorage, staged.values);
-      status.textContent = `追加した棋譜 ${games} 件、解析と検討 ${analysis} 件、学習・設定の項目 ${settings.added} 件。`
-        + ` 重複または移行先にデータがある項目 ${staged.games.length - games + staged.studies.length - analysis + settings.skipped} 件は追加しませんでした。`;
+      status.textContent = `追加した棋譜 ${games} 件、解析と検討 ${analysis} 件、個別問題 ${personal} 件、学習・設定の項目 ${settings.added} 件。`
+        + ` 重複または移行先にデータがある項目 ${staged.games.length - games + staged.studies.length - analysis + staged.personal.length - personal + settings.skipped} 件は追加しませんでした。`;
       staged = null;
       restore.hidden = true;
     } catch {

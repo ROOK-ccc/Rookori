@@ -29,7 +29,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.2\.1/);
+  assert.match(html, /Rookori v4\.2\.0/);
   assert.match(html, /id="external-title"/);
   assert.match(html, /id="lichess-form"[^>]*data-browser-api-approved="false"[^>]*\bhidden\b/);
   assert.match(html, /id="lichess-api-paused"/);
@@ -63,6 +63,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.equal(ids.length, new Set(ids).size, '画面内のIDは重複しない');
   assert.match(html, /src="learning-insights\.js\?v=/);
   assert.match(html, /src="learning-progress-ui\.js\?v=/);
+  assert.match(html, /src="personal-practice\.js\?v=/);
+  assert.match(html, /src="personal-ui\.js\?v=/);
   assert.doesNotMatch(html, /class="site-nav"/);
   assert.match(html, /id="review-tabs"[^>]*role="tablist"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',

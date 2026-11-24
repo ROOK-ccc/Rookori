@@ -23,6 +23,9 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   let view, record, key, branch, job, debounce, cachedPosition;
   let write = Promise.resolve();
   let loading = false;
+  const personalStore = createPersonalStore();
+  let pendingQuestions = [];
+  const personalStatus = message => { byId('personal-generate-status').textContent = message; };
 
   function button(text, onClick, classes = 'text-button') {
     const node = element('button', text, classes);
@@ -96,6 +99,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     const running = job;
     job = null;
     running.engine.close();
+    if (running.mode === 'personal') byId('personal-generate-stop').hidden = true;
     if (running.mode === 'batch') persist();
     if (message) note(message);
   }
@@ -104,11 +108,21 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     stop();
     view = record = key = branch = cachedPosition = null;
     loading = false;
+    pendingQuestions = [];
+    byId('personal-candidate-list').replaceChildren();
+    byId('personal-candidate-actions').hidden = true;
+    personalStatus('');
   }
 
   async function open(next) {
     close();
     view = next;
+    byId('personal-generate-panel').open = false;
+    const known = personalSide(next.game);
+    byId('personal-source-side').value = known ?? '';
+    byId('personal-source-side').disabled = Boolean(known);
+    byId('personal-ended-label').hidden = personalEligibility(next.game) !== 'confirm';
+    byId('personal-ended').checked = false;
     record = { scores: [], single: {}, variations: [], version: null, mode: null, analyzed: null };
     el('auto').checked = false;
     el('storage').textContent = '';
@@ -338,7 +352,13 @@ function createGameStudyUI({ current, goToPly, repaint }) {
       }
       const actions = element('div', null, 'study-mode-links');
       actions.append(button('実際の手を見る', () => goToPly(ply)), button('自分で考える', () => { goToPly(ply - 1); newBranch(); }),
-        button('ここからCPU対戦', () => { goToPly(ply - 1); startCpu(); }));
+        button('ここからCPU対戦', () => { goToPly(ply - 1); startCpu(); }),
+        button('この局面を練習問題にする', () => {
+          goToPly(ply - 1);
+          selectTab('analysis', true);
+          generationPanel(true);
+          generateQuestions(ply - 1);
+        }));
       if (before.move) actions.append(button('推奨手を試す', () => tryMove(ply - 1, before.move)));
       body.append(element('h3', `${move.number}${move.color === 'w' ? '.' : '…'} ${move.san} · ${grade.label}`),
         element('p', `推奨手 ${before.san[0] ?? '—'} ／ ${points}`), element('p', why), actions);
@@ -388,8 +408,10 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     el('batch').disabled = loading || Boolean(job);
     el('position').disabled = loading || Boolean(job);
     el('stop').disabled = !job;
-    el('stop').hidden = el('stop-local').hidden = !job;
+    el('stop').hidden = el('stop-local').hidden = !job || job.mode === 'personal';
     el('cpu').disabled = !canStartCpu();
+    byId('personal-generate-one').disabled = loading || Boolean(job);
+    byId('personal-generate-many').disabled = loading || Boolean(job) || !partial;
     el('graph-position').max = view.game.positions.length - 1;
     el('source-conditions').textContent = partial
       ? `Stockfish ${record.version} · ${record.mode === 'analysis-detail' ? '詳細' : 'クイック'} · ${record.scores.filter(Boolean).length} / ${view.game.positions.length}局面${record.analyzed ? ' · ' + new Date(record.analyzed).toLocaleString('ja-JP') : ''}` : '';
@@ -401,10 +423,130 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     if (job || !view || loading) return null;
     const work = { mode, engine: createStockfishSession(), view };
     job = work;
-    note('Stockfishを準備しています…');
+    if (mode !== 'personal') note('Stockfishを準備しています…');
     render();
     return work;
   }
+
+  function generationPanel(scroll = false) {
+    const panel = byId('personal-generate-panel');
+    panel.open = true;
+    if (scroll) panel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function showPersonalCandidates() {
+    const list = byId('personal-candidate-list');
+    list.replaceChildren(...pendingQuestions.map(question => {
+      const checkbox = element('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = question.id;
+      checkbox.checked = true;
+      const label = element('label');
+      label.append(checkbox, document.createTextNode(` ${question.ply}手の直後 · ${question.tags.map(tag => personalTags[tag]).join('、')}`));
+      const li = element('li');
+      li.append(label, button('本譜の盤面を見る', () => goToPly(question.ply)));
+      return li;
+    }));
+    byId('personal-candidate-actions').hidden = pendingQuestions.length === 0;
+    byId('personal-show-candidates').hidden = !list.hidden;
+    byId('personal-add-selected').hidden = list.hidden;
+    if (!pendingQuestions.length) list.hidden = true;
+  }
+
+  async function savePersonalCandidates(selectedOnly = false) {
+    const owner = view;
+    const selection = new Set([...byId('personal-candidate-list').querySelectorAll('input:checked')].map(input => input.value));
+    const chosen = selectedOnly ? pendingQuestions.filter(question => selection.has(question.id)) : pendingQuestions;
+    if (!chosen.length) { personalStatus('追加する局面を選んでください。'); return; }
+    try {
+      const count = await personalStore.merge(chosen.map(question => ({ question, history: null })));
+      if (view !== owner) return;
+      pendingQuestions = [];
+      showPersonalCandidates();
+      personalStatus(`${count}問を追加しました。${count < chosen.length ? '登録済みの局面とその学習記録を残しました。' : ''}`);
+    } catch { if (view === owner) personalStatus('問題を保存できませんでした。ブラウザーの空き容量や保存設定を確認してください。'); }
+  }
+
+  async function generateQuestions(ply = null, afterAnalysis = false) {
+    if (!view || job || !current(view)) return;
+    const game = view.game;
+    const side = byId('personal-source-side').value;
+    const eligibility = personalEligibility(game);
+    if (eligibility === 'live' || eligibility === 'sample') {
+      if (!afterAnalysis) personalStatus(eligibility === 'live' ? '対局結果のある終了済みのオンライン棋譜を使ってください。' : '自分の終了済み対局から練習問題を作れます。');
+      return;
+    }
+    if (!['w', 'b'].includes(side) || (eligibility === 'confirm' && !byId('personal-ended').checked)) {
+      generationPanel(!afterAnalysis);
+      personalStatus('自分の駒の色を選び、必要に応じて対局が終了したことを確認してください。');
+      return;
+    }
+    const variation = ply !== null && branch ? branch.moves.slice(0, branch.step) : [];
+    const chosenFen = variation.length ? outputPosition().game.fen() : game.positions[ply]?.fen;
+    if (ply !== null && chosenFen?.split(' ')[1] !== side) {
+      personalStatus('自分の手番の局面を選んでください。');
+      return;
+    }
+    const plies = ply === null ? personalCandidates(game, record.scores, side).map(event => event.ply - 1) : [ply];
+    generationPanel(!afterAnalysis);
+    pendingQuestions = [];
+    byId('personal-candidate-list').hidden = true;
+    showPersonalCandidates();
+    if (!plies.length) { personalStatus('この対局から、解析で十分な改善が確認できる候補は見つかりませんでした。'); return; }
+    const work = begin('personal');
+    if (!work) return;
+    byId('personal-generate-stop').hidden = false;
+    try {
+      const sourceKey = await studyContentKey(game);
+      const saved = await personalStore.all();
+      const registered = new Set(saved.map(({ question }) => question.id));
+      const countFromGame = saved.filter(({ question }) => question.sourceKey === sourceKey).length;
+      const limit = ply === null ? Math.max(0, personalRules.perGame - countFromGame) : 1;
+      if (job !== work) return;
+      if (limit) await work.engine.start();
+      for (const [index, start] of plies.entries()) {
+        if (job !== work || pendingQuestions.length >= limit) break;
+        personalStatus(`候補を確認しています ${index + 1} / ${plies.length}`);
+        const id = await personalPositionId(variation.length ? chosenFen : game.positions[start].fen);
+        if (job !== work) return;
+        if (registered.has(id)) continue;
+        const row = await verifyPersonalQuestion(work.engine, game, start, ply === null, () => job === work, variation, sourceKey);
+        if (job !== work) return;
+        if (row) { registered.add(row.id); pendingQuestions.push(row); }
+      }
+      if (job !== work) return;
+      showPersonalCandidates();
+      personalStatus(pendingQuestions.length ? `復習に適した局面が${pendingQuestions.length}つ見つかりました。`
+        : '登録済みか、十分な精度で問題にできる局面がありません。別の局面を選ぶか、自由検討で振り返れます。');
+      if (ply === null && pendingQuestions.length && personalPreference(personalAutoKey, false)) await savePersonalCandidates();
+    } catch { if (job === work) personalStatus('候補の確認が中断されました。必要なら再試行してください。'); }
+    finally {
+      if (job === work) { stop(); render(); }
+    }
+  }
+
+  byId('personal-generate-one').addEventListener('click', () => generateQuestions(view?.position.ply));
+  byId('personal-generate-many').addEventListener('click', () => generateQuestions());
+  byId('personal-add-all').addEventListener('click', () => savePersonalCandidates());
+  byId('personal-add-selected').addEventListener('click', () => savePersonalCandidates(true));
+  byId('personal-show-candidates').addEventListener('click', () => {
+    byId('personal-candidate-list').hidden = false;
+    byId('personal-show-candidates').hidden = true;
+    byId('personal-add-selected').hidden = false;
+    byId('personal-candidate-list').querySelector('input')?.focus();
+  });
+  byId('personal-dismiss-candidates').addEventListener('click', () => {
+    pendingQuestions = [];
+    showPersonalCandidates();
+    personalStatus('今回は問題を追加しませんでした。');
+  });
+  byId('personal-generate-stop').addEventListener('click', () => {
+    pendingQuestions = [];
+    stop();
+    render();
+    showPersonalCandidates();
+    personalStatus('問題の生成を中止しました。');
+  });
 
   async function analyzePosition() {
     if (!view || !current(view)) return;
@@ -448,6 +590,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     const count = game.positions.length;
     const prefix = game.cpu?.origin?.moves ?? [];
     const moves = [...prefix, ...studyMainMoves(game, count - 1)];
+    let completed = false;
     try {
       await work.engine.start();
       for (let ply = 0; ply < count && job === work; ply++) {
@@ -462,7 +605,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
         if ((ply + 1) % 10 === 0) persist();
         render();
       }
-      if (job === work) note('対局解析が完了しました。');
+      if (job === work) { completed = true; note('対局解析が完了しました。'); }
     } catch { if (job === work) note('解析を続けられませんでした。完了した局面は確認できます。'); }
     finally {
       if (job === work) {
@@ -470,6 +613,10 @@ function createGameStudyUI({ current, goToPly, repaint }) {
         render();
         highlights();
         repaint();
+        if (completed && !['sample', 'live'].includes(personalEligibility(game))) {
+          selectTab('analysis');
+          generateQuestions(null, true);
+        }
       }
     }
   }
