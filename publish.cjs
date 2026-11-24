@@ -53,6 +53,7 @@ try {
   const generated = publicSiteFiles(siteConfig);
   const files = [
     'styles.css', 'app.js', 'navigation.js', 'analytics.js',
+    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'cpu-engine-worker.js', 'cpu-engine.LICENSE.txt',
     'brand/rookori.png', 'brand/rookori-share.jpg',
     'data.js', 'scoring.js', 'card-data.js', 'cards.js', 'result-links.js',
     'opening-data.js', 'opening-scoring.js', 'opening-study.js', 'opening-study-ui.js',

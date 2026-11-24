@@ -20,6 +20,7 @@
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="game-review.css">
+  <link rel="stylesheet" href="cpu-game.css">
   <script src="data.js" defer></script>
   <script src="scoring.js" defer></script>
   <script src="card-data.js" defer></script>
@@ -37,10 +38,12 @@
   <script src="problem-curriculum.js" defer></script>
   <script src="intro-course.js" defer></script>
   <script src="chess-board.js" defer></script>
+  <script src="cpu-game.js" defer></script>
   <script src="navigation.js" defer></script>
   <script src="learning.js" defer></script>
   <script src="analytics.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="cpu-game-ui.js" defer></script>
   <script src="opening-study-ui.js" defer></script>
   <script src="opening-memory-ui.js" defer></script>
   <script src="intro-ui.js" defer></script>
@@ -62,6 +65,7 @@
       <nav class="site-nav" aria-label="メインメニュー">
         <a href="#home">ホーム</a>
         <a href="#learn">学習を始める</a>
+        <a href="#cpu">コンピューター対戦</a>
         <a href="#opening-quiz">オープニング診断</a>
         <a href="#mode">16タイプ診断</a>
         <a href="#review">復習する</a>
@@ -82,6 +86,7 @@
         </section>
         <section class="menu-group">
           <h3>対局</h3>
+          <a href="#cpu"><span aria-hidden="true">♞</span>コンピューター対戦</a>
           <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
           <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
         </section>
@@ -146,6 +151,7 @@
             <h3>チェスをまだ知らない人へ</h3>
             <p>まずは一手から。盤の見方や駒の動かし方を試してみましょう。</p>
             <a class="text-button" href="#intro">ルールや基本から学ぶ</a>
+            <a class="text-button" href="#cpu">コンピューターと一局指す</a>
           </section>
           <section class="first-step-card">
             <h3>チェスを少し知っている人へ</h3>
@@ -413,6 +419,7 @@
       <p class="guide-intro">短い説明を読んで、盤上で一手ずつ試しましょう。</p>
       <div class="intro-overview">
         <a class="button primary" id="intro-resume" href="#lesson/first-turn">最初のレッスンを始める</a>
+        <a class="text-button" href="#cpu">覚えた動きを対局で試す</a>
         <a class="text-button" id="intro-check-results" href="#intro-summary" hidden>理解度チェックの結果を見る</a>
         <p id="intro-count"></p>
       </div>
@@ -483,6 +490,7 @@
       </div>
       <p class="guide-intro intro-next-guide">次はオープニング診断で自分に合う戦法を見つけ、盤上で試してみましょう。</p>
       <a class="button primary" href="#opening-quiz">オープニング診断へ進む</a>
+      <a class="button secondary" href="#cpu">コンピューターと対戦する</a>
     </section>
 
     <section id="error" class="screen inner-screen" hidden>
@@ -553,6 +561,113 @@
       <div id="review-list"></div>
       <a class="button secondary" href="#openings">戦法一覧を見る</a>
     </section>
+    <section id="cpu" class="screen inner-screen cpu-page" hidden>
+      <header class="cpu-header">
+        <h1 id="cpu-title" tabindex="-1">コンピューター対戦</h1>
+        <p>自分のペースで、はじめの一手を。</p>
+      </header>
+      <div id="cpu-setup">
+        <form id="cpu-form" class="cpu-form">
+          <fieldset>
+            <legend>対戦モード</legend>
+            <div class="cpu-choices">
+              <label><input type="radio" name="mode" value="practice" checked><span><strong>練習モード</strong><small>ヒントや「待った」を使い、一手ずつ試せます。時計も止められます。</small></span></label>
+              <label><input type="radio" name="mode" value="match"><span><strong>実戦モード</strong><small>ヒント・待った・一時停止なしで一局指します。結果をこのブラウザーに記録します。</small></span></label>
+            </div>
+          </fieldset>
+          <fieldset><legend>コンピューターの難易度</legend><div id="cpu-levels" class="cpu-choices cpu-levels"></div></fieldset>
+          <div class="cpu-setup-row">
+            <label for="cpu-color">自分の駒の色
+              <select id="cpu-color" name="color"><option value="random">ランダム</option><option value="w">白番（先手）</option><option value="b">黒番（後手）</option></select>
+            </label>
+            <label for="cpu-time">持ち時間 <select id="cpu-time" name="time" aria-describedby="cpu-time-help"><option value="unlimited">時間無制限</option></select></label>
+          </div>
+          <p id="cpu-time-help" class="cpu-help">「10＋5」は、一人10分で、1手指すたびに5秒が増える設定です。</p>
+          <div id="cpu-custom" class="cpu-setup-row" hidden>
+            <label for="cpu-minutes">初期持ち時間（1〜180分）<input id="cpu-minutes" name="minutes" inputmode="numeric" value="10"></label>
+            <label for="cpu-seconds">1手ごとの加算（0〜60秒）<input id="cpu-seconds" name="seconds" inputmode="numeric" value="0"></label>
+          </div>
+          <p id="cpu-summary"></p>
+          <p id="cpu-form-error" role="alert"></p>
+          <button class="button primary" type="submit">対局を始める</button>
+        </form>
+        <details id="cpu-records" class="cpu-details" hidden><summary>このブラウザーの実戦記録</summary><ul id="cpu-record-list"></ul></details>
+        <details class="cpu-details"><summary>対局ルールとエンジン</summary>
+          <p>同じ局面が3回、またはポーン移動と駒取りなしで双方が50手指すと、成立した局面で引き分けを請求できます。5回・75手では自動的に引き分けになります。</p>
+          <p>時間切れでは、相手がキングだけの場合など、判定できる範囲で引き分けになります。</p>
+          <p>Rookori CPU 1.0.0 はこのブラウザー内で動作します。<a href="cpu-engine.LICENSE.txt">エンジンのライセンス</a>・<a href="vendor/chess.LICENSE.txt">chess.jsのライセンス</a></p>
+        </details>
+      </div>
+      <div id="cpu-session" hidden>
+        <div class="study-layout cpu-layout">
+          <div class="cpu-board-column">
+            <div class="cpu-side"><div><strong id="cpu-opponent"></strong><p id="cpu-opponent-color"></p></div><span class="cpu-clock" id="cpu-opponent-clock" aria-label="コンピューターの残り時間"></span></div>
+            <div class="study-board" id="cpu-board" role="group" aria-label="対局のチェス盤"></div>
+            <div class="cpu-side"><div><strong>あなた</strong><p id="cpu-player-color"></p></div><span class="cpu-clock" id="cpu-player-clock" aria-label="あなたの残り時間"></span></div>
+            <p class="cpu-status" id="cpu-status" role="status"></p>
+            <p id="cpu-feedback" role="status"></p>
+            <button class="button secondary" id="cpu-retry" type="button" hidden>エンジンを再読み込み</button>
+            <div id="cpu-controls" class="study-complete-actions cpu-controls">
+              <button class="button secondary" id="cpu-undo" type="button">待った</button>
+              <button class="button secondary" id="cpu-hint" type="button">ヒント</button>
+              <button class="button secondary" id="cpu-pause" type="button">一時停止</button>
+              <button class="button secondary" id="cpu-draw" type="button" hidden>引き分けを請求</button>
+              <button class="button secondary" id="cpu-resign" type="button">投了</button>
+              <button class="button secondary" id="cpu-restart" type="button">再戦</button>
+              <button class="text-button" id="cpu-settings-back" type="button">対局設定に戻る</button>
+            </div>
+            <section id="cpu-result" class="cpu-result" aria-labelledby="cpu-result-title" hidden>
+              <h2 id="cpu-result-title" tabindex="-1"></h2>
+              <p id="cpu-result-note"></p>
+              <div class="study-complete-actions">
+                <button class="button primary" id="cpu-continue" type="button" hidden>時間無制限で続きを指す</button>
+                <button class="button secondary" id="cpu-rematch" type="button">同じ設定で再戦</button>
+                <button class="button secondary" id="cpu-change" type="button">対局設定を変更</button>
+                <a class="text-button" href="#home">ホームに戻る</a>
+              </div>
+            </section>
+          </div>
+          <aside class="cpu-score" aria-labelledby="cpu-score-title">
+            <h2 id="cpu-score-title" tabindex="-1">指した手</h2>
+            <p class="cpu-help">手を指した順に記録します。</p>
+            <ol id="cpu-moves" class="cpu-moves" tabindex="0" aria-label="指した手の一覧"></ol>
+            <div id="cpu-export" class="cpu-export" hidden>
+              <p data-chess-terms>PGNで棋譜を保存できます。</p>
+              <div class="study-complete-actions">
+                <button class="button secondary" id="cpu-view-pgn" type="button" aria-expanded="false" aria-controls="cpu-pgn">棋譜を確認</button>
+                <button class="button secondary" id="cpu-copy" type="button">PGNをコピー</button>
+                <button class="button secondary" id="cpu-download" type="button">PGNをダウンロード</button>
+              </div>
+              <textarea id="cpu-pgn" rows="8" aria-label="対局の棋譜（PGN）" readonly hidden></textarea>
+              <p id="cpu-export-status" role="status"></p>
+            </div>
+          </aside>
+        </div>
+      </div>
+      <dialog id="cpu-promotion" class="promotion-dialog" aria-labelledby="cpu-promotion-title">
+        <form method="dialog">
+          <h2 id="cpu-promotion-title">どの駒に昇格しますか？</h2>
+          <div class="study-promotion-options">
+            <button class="button secondary" value="q" autofocus>クイーン</button>
+            <button class="button secondary" value="r">ルーク</button>
+            <button class="button secondary" value="b">ビショップ</button>
+            <button class="button secondary" value="n">ナイト</button>
+          </div>
+          <button class="text-button" value="">キャンセル</button>
+        </form>
+      </dialog>
+      <dialog id="cpu-confirm" class="promotion-dialog" aria-labelledby="cpu-confirm-title">
+        <form method="dialog">
+          <h2 id="cpu-confirm-title">対局を終了しますか？</h2>
+          <p id="cpu-confirm-message"></p>
+          <div class="study-complete-actions">
+            <button class="button secondary" value="cancel" autofocus>対局に戻る</button>
+            <button class="button primary" id="cpu-confirm-action" value="confirm">終了する</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+
     <section id="game-review" class="screen inner-screen guide-screen game-page" hidden>
       <nav class="study-navigation" aria-label="対局のメニュー">
         <a class="text-button" href="#game-library">対局履歴を見る</a>
@@ -689,7 +804,7 @@
 
     <section id="dashboard" class="screen inner-screen guide-screen" hidden>
       <h1 id="dashboard-title" tabindex="-1">今日の学習</h1>
-      <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a></div>
+      <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a><a class="text-button" href="#cpu">コンピューター対戦</a></div>
       <section class="dashboard-priority" id="dashboard-review"></section>
       <div id="dashboard-plan"></div>
       <div id="dashboard-progress"></div>
@@ -769,7 +884,7 @@
           <h2 id="about-pillars-title">Rookoriの4つの柱</h2>
           <div class="about-pillar-grid">
             <article class="first-step-card"><h3>学ぶ</h3><p>駒の動かし方から、盤を使って順に学べます。途中で休んでも、続きから取り組めます。</p></article>
-            <article class="first-step-card"><h3>対戦する</h3><p>実力を気にしすぎず、一手を指せる場を目指します。いまは練習盤や棋譜の振り返りを利用できます。</p><p class="about-future">今後の構想・コンピューター対戦、友達とのオンライン対戦（未実装）</p></article>
+            <article class="first-step-card"><h3>対戦する</h3><p>覚えた駒の動きを、練習モードで一手ずつ試せます。</p><a class="text-button" href="#cpu">コンピューター対戦へ</a><p class="about-future">今後の構想・友達とのオンライン対戦（未実装）</p></article>
             <article class="first-step-card"><h3>成長する</h3><p>問題や復習を重ね、上達記録から以前の自分と比べて、できるようになったことを確かめられます。</p></article>
             <article class="first-step-card"><h3>教え合う</h3><p>初歩的な質問を歓迎し、気づきを共有できる場を目指します。いまは用語集で疑問を調べられます。</p><p class="about-future">今後の構想・初心者コミュニティ（未実装）</p></article>
           </div>

@@ -158,6 +158,7 @@ function updateEntry(data) {
 function goTo(path, data = {}) {
   const from = displayedRoute?.path ?? 'home';
   siteMenu.close(path === from);
+  if (from === 'cpu' && path !== 'cpu' && cpuPage.leave(() => goTo(path, data))) return;
   if (path === from && !Object.keys(data).length) {
     if (path === 'home' || path === 'learn') renderSite();
     return;
@@ -203,12 +204,14 @@ function renderSite() {
   if (previous?.opening) openingStudyScreen.close();
   if (previous?.practice || previous?.reviewId) openingMemoryScreen.close();
   if (previous?.lesson) introScreen.close();
+  if (previous?.path === 'cpu' && path !== 'cpu') cpuPage.close();
 
   let menuPath = 'learn';
   if (path === 'home') menuPath = 'home';
   if (path === 'mode' || path === 'result' || route.mode && route.mode !== 'opening') menuPath = 'mode';
   if (path === 'opening-quiz' || path === 'opening-result' || route.recommended) menuPath = 'opening-quiz';
   if (path === 'review' || route.reviewId) menuPath = 'review';
+  if (path === 'cpu') menuPath = 'cpu';
   for (const link of document.querySelectorAll('.site-nav a')) {
     if (link.hash === `#${menuPath}` && path !== 'error') link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
@@ -216,6 +219,8 @@ function renderSite() {
 
   if (path === 'glossary' || route.termId) {
     chessGlossary.open(route.termId);
+  } else if (path === 'cpu') {
+    if (previous?.path !== 'cpu') cpuPage.open();
   } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);
   } else if (route.reviewId) {

@@ -14,6 +14,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
     copyFileSync(join(__dirname, file), join(scratch, file));
   }
   for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
+  copyFileSync(join(__dirname, 'cpu-engine.LICENSE.txt'), join(scratch, 'cpu-engine.LICENSE.txt'));
   const configFile = join(scratch, 'site-config.json');
   writeFileSync(configFile, JSON.stringify({ ...siteConfig, googleSearchVerification: '', ga4MeasurementId: '' }));
   // Keep an earlier build in place to verify that CI receives the new directory.
@@ -52,7 +53,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="learning-insights\.js"/);
   assert.match(html, /src="learning-progress-ui\.js"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
-    'opening-classification.js', 'chess-terms.js', 'chess-glossary.js']) {
+    'opening-classification.js', 'chess-terms.js', 'chess-glossary.js',
+    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'cpu-engine-worker.js', 'cpu-engine.LICENSE.txt']) {
     assert.ok(artifacts.includes(file));
   }
   assert.ok(!artifacts.some(file => file.startsWith('editor.')));

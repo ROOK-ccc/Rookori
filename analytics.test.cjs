@@ -72,10 +72,12 @@ test('同意後だけ手動ページビューを送り、URL・診断結果・�
   analytics.screen('intro-lesson', 'lesson/one');
   analytics.screen('intro-lesson', 'lesson/two');
   analytics.screen('game-player', 'game-review/private-id');
+  analytics.screen('cpu', 'cpu');
+  analytics.screen('cpu', 'cpu');
   analytics.screen('home', 'learn');
   analytics.screen('home', 'home');
   assert.deepEqual(Array.from(events(), event => event.page_location), [
-    site + '#result', site + '#quiz', site + '#intro-lesson', site + '#intro-lesson', site + '#game-player', site,
+    site + '#result', site + '#quiz', site + '#intro-lesson', site + '#intro-lesson', site + '#game-player', site + '#cpu', site,
   ]);
   assert.equal(events()[1].page_referrer, site + '#result');
   assert.doesNotMatch(JSON.stringify(window.dataLayer), /ATCI|person(?:%40|@)example|private-id|lesson\/one|lesson\/two/);

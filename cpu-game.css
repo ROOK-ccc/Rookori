@@ -1,0 +1,99 @@
+.cpu-page { max-width: 1060px; }
+.cpu-header {
+  margin-bottom: clamp(18px, 4vw, 32px);
+  padding: clamp(18px, 4vw, 36px);
+  border: 1px solid #756139;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #304b37, #12271d);
+  color: var(--white);
+}
+.cpu-header p { margin-top: 6px; color: #f1d7a5; }
+.cpu-form {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: clamp(12px, 3vw, 24px);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.cpu-form fieldset { width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; }
+.cpu-form legend { padding: 0; margin-bottom: 8px; font-weight: 700; }
+.cpu-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cpu-levels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cpu-choices label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.cpu-choices label:has(input:checked) { border-color: #967033; background: #fff3d9; }
+.cpu-choices label:focus-within { outline: 2px solid var(--gold-dark); outline-offset: 2px; }
+.cpu-choices input { margin: 0; flex: none; accent-color: var(--green); }
+.cpu-choices img { flex: none; }
+.cpu-choices strong, .cpu-choices small { display: block; }
+.cpu-choices small, .cpu-help { color: var(--muted); }
+.cpu-setup-row { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cpu-setup-row label { display: grid; align-content: end; gap: 4px; min-width: 0; font-weight: 700; }
+.cpu-setup-row select, .cpu-setup-row input, .cpu-export textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 8px;
+  background: var(--white);
+  color: var(--ink);
+  border: 1px solid #8a907d;
+  border-radius: 7px;
+  font: inherit;
+}
+#cpu-form-error:empty, #cpu-feedback:empty, #cpu-result-note:empty { display: none; }
+#cpu-form-error { color: var(--rust); }
+.cpu-details { margin-top: 16px; }
+.cpu-details summary { width: fit-content; min-height: 44px; padding-block: 8px; font-weight: 700; cursor: pointer; }
+.cpu-details p + p { margin-top: 8px; }
+.cpu-layout.study-layout { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+.cpu-board-column, .cpu-score { min-width: 0; }
+.cpu-board-column .study-board { width: 100%; }
+.cpu-side {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-inline-start: 3px solid transparent;
+  border-radius: 6px;
+}
+.cpu-side.cpu-turn { border-color: var(--gold-dark); background: #eee8d9; }
+.cpu-side p { color: var(--muted); }
+.cpu-clock { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cpu-status { min-height: 1.65em; margin: 8px 0 4px; font-weight: 700; }
+.cpu-controls .button, .cpu-result .button, .cpu-export .button { min-height: 46px; padding-inline: 12px; }
+.cpu-score, .cpu-result { padding: 14px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
+.cpu-score h2, .cpu-result h2 { font-size: 1.2rem; }
+.cpu-result { margin-top: 14px; border-color: #a98649; }
+.cpu-result p { margin-top: 8px; }
+.cpu-moves { max-height: 12em; overflow: auto; padding-inline-start: 2.5em; margin-block: 8px; }
+.cpu-moves li { padding: 4px 8px; font-variant-numeric: tabular-nums; }
+.cpu-moves li span { display: inline-block; width: 50%; }
+.cpu-moves li:last-child { background: var(--green-light); font-weight: 700; }
+.cpu-export { padding-top: 12px; border-top: 1px solid var(--line); }
+.cpu-export textarea { margin-top: 8px; resize: vertical; font-family: monospace; }
+
+@media (max-width: 760px) {
+  .cpu-layout.study-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .cpu-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 420px) {
+  .cpu-choices:not(.cpu-levels), .cpu-setup-row { grid-template-columns: minmax(0, 1fr); }
+  .cpu-levels label { flex-wrap: wrap; padding-inline: 8px; gap: 4px 7px; }
+  .cpu-levels label span { flex-basis: 100%; }
+}

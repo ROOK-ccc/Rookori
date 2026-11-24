@@ -52,6 +52,8 @@ test('公開先のサブフォルダーを維持して内部リンクと共有�
   const study = siteAddress(shared, 'study/italian-game', {});
   assert.equal(study, `${pages}#study/italian-game`);
   assert.equal(readSiteRoute(study).opening.id, 'italian-game');
+  assert.equal(siteAddress(study, 'cpu', {}), `${pages}#cpu`);
+  assert.equal(readSiteRoute(`${pages}#cpu`).path, 'cpu');
   assert.equal(siteAddress(study, 'home', {}), pages);
 });
 
