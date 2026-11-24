@@ -70,6 +70,11 @@
 }
 .cpu-side.cpu-turn { border-color: var(--gold-dark); background: #eee8d9; }
 .cpu-side p { color: var(--muted); }
+.cpu-display-settings label { display: inline-flex; align-items: center; min-height: 44px; gap: 4px; margin-inline-end: 14px; }
+.cpu-display-settings input { accent-color: var(--green); }
+.cpu-material { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; margin-top: 4px; }
+.cpu-material img { display: block; }
+.cpu-material-score { color: var(--gold-dark); font-weight: 700; padding-inline: 4px; }
 .cpu-clock { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .cpu-status { min-height: 1.65em; margin: 8px 0 4px; font-weight: 700; }
 .cpu-controls .button, .cpu-result .button, .cpu-export .button { min-height: 46px; padding-inline: 12px; }

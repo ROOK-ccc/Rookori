@@ -1,4 +1,4 @@
-function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-library', 1)) {
+function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-library', 2)) {
   let connection;
 
   function open() {
@@ -6,9 +6,22 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
     connection = new Promise((resolve, reject) => {
       const request = openDatabase();
       let blocked = false;
-      request.onupgradeneeded = () => {
-        const games = request.result.createObjectStore('games', { keyPath: 'id' });
-        games.createIndex('pgn', 'pgn', { unique: true });
+      request.onupgradeneeded = event => {
+        const games = event.oldVersion === 0 ? request.result.createObjectStore('games', { keyPath: 'id' })
+          : request.transaction.objectStore('games');
+        if (event.oldVersion === 0) games.createIndex('pgn', 'pgn', { unique: true });
+        // Keep historical duplicates intact if two different PGNs already describe one game.
+        games.createIndex('lichessId', 'lichessId');
+        if (event.oldVersion === 0) return;
+        const scan = games.openCursor();
+        scan.onsuccess = () => {
+          const cursor = scan.result;
+          if (!cursor) return;
+          const record = cursor.value;
+          const id = lichessPgnId(record.pgn);
+          if (id) cursor.update({ ...record, lichessId: id });
+          cursor.continue();
+        };
       };
       request.onerror = () => reject(request.error);
       request.onblocked = () => {
@@ -61,9 +74,37 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
   return {
     get: id => access('readonly', (store, read) => read(store.get(id))),
     all: () => access('readonly', (store, read) => read(store.getAll())),
+    lichessIds: () => access('readonly', (store, read, result) => {
+      const ids = new Set();
+      read(store.index('lichessId').openKeyCursor(null, 'nextunique'), cursor => {
+        if (!cursor) { result(ids); return; }
+        ids.add(cursor.key);
+        cursor.continue();
+      });
+    }),
+    saveExternal(game) {
+      return access('readwrite', (store, read, result) => {
+        const source = validateReviewExternal(game.source, game.pgn, game.metadata.result);
+        read(store.index('lichessId').get(source.id), existing => {
+          if (existing) {
+            if (!existing.source && sameReviewMainline(existing, game)) {
+              existing.source = source;
+              store.put(existing);
+            }
+            result({ record: existing, duplicate: true });
+            return;
+          }
+          const bytes = crypto.getRandomValues(new Uint8Array(16));
+          const id = Array.from(bytes, value => value.toString(16).padStart(2, '0')).join('');
+          const record = reviewGameRecord({ ...game, source }, id);
+          store.add(record);
+          result({ record, duplicate: false });
+        });
+      });
+    },
     save(game, point, preferredId) {
       return access('readwrite', (store, read, result) => {
-        read(store.index('pgn').get(game.pgn), existing => {
+        function write(existing) {
           if (existing && !point) {
             if (game.cpu && !existing.cpu) {
               existing.cpu = game.cpu;
@@ -79,6 +120,9 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
             record = reviewGameRecord(game, id);
           }
           if (point) {
+            if (existing && record.positions[point.ply]?.fen !== game.positions[point.ply]?.fen) {
+              throw new Error('保存済みの棋譜と局面が一致しません。履歴から開いてメモしてください。');
+            }
             if (record.notes.some(note => note.ply === point.ply)) {
               throw new Error('履歴の同じ局面にメモがあります。「対局を履歴に保存」で保存済みの対局を開いてください。');
             }
@@ -88,6 +132,11 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
           if (existing) store.put(record);
           else store.add(record);
           result(record);
+        }
+        read(store.index('pgn').get(game.pgn), existing => {
+          const lichessId = !existing && lichessPgnId(game.pgn);
+          if (lichessId) read(store.index('lichessId').get(lichessId), write);
+          else write(existing);
         });
       });
     },

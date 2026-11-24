@@ -28,6 +28,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
+  assert.match(html, /Rookori v4\.0\.0/);
+  assert.match(html, /id="external-title"/);
   assert.match(html, /rel="icon"[^>]*href="brand\/rookori\.png"/);
   const site = new URL(siteConfig.siteUrl);
   assert.ok(html.includes(`rel="canonical" href="${site}"`));
@@ -54,7 +56,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="learning-progress-ui\.js"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'opening-classification.js', 'chess-terms.js', 'chess-glossary.js',
-    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js']) {
+    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js', 'lichess-api.js', 'lichess-ui.js']) {
     assert.ok(artifacts.includes(file));
   }
   const engine = ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm', 'stockfish.js-19.0.0-source.tar.gz',

@@ -18,6 +18,7 @@ function createRookoriAnalytics(win, doc) {
     intro: 'はじめてのチェス', 'intro-lesson': '入門レッスン', 'intro-summary': '入門の結果',
     dashboard: '今日の学習', daily: '今日の練習問題', review: '復習', progress: '上達記録',
     'game-review': '対局の取り込み', 'game-player': '対局再生', 'game-library': '対局履歴',
+    external: '外部サイトとの連携',
     cpu: 'コンピューター対戦',
     backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集',
     privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー',

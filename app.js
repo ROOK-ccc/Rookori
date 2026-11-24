@@ -205,6 +205,7 @@ function renderSite() {
   if (previous?.practice || previous?.reviewId) openingMemoryScreen.close();
   if (previous?.lesson) introScreen.close();
   if (previous?.path === 'cpu' && path !== 'cpu') cpuPage.close();
+  if (previous?.path === 'external' && path !== 'external') lichessPage.close();
 
   let menuPath = 'learn';
   if (path === 'home') menuPath = 'home';
@@ -219,6 +220,8 @@ function renderSite() {
 
   if (path === 'glossary' || route.termId) {
     chessGlossary.open(route.termId);
+  } else if (path === 'external') {
+    lichessPage.open();
   } else if (path === 'cpu') {
     if (previous?.path !== 'cpu') {
       if (route.cpuReplay) {

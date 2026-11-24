@@ -62,7 +62,7 @@ const gameReviewPages = (() => {
     goTo('game-review/preview', { gamePly: 0, gamePreviewId: previewId });
   }
 
-  function reviewCpu(record, game) {
+  function openSavedOrPreview(record, game) {
     if (record) goTo(`game-review/${record.id}`, { gamePly: 0 });
     else openPreview(game);
   }
@@ -361,8 +361,11 @@ const gameReviewPages = (() => {
   function renderHistory(page) {
     const query = byId('game-search').value.trim().toLocaleLowerCase();
     const filter = byId('game-history-mode').value;
+    const sourceFilter = byId('game-history-source').value;
+    const origin = game => game.cpu ? 'cpu' : game.source?.provider === 'lichess' ? 'lichess' : 'manual';
     const matching = page.games.filter(game =>
       (filter === 'all' || (game.cpu?.settings.mode ?? 'imported') === filter)
+      && (sourceFilter === 'all' || origin(game) === sourceFilter)
       && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
         .some(text => text?.toLocaleLowerCase().includes(query))));
     const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習' };
@@ -394,11 +397,13 @@ const gameReviewPages = (() => {
       const { cpu } = game;
       const result = cpu ? cpuHistoryResult(game) : resultText(game.metadata);
       item.append(heading);
+      item.append(element('p', { cpu: 'Rookori CPU対戦', lichess: 'Lichess', manual: '手動取り込み' }[origin(game)]));
       if (cpu) {
         const mode = cpu.continued ? types.continued : cpu.resumes && cpu.settings.mode === 'match' ? types.resumed : cpuLabels[cpu.settings.mode];
         item.append(element('p', `${mode} ／ ${cpuLabels[cpu.player]} ／ ${cpu.continued ? '時間無制限' : cpuTimeLabel(cpu.settings)}`));
       } else item.append(element('p', `白：${white ?? '記録なし'} ／ 黒：${black ?? '記録なし'}`));
-      const playedAt = cpu ? new Date(cpu.started).toLocaleString('ja-JP') : date ?? '記録なし';
+      const playedAt = cpu ? new Date(cpu.started).toLocaleString('ja-JP')
+        : game.source?.date ? new Date(game.source.date).toLocaleString('ja-JP') : date ?? '記録なし';
       item.append(element('p', `${playedAt} ／ ${result}${cpu ? '（' + cpuReasons[cpu.reason] + '）' : ''} ／ ${game.positions.length - 1}手 ／ メモ ${game.notes.length}件`));
       if (!hasEndMarker) item.append(element('p', '対局の終わりを示す記号のない棋譜'));
       const actions = element('div', null, 'study-mode-links');
@@ -425,6 +430,13 @@ const gameReviewPages = (() => {
         }
       });
       actions.append(review);
+      if (game.source?.provider === 'lichess' && lichessGameId.test(game.source.id)) {
+        const sourceLink = element('a', 'Lichessで対局を開く', 'text-button');
+        sourceLink.href = lichessGameUrl(game.source.id);
+        sourceLink.target = '_blank';
+        sourceLink.rel = 'noopener noreferrer';
+        actions.append(sourceLink);
+      }
       if (cpu) {
         const replay = element('button', '同じ設定で対局', 'text-button');
         replay.type = 'button';
@@ -476,6 +488,7 @@ const gameReviewPages = (() => {
   }
   byId('game-search').addEventListener('input', resetHistoryPage);
   byId('game-history-mode').addEventListener('change', resetHistoryPage);
+  byId('game-history-source').addEventListener('change', resetHistoryPage);
   byId('game-history-prev').addEventListener('click', () => { historyPage.index--; renderHistory(historyPage); });
   byId('game-history-next').addEventListener('click', () => { historyPage.index++; renderHistory(historyPage); });
   byId('game-export-library').addEventListener('click', async () => {
@@ -563,5 +576,6 @@ const gameReviewPages = (() => {
     }
   }
 
-  return { open, saveCpu: (game, id) => library.save(game, undefined, id), reviewCpu };
+  return { open, openSavedOrPreview, saveCpu: (game, id) => library.save(game, undefined, id),
+    saveExternal: library.saveExternal, lichessIds: library.lichessIds };
 })();

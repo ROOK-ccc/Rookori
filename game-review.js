@@ -1,6 +1,7 @@
 const gamePgnLimit = 2_000_000;
 const gameNoteLimit = 4000;
 const gameIdPattern = /^[a-f0-9]{32}$/;
+const lichessGameId = /^[A-Za-z0-9]{8}$/;
 const gameResults = Object.freeze({
   '1-0': '白の勝ち', '0-1': '黒の勝ち', '1/2-1/2': '引き分け', '*': '結果未確定',
 });
@@ -130,10 +131,58 @@ function reviewPosition(game, ply) {
   return game.positions[Math.max(0, Math.min(ply, game.positions.length - 1))];
 }
 
+function reviewPgnTag(pgn, name) {
+  const header = pgn.slice(0, 16000).trimStart().split(/\r?\n\s*\r?\n/, 1)[0];
+  return header.match(new RegExp('^\\s*\\[' + name + '\\s+"([^"\\r\\n]*)"\\s*\\]', 'im'))?.[1] ?? null;
+}
+
+function lichessPgnId(pgn) {
+  const site = typeof pgn === 'string' && reviewPgnTag(pgn, 'Site');
+  if (!site) return null;
+  const id = /^https:\/\/lichess\.org\/(?:game\/)?([a-zA-Z0-9]{8})(?:\/(?:white|black))?\/?(?:#\d+)?$/.exec(site)?.[1];
+  const tag = reviewPgnTag(pgn, 'GameId');
+  return id && (!tag || tag === id) ? id : null;
+}
+
+function lichessGameUrl(id) {
+  return 'https://lichess.org/' + id;
+}
+
+function sameReviewMainline(a, b) {
+  return a.metadata.result === b.metadata.result && a.initialFen === b.initialFen
+    && a.positions.length === b.positions.length
+    && a.positions.every((position, i) => position.move?.lan === b.positions[i].move?.lan);
+}
+
+function validateReviewExternal(source, pgn, result) {
+  const { provider, id, date, color, format, time } = source ?? {};
+  if (provider !== 'lichess' || typeof id !== 'string' || !lichessGameId.test(id) || lichessPgnId(pgn) !== id
+    || typeof date !== 'string' || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString() !== date
+    || !['white', 'black'].includes(color) || !['bullet', 'blitz', 'rapid', 'classical', 'correspondence'].includes(format)
+    || !['1-0', '0-1', '1/2-1/2'].includes(result)) throw new Error('外部棋譜の情報を確認できません。');
+  const number = value => Number.isSafeInteger(value) && value >= 0 && value < 100000 ? value : null;
+  const text = value => typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : null;
+  let normalizedTime = null;
+  if (number(time?.days)) normalizedTime = { days: time.days };
+  else if (number(time?.initial) !== null && number(time?.increment) !== null) {
+    normalizedTime = { initial: time.initial, increment: time.increment };
+  }
+  return {
+    provider, id, url: lichessGameUrl(id), date, color, format, time: normalizedTime,
+    result: result === '1/2-1/2' ? 'draw' : result === (color === 'white' ? '1-0' : '0-1') ? 'win' : 'loss',
+    opponent: text(source.opponent), opening: text(source.opening),
+    rating: number(source.rating), ratingDiff: Number.isInteger(source.ratingDiff) && Math.abs(source.ratingDiff) < 10000 ? source.ratingDiff : null,
+    opponentRating: number(source.opponentRating),
+    opponentRatingDiff: Number.isInteger(source.opponentRatingDiff) && Math.abs(source.opponentRatingDiff) < 10000 ? source.opponentRatingDiff : null,
+  };
+}
+
 function reviewGameRecord(game, id, savedAt = new Date().toISOString()) {
+  const lichessId = lichessPgnId(game.pgn);
   return {
     id, savedAt, pgn: game.pgn, initialFen: game.initialFen, positions: game.positions,
     metadata: game.metadata, notes: [], ...(game.cpu && { cpu: game.cpu }),
+    ...(lichessId && { lichessId }), ...(game.source && { source: game.source }),
   };
 }
 
@@ -149,7 +198,9 @@ function reviewNote(game, ply, text, savedAt = new Date().toISOString()) {
 function makeGameBackup(games) {
   return {
     type: 'chesspath.game-library', version: 1,
-    games: games.map(({ id, pgn, savedAt, notes, cpu }) => ({ id, pgn, savedAt, notes, ...(cpu && { cpu }) })),
+    games: games.map(({ id, pgn, savedAt, notes, cpu, source }) => ({
+      id, pgn, savedAt, notes, ...(cpu && { cpu }), ...(source && { source }),
+    })),
   };
 }
 
@@ -170,6 +221,10 @@ function validateGameBackup(backup) {
     if (entry.cpu !== undefined) {
       if (!game.metadata.result || game.metadata.result === '*') throw new Error(invalid);
       game.cpu = validateCpuGameDetails(entry.cpu);
+    }
+    if (entry.source !== undefined) {
+      if (entry.cpu !== undefined) throw new Error(invalid);
+      game.source = validateReviewExternal(entry.source, game.pgn, game.metadata.result);
     }
     const record = reviewGameRecord(game, entry.id, entry.savedAt);
     ids.add(entry.id);

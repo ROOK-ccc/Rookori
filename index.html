@@ -54,9 +54,11 @@
   <script src="game-review.js" defer></script>
   <script src="opening-classification.js" defer></script>
   <script src="game-library.js" defer></script>
+  <script src="lichess-api.js" defer></script>
   <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
   <script src="game-review-ui.js" defer></script>
+  <script src="lichess-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
 <body>
@@ -90,6 +92,7 @@
           <a href="#cpu"><span aria-hidden="true">♞</span>コンピューター対戦</a>
           <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
           <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
+          <a href="#external"><span aria-hidden="true">↗</span>外部サイトとの連携</a>
         </section>
         <section class="menu-group">
           <h3>チェスを学ぶ</h3>
@@ -595,6 +598,12 @@
             <label for="cpu-seconds">1手ごとの加算（0〜60秒）<input id="cpu-seconds" name="seconds" inputmode="numeric" value="0"></label>
           </div>
           <p id="cpu-summary"></p>
+          <fieldset class="cpu-display-settings">
+            <legend>盤の横に表示する情報</legend>
+            <label><input type="checkbox" id="cpu-show-captures"> 取った駒</label>
+            <label><input type="checkbox" id="cpu-show-material"> 駒得の数値</label>
+            <p class="cpu-help">駒得は盤に残っている駒の価値の差です。局面全体の有利・不利は、駒の位置やキングの安全などでも変わります。</p>
+          </fieldset>
           <p id="cpu-form-error" role="alert"></p>
           <button class="button primary" type="submit">対局を始める</button>
         </form>
@@ -610,9 +619,9 @@
       <div id="cpu-session" hidden>
         <div class="study-layout cpu-layout">
           <div class="cpu-board-column">
-            <div class="cpu-side"><div><strong id="cpu-opponent"></strong><p id="cpu-opponent-color"></p></div><span class="cpu-clock" id="cpu-opponent-clock" aria-label="コンピューターの残り時間"></span></div>
+            <div class="cpu-side"><div><strong id="cpu-opponent"></strong><p id="cpu-opponent-color"></p><div class="cpu-material" id="cpu-opponent-material" hidden></div></div><span class="cpu-clock" id="cpu-opponent-clock" aria-label="コンピューターの残り時間"></span></div>
             <div class="study-board" id="cpu-board" role="group" aria-label="対局のチェス盤"></div>
-            <div class="cpu-side"><div><strong>あなた</strong><p id="cpu-player-color"></p></div><span class="cpu-clock" id="cpu-player-clock" aria-label="あなたの残り時間"></span></div>
+            <div class="cpu-side"><div><strong>あなた</strong><p id="cpu-player-color"></p><div class="cpu-material" id="cpu-player-material" hidden></div></div><span class="cpu-clock" id="cpu-player-clock" aria-label="あなたの残り時間"></span></div>
             <p class="cpu-status" id="cpu-status" role="status"></p>
             <p id="cpu-feedback" role="status"></p>
             <button class="button secondary" id="cpu-retry" type="button" hidden>エンジンを再読み込み</button>
@@ -685,6 +694,7 @@
         <a class="text-button" href="#game-library">対局履歴を見る</a>
       </nav>
       <h1 id="game-review-title" tabindex="-1">対局を振り返る</h1>
+      <a class="text-button" href="#external">Lichessの公開棋譜を取り込む</a>
       <p>指した手を盤に並べて、気になったところをもう一度考えてみましょう。</p>
       <div class="study-complete">
         <h2>サンプル対局で試す</h2>
@@ -794,14 +804,60 @@
       </div>
     </section>
 
+    <section id="external" class="screen inner-screen guide-screen game-page" hidden>
+      <nav class="study-navigation" aria-label="対局のメニュー">
+        <a class="text-button" href="#game-review">対局を振り返る</a>
+        <a class="text-button" href="#game-library">対局履歴を見る</a>
+      </nav>
+      <h1 id="external-title" tabindex="-1">外部サイトとの連携</h1>
+      <p class="guide-intro">いつもの対局を、Rookoriで振り返る。</p>
+      <form class="game-card lichess-form" id="lichess-form" novalidate>
+        <h2>Lichessの公開棋譜</h2>
+        <p id="lichess-help">ユーザー名だけで、終了した通常ルールの対局を取得できます。パスワード不要で、Lichessへのログインやアカウント連携を行わずに使えます。</p>
+        <label for="lichess-username">Lichessユーザー名</label>
+        <input id="lichess-username" type="text" maxlength="30" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="lichess-help">
+        <div class="lichess-filters">
+          <label for="lichess-limit">取得する対局数<select id="lichess-limit"><option value="10">直近10局</option><option value="20" selected>直近20局</option><option value="50">直近50局</option><option value="100">直近100局</option></select></label>
+          <label for="lichess-format">対局形式<select id="lichess-format"><option value="all">すべて</option></select></label>
+        </div>
+        <div class="study-mode-links">
+          <button type="submit" class="button primary" id="lichess-submit">対局を取得する</button>
+          <button type="button" class="button secondary" id="lichess-cancel" hidden>取得を取り消す</button>
+          <button type="button" class="text-button" id="lichess-forget">保存したユーザー名を削除</button>
+        </div>
+        <p id="lichess-cooldown" class="game-status"></p>
+        <p id="lichess-status" class="game-status" role="status"></p>
+      </form>
+      <section id="lichess-results" class="game-review-tools" aria-labelledby="lichess-results-title" hidden>
+        <h2 id="lichess-results-title">取得した対局</h2>
+        <div class="lichess-filters" id="lichess-filters">
+          <label for="lichess-filter-result">勝敗<select id="lichess-filter-result"><option value="all">すべて</option><option value="win">勝利</option><option value="loss">敗北</option><option value="draw">引き分け</option></select></label>
+          <label for="lichess-filter-color">自分の駒の色<select id="lichess-filter-color"><option value="all">すべて</option><option value="white">白番</option><option value="black">黒番</option></select></label>
+          <label for="lichess-filter-format">対局形式<select id="lichess-filter-format"><option value="all">すべて</option></select></label>
+          <label><input type="checkbox" id="lichess-filter-unsaved"> 未取り込みのみ</label>
+        </div>
+        <p id="lichess-count-status" role="status"></p>
+        <div class="study-mode-links">
+          <button type="button" class="text-button" id="lichess-select-all">表示中の対局をすべて選択</button>
+          <button type="button" class="text-button" id="lichess-select-new">未取り込みの対局を選択</button>
+          <button type="button" class="button primary" id="lichess-save-selected">選択した対局を保存</button>
+        </div>
+        <p id="lichess-selected" role="status"></p>
+        <ul class="game-history" id="lichess-list"></ul>
+      </section>
+    </section>
+
     <section id="game-library" class="screen inner-screen guide-screen game-page" hidden>
       <nav class="study-navigation" aria-label="対局のメニュー"><a class="text-button" href="#game-review">対局を振り返る</a></nav>
       <h1 id="game-library-title" tabindex="-1">対局履歴</h1>
+      <a class="text-button" href="#external">Lichessの公開棋譜を取り込む</a>
       <p>保存した対局とメモは、同じブラウザーで開き直せます。</p>
       <label for="game-search">対局名・対局者・メモで検索</label>
       <input type="search" id="game-search">
       <label for="game-history-mode">対局の種類</label>
       <select id="game-history-mode"><option value="all">すべて</option><option value="practice">練習モード</option><option value="match">実戦モード</option><option value="imported">取り込んだ棋譜</option></select>
+      <label for="game-history-source">取得元</label>
+      <select id="game-history-source"><option value="all">すべて</option><option value="cpu">Rookori CPU対戦</option><option value="lichess">Lichess</option><option value="manual">手動取り込み</option></select>
       <p id="game-history-counts"></p>
       <p class="game-status" id="game-library-status" role="status"></p>
       <p id="game-history-action" role="status"></p>
@@ -939,6 +995,7 @@
       <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>
       <p class="guide-intro">Rookoriでは、利用状況を把握してサイトを改善するため、同意した方に Google Analytics 4 を使用します。</p>
       <p>表示した画面の種類を計測します。Google はブラウザーを区別するための Cookie などを使用します。棋譜やメモ、診断の回答・結果、学習履歴は計測の対象に含めません。選択内容はこのブラウザーに保存し、いつでも変更できます。</p>
+      <p>Lichessの公開棋譜を取得するときは、入力したユーザー名と取得条件をLichessに送ります。ユーザー名・対局相手の名前・棋譜はアクセス解析に送りません。</p>
       <p><a class="text-button" href="https://policies.google.com/technologies/partner-sites?hl=ja">Google によるデータの使用について</a></p>
       <p id="analytics-status" role="status">アクセス解析は無効です。</p>
       <div id="analytics-settings" class="analytics-actions" hidden>
@@ -948,7 +1005,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.0.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

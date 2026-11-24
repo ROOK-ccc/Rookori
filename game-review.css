@@ -84,3 +84,21 @@
 @media (max-width: 760px) {
   .game-player .study-layout { grid-template-columns: minmax(0, 1fr); }
 }
+.lichess-form, #lichess-results { margin-top: 16px; }
+.lichess-form input[type="text"], .lichess-filters select, #game-history-source {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+}
+.lichess-form input[type="text"] { max-width: 23rem; }
+.lichess-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px; margin-block: 8px; }
+.lichess-filters label, .lichess-pick { min-height: 44px; }
+.lichess-pick { display: flex; gap: 8px; align-items: center; }
+#lichess-status:empty, #lichess-cooldown:empty { display: none; }

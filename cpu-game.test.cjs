@@ -7,10 +7,10 @@ const { webcrypto } = require('node:crypto');
 const source = name => readFileSync(join(__dirname, name), 'utf8');
 const context = { performance, crypto: webcrypto };
 const { CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, Chess,
-  cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup } =
+  cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup, cpuMaterial, normalizeCpuMaterialDisplay } =
   runInNewContext(['vendor/chess.js', 'cpu-game.js', 'game-review.js'].map(source).join('\n') +
     '\n({ CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, Chess: chessRules.Chess,'
-    + ' cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup })', context);
+    + ' cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup, cpuMaterial, normalizeCpuMaterialDisplay })', context);
 
 function fixture(settings = {}, fen) {
   let elapsed = 0;
@@ -198,6 +198,37 @@ test('アンパッサンと時間無制限の局面を復元する', () => {
   const restored = restoreCpuSnapshot(JSON.parse(JSON.stringify(cpuSnapshot(match))));
   assert.equal(restored.clocks().w, Infinity);
   assert.equal(restored.legalMove('e5d6'), true);
+});
+
+test('駒得は盤上の価値を比較し、取った駒と独立して昇格・待った・再開を反映する', () => {
+  const initial = fixture().match;
+  assert.equal(cpuMaterial(initial).difference, 0);
+  assert.equal(cpuMaterial(initial).captures.w.length, 0);
+  for (const [piece, value] of [['p', 1], ['n', 3], ['b', 3], ['r', 5], ['q', 9]]) {
+    const { match } = fixture({}, `4k3/8/8/3${piece}4/3R4/8/8/4K3 w - - 0 1`);
+    match.start();
+    assert.equal(cpuMaterial(match).difference, 5 - value);
+    play(match, 'd4d5');
+    assert.equal(cpuMaterial(match).captures.w[0], piece);
+    assert.equal(cpuMaterial(match).difference, 5);
+  }
+  const { match } = fixture({}, '4k3/3p4/8/4P3/8/8/8/4K3 b - - 0 1');
+  match.start();
+  play(match, 'd7d5', 'e5d6');
+  const restored = restoreCpuSnapshot(JSON.parse(JSON.stringify(cpuSnapshot(match))));
+  assert.equal(cpuMaterial(restored).captures.w[0], 'p');
+  assert.equal(cpuMaterial(restored).difference, 1);
+  assert.equal(restored.undo(), true);
+  assert.equal(cpuMaterial(restored).captures.w.length, 0);
+  const promotion = fixture({}, '4k3/P7/8/8/8/8/7p/4K3 w - - 0 1').match;
+  promotion.start();
+  play(promotion, 'a7a8q');
+  assert.equal(cpuMaterial(promotion).difference, 8);
+  assert.equal(cpuMaterial(promotion).captures.w.length, 0);
+  const defaults = normalizeCpuMaterialDisplay();
+  assert.equal(defaults.practice.score, true);
+  assert.equal(defaults.match.score, false);
+  assert.equal(normalizeCpuMaterialDisplay({ match: { captures: false } }).match.captures, false);
 });
 
 test('終了した対局は時計切れの継続と別IDで保存され、既存形式のバックアップを維持する', () => {

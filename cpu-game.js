@@ -14,6 +14,9 @@ const cpuDefaultSettings = { mode: 'practice', level: 1, color: 'random', time: 
 const cpuSettingsKey = 'rookori.cpu-settings.v1';
 const cpuResultsKey = 'rookori.cpu-results.v1';
 const cpuResumeKey = 'rookori.cpu-resume.v1';
+const cpuMaterialKey = 'rookori.cpu-material-display.v1';
+const cpuPieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+const cpuPieceLabels = { p: 'ポーン', n: 'ナイト', b: 'ビショップ', r: 'ルーク', q: 'クイーン' };
 const cpuLabels = { practice: '練習モード', match: '実戦モード', w: '白番', b: '黒番', random: 'ランダム' };
 const cpuReasons = {
   mate: 'チェックメイト', stalemate: 'ステイルメイト', material: '駒不足',
@@ -64,6 +67,26 @@ function cpuTimeLabel(settings) {
 
 function cpuPlayerColor(choice, random = Math.random) {
   return choice === 'random' ? (random() < .5 ? 'w' : 'b') : choice;
+}
+
+function normalizeCpuMaterialDisplay(saved) {
+  return Object.fromEntries(['practice', 'match'].map(mode => [mode, {
+    captures: typeof saved?.[mode]?.captures === 'boolean' ? saved[mode].captures : true,
+    score: typeof saved?.[mode]?.score === 'boolean' ? saved[mode].score : mode === 'practice',
+  }]));
+}
+
+function cpuMaterial(match) {
+  const captures = { w: [], b: [] };
+  for (const { move } of match.turns) {
+    if (Object.hasOwn(cpuPieceValues, move.captured)) captures[move.color].push(move.captured);
+  }
+  const remaining = { w: 0, b: 0 };
+  for (const piece of match.game.board().flat()) {
+    if (piece) remaining[piece.color] += cpuPieceValues[piece.type] ?? 0;
+  }
+  for (const pieces of Object.values(captures)) pieces.sort((a, b) => cpuPieceValues[b] - cpuPieceValues[a]);
+  return { captures, difference: remaining.w - remaining.b };
 }
 
 class CpuMatch {

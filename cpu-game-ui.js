@@ -6,6 +6,7 @@ const cpuPage = (() => {
   const recordLimit = 50;
   const owner = newCpuGameId();
   let settings = normalizeCpuSettings(readStorage(cpuSettingsKey));
+  const materialSettings = normalizeCpuMaterialDisplay(readStorage(cpuMaterialKey));
   let match, engine, job, timer, confirmation, interrupted, archive;
   let ready = false;
   let paused = false;
@@ -102,10 +103,20 @@ const cpuPage = (() => {
     for (const field of [node('minutes'), node('seconds')]) field.removeAttribute('aria-invalid');
     const time = valid ? cpuTimeLabel(normalizeCpuSettings({ ...value, level: Number(value.level) })) : '持ち時間を入力してください';
     node('summary').textContent = `${cpuLabels[value.mode]} · ${cpuLevelLabel(Number(value.level))} · ${cpuLabels[value.color]} · ${time}`;
+    node('show-captures').checked = materialSettings[value.mode].captures;
+    node('show-material').checked = materialSettings[value.mode].score;
     return value;
   }
 
-  form.addEventListener('input', updateSettings);
+  form.addEventListener('input', event => {
+    const field = event.target;
+    if (field === node('show-captures') || field === node('show-material')) {
+      const preferences = materialSettings[form.elements.namedItem('mode').value];
+      preferences[field === node('show-captures') ? 'captures' : 'score'] = field.checked;
+      writeStorage(cpuMaterialKey, materialSettings);
+    }
+    updateSettings();
+  });
   form.addEventListener('submit', event => {
     event.preventDefault();
     if (match) return;
@@ -330,6 +341,31 @@ const cpuPage = (() => {
     moves.scrollTop = moves.scrollHeight;
   }
 
+  function renderMaterial() {
+    const { captures, score } = materialSettings[match.settings.mode];
+    const totals = captures || score ? cpuMaterial(match) : null;
+    for (const [side, color] of [['player', match.player], ['opponent', otherChessColor(match.player)]]) {
+      const row = node(side + '-material');
+      const difference = totals ? (color === 'w' ? totals.difference : -totals.difference) : 0;
+      const pieces = captures ? totals.captures[color] : [];
+      row.hidden = !pieces.length && (!score || difference <= 0);
+      const icons = pieces.map(piece => {
+        const image = element('img');
+        image.src = `pieces/cburnett/${otherChessColor(color)}${piece.toUpperCase()}.svg`;
+        image.alt = '取った' + cpuPieceLabels[piece];
+        image.width = image.height = 20;
+        return image;
+      });
+      if (score && difference > 0) {
+        const points = element('span', '+' + difference, 'cpu-material-score');
+        points.setAttribute('role', 'img');
+        points.setAttribute('aria-label', `駒得 ${difference}点`);
+        icons.push(points);
+      }
+      row.replaceChildren(...icons);
+    }
+  }
+
   function resultText(outcome) {
     const prefix = outcome.winner === null ? '引き分け' : outcome.winner === match.player ? '勝利' : '敗北';
     const reason = outcome.reason === 'flag'
@@ -378,6 +414,7 @@ const cpuPage = (() => {
     node('opponent').textContent = 'コンピューター · ' + cpuLevelLabel(match.settings.level);
     node('opponent-color').textContent = cpuLabels[otherChessColor(match.player)];
     node('player-color').textContent = cpuLabels[match.player];
+    renderMaterial();
     node('retry').hidden = !failure;
     node('controls').hidden = !live;
     node('result').hidden = live;
@@ -496,7 +533,7 @@ const cpuPage = (() => {
     if (!entry) return;
     node('review').disabled = true;
     const record = await entry.saved;
-    if (archive === entry) gameReviewPages.reviewCpu(record, entry.game);
+    if (archive === entry) gameReviewPages.openSavedOrPreview(record, entry.game);
   });
 
   node('view-pgn').addEventListener('click', () => {

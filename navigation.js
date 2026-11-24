@@ -9,6 +9,7 @@ const siteHeadings = {
   error: 'error-title', dashboard: 'dashboard-title', daily: 'daily-title',
   progress: 'progress-title', backup: 'backup-title', about: 'about-title', memorize: 'openings-title',
   'game-review': 'game-review-title', 'game-library': 'game-library-title',
+  external: 'external-title',
   glossary: 'glossary-title', privacy: 'privacy-title', cpu: 'cpu-title',
 };
 
