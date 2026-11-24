@@ -28,6 +28,7 @@ function readSiteRoute(address, state) {
   const path = new URL(address).hash.slice(1);
   // 履歴の各項目には、その画面の回答や学習の進行だけを保存します。
   const entry = state?.path === path ? state : {};
+  if (path === 'cpu') return { path, cpuReplay: entry.cpuReplay };
   if (Object.hasOwn(siteHeadings, path)) return { path };
   const term = /^glossary\/([a-z0-9-]+)$/.exec(path);
   if (term) return { path, termId: term[1] };

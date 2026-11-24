@@ -3,11 +3,14 @@ const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
+const { webcrypto } = require('node:crypto');
 const source = name => readFileSync(join(__dirname, name), 'utf8');
-const context = { performance };
-const { CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, cpuLevels, cpuHintLevel, Chess } =
-  runInNewContext(source('vendor/chess.js') + '\n' + source('cpu-game.js') +
-    '\n({ CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, cpuLevels, cpuHintLevel, Chess: chessRules.Chess })', context);
+const context = { performance, crypto: webcrypto };
+const { CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, Chess,
+  cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup } =
+  runInNewContext(['vendor/chess.js', 'cpu-game.js', 'game-review.js'].map(source).join('\n') +
+    '\n({ CpuMatch, cpuPgn, cpuTimeControl, normalizeCpuSettings, validCpuTime, Chess: chessRules.Chess,'
+    + ' cpuSnapshot, restoreCpuSnapshot, cpuReviewGame, makeGameBackup, validateGameBackup })', context);
 
 function fixture(settings = {}, fen) {
   let elapsed = 0;
@@ -166,21 +169,58 @@ test('投了した実戦のPGNを読み込み直せる', () => {
   assert.equal(replay.fen(), match.game.fen());
 });
 
-test('Workerの6段階は合法手を返し、ヒントは一手メイトを見つける', () => {
-  const replies = [];
-  const self = { postMessage: reply => replies.push(reply) };
-  runInNewContext(source('vendor/chess.js') + '\n' + source('cpu-engine-worker.js'), {
-    self, importScripts() {}, performance,
-  });
-  assert.equal(replies.pop().ready, true);
-  const game = new Chess();
-  for (const level of cpuLevels) {
-    self.onmessage({ data: { fen: game.fen(), level } });
-    const reply = replies.pop();
-    const move = reply.move;
-    assert.ok(move, level.name);
-    assert.ok(game.move({ from: move.slice(0, 2), to: move.slice(2, 4), promotion: move[4] }), level.name);
-  }
-  self.onmessage({ data: { fen: '7k/8/5KQ1/8/8/8/8/8 w - - 0 1', level: cpuHintLevel } });
-  assert.equal(replies.pop().move, 'g6g7');
+test('中断再開は経過時計・手番・待った履歴とキャスリング権を復元する', () => {
+  const { match, advance } = fixture({ time: '3+2' }, 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1');
+  const initialClocks = match.clocks();
+  match.start();
+  advance(6000);
+  play(match, 'e1g1');
+  advance(1500);
+  const snapshot = JSON.parse(JSON.stringify(cpuSnapshot(match)));
+  const restored = restoreCpuSnapshot(snapshot, () => 2000000);
+  assert.equal(restored.id, match.id);
+  assert.equal(restored.resumeCount, 1);
+  assert.equal(restored.anchor, null);
+  assert.deepEqual(restored.clocks(), match.clocks());
+  assert.equal(restored.game.fen(), match.game.fen());
+  assert.equal(restored.game.turn(), 'b');
+  assert.equal(restored.undo(), true);
+  assert.deepEqual(restored.clocks(), initialClocks);
+  assert.equal(restored.game.fen(), match.initialFen);
+  snapshot.moves[0].code = 'e1g8';
+  assert.throws(() => restoreCpuSnapshot(snapshot), /着手/);
+});
+
+test('アンパッサンと時間無制限の局面を復元する', () => {
+  const { match } = fixture({}, '4k3/3p4/8/4P3/8/8/8/4K3 b - - 0 1');
+  match.start();
+  play(match, 'd7d5');
+  const restored = restoreCpuSnapshot(JSON.parse(JSON.stringify(cpuSnapshot(match))));
+  assert.equal(restored.clocks().w, Infinity);
+  assert.equal(restored.legalMove('e5d6'), true);
+});
+
+test('終了した対局は時計切れの継続と別IDで保存され、既存形式のバックアップを維持する', () => {
+  const engine = { name: 'Stockfish', version: '19', distribution: 'Lite' };
+  const { match, advance } = fixture({ time: '1+0' });
+  match.start();
+  play(match, 'e2e4', 'e7e5');
+  advance(60000);
+  assert.ok(match.flag());
+  const originalId = match.id;
+  const original = cpuReviewGame(match, engine);
+  assert.ok(match.continuePractice());
+  assert.notEqual(match.id, originalId);
+  match.start();
+  play(match, 'g1f3');
+  match.finish('resign', 'b');
+  const continued = cpuReviewGame(match, engine);
+  const restored = validateGameBackup(makeGameBackup([
+    { ...original, id: originalId, savedAt: match.started.toISOString(), notes: [] },
+    { ...continued, id: match.id, savedAt: match.started.toISOString(), notes: [] },
+  ]));
+  assert.equal(restored[0].cpu.reason, 'flag');
+  assert.equal(restored[1].cpu.parentId, originalId);
+  assert.notEqual(restored[0].pgn, restored[1].pgn);
+  assert.equal(restored[1].positions.at(-1).move.san, 'Nf3');
 });

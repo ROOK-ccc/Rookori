@@ -133,7 +133,7 @@ function reviewPosition(game, ply) {
 function reviewGameRecord(game, id, savedAt = new Date().toISOString()) {
   return {
     id, savedAt, pgn: game.pgn, initialFen: game.initialFen, positions: game.positions,
-    metadata: game.metadata, notes: [],
+    metadata: game.metadata, notes: [], ...(game.cpu && { cpu: game.cpu }),
   };
 }
 
@@ -149,7 +149,7 @@ function reviewNote(game, ply, text, savedAt = new Date().toISOString()) {
 function makeGameBackup(games) {
   return {
     type: 'chesspath.game-library', version: 1,
-    games: games.map(({ id, pgn, savedAt, notes }) => ({ id, pgn, savedAt, notes })),
+    games: games.map(({ id, pgn, savedAt, notes, cpu }) => ({ id, pgn, savedAt, notes, ...(cpu && { cpu }) })),
   };
 }
 
@@ -167,6 +167,10 @@ function validateGameBackup(backup) {
       || !validDate(entry.savedAt) || !Array.isArray(entry.notes)) throw new Error(invalid);
     const [game, extra] = parseReviewGames(entry.pgn);
     if (extra || sources.has(game.pgn)) throw new Error('同じ対局がバックアップに複数含まれています。');
+    if (entry.cpu !== undefined) {
+      if (!game.metadata.result || game.metadata.result === '*') throw new Error(invalid);
+      game.cpu = validateCpuGameDetails(entry.cpu);
+    }
     const record = reviewGameRecord(game, entry.id, entry.savedAt);
     ids.add(entry.id);
     sources.add(game.pgn);

@@ -3,23 +3,15 @@ const cpuPage = (() => {
   const form = node('form');
   const moves = node('moves');
   const confirmDialog = node('confirm');
-  const workerUrl = new URL('cpu-engine-worker.js', document.currentScript.src);
-  const labels = { practice: '練習モード', match: '実戦モード', w: '白番', b: '黒番', random: 'ランダム' };
-  const reasons = {
-    mate: 'チェックメイト', stalemate: 'ステイルメイト', material: '駒不足',
-    threefold: '同一局面の3回出現（請求）', fivefold: '同一局面の5回出現',
-    fifty: '50手ルール（請求）', seventyFive: '75手ルール', resign: '投了',
-  };
   const recordLimit = 50;
+  const owner = newCpuGameId();
   let settings = normalizeCpuSettings(readStorage(cpuSettingsKey));
-  let match, worker, job, watchdog, timer, confirmation;
+  let match, engine, job, timer, confirmation, interrupted, archive;
   let ready = false;
   let paused = false;
   let failure = '';
   let hint = [];
-  let saved = false;
   let resultShown = false;
-  let timeLimitResult = '';
   let records = readStorage(cpuResultsKey);
   records = Array.isArray(records) ? records.filter(entry =>
     entry && typeof entry.date === 'string' && Number.isFinite(Date.parse(entry.date))
@@ -35,13 +27,21 @@ const cpuPage = (() => {
     try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
   }
 
-  function timeLabel(value) {
-    const time = cpuTimeControl(value);
-    return time ? `${time.initial / 60000}分 ＋ ${time.increment / 1000}秒` : '時間無制限';
+  function remember(takeOwnership = false) {
+    if (!match || match.outcome) return false;
+    const existing = readStorage(cpuResumeKey);
+    if (!takeOwnership && (existing?.id !== match.id || existing.owner !== owner)) return false;
+    return writeStorage(cpuResumeKey, { ...cpuSnapshot(match), owner });
   }
 
-  function levelLabel(level) {
-    return `Lv.${level} ${cpuLevels[level - 1].name}`;
+  function clearSnapshot() {
+    const snapshot = readStorage(cpuResumeKey);
+    if (snapshot?.id !== match.id || snapshot.owner !== owner) return;
+    try { localStorage.removeItem(cpuResumeKey); } catch { /* Storage may be blocked. */ }
+  }
+
+  function describe(game) {
+    return `${cpuLabels[game.settings.mode]} · ${cpuLevelLabel(game.settings.level)} · ${cpuLabels[game.player]} · ${game.continued ? '時間無制限の継続練習' : cpuTimeLabel(game.settings)}`;
   }
 
   cpuLevels.forEach((level, index) => {
@@ -55,7 +55,7 @@ const cpuPage = (() => {
     image.alt = '';
     image.width = image.height = 30;
     const description = element('span');
-    description.append(element('strong', levelLabel(index + 1)), element('small', level.description));
+    description.append(element('strong', cpuLevelLabel(index + 1)), element('small', level.description));
     label.append(input, image, description);
     node('levels').append(label);
   });
@@ -80,8 +80,17 @@ const cpuPage = (() => {
     node('session').hidden = true;
     node('setup').hidden = false;
     node('record-list').replaceChildren(...records.map(entry => element('li',
-      `${new Date(entry.date).toLocaleString('ja-JP')} · ${levelLabel(entry.level)} · ${labels[entry.color]} · ${entry.time} · ${entry.result}`)));
+      `${new Date(entry.date).toLocaleString('ja-JP')} · ${cpuLevelLabel(entry.level)} · ${cpuLabels[entry.color]} · ${entry.time} · ${entry.result}`)));
     node('records').hidden = records.length === 0;
+    interrupted = null;
+    const snapshot = readStorage(cpuResumeKey);
+    if (snapshot) {
+      try { interrupted = restoreCpuSnapshot(snapshot); }
+      catch { node('resume-status').textContent = '中断データを読み込めませんでした。新しい対局を始められます。'; }
+    }
+    node('resume-panel').hidden = !interrupted;
+    if (interrupted) node('resume-detail').textContent = `${describe(interrupted)} · ${interrupted.turns.length}手`;
+    form.querySelector('[type="submit"]').textContent = interrupted ? '新しい対局を開始する' : '対局を始める';
   }
 
   function updateSettings() {
@@ -91,8 +100,8 @@ const cpuPage = (() => {
     node('custom').hidden = !isCustom;
     node('form-error').textContent = '';
     for (const field of [node('minutes'), node('seconds')]) field.removeAttribute('aria-invalid');
-    const time = valid ? timeLabel(normalizeCpuSettings({ ...value, level: Number(value.level) })) : '持ち時間を入力してください';
-    node('summary').textContent = `${labels[value.mode]} · ${levelLabel(Number(value.level))} · ${labels[value.color]} · ${time}`;
+    const time = valid ? cpuTimeLabel(normalizeCpuSettings({ ...value, level: Number(value.level) })) : '持ち時間を入力してください';
+    node('summary').textContent = `${cpuLabels[value.mode]} · ${cpuLevelLabel(Number(value.level))} · ${cpuLabels[value.color]} · ${time}`;
     return value;
   }
 
@@ -113,9 +122,14 @@ const cpuPage = (() => {
       firstInvalid?.focus();
       return;
     }
-    settings = normalizeCpuSettings({ ...value, level: Number(value.level) });
-    writeStorage(cpuSettingsKey, settings);
-    start();
+    const selected = normalizeCpuSettings({ ...value, level: Number(value.level) });
+    const begin = () => {
+      settings = selected;
+      writeStorage(cpuSettingsKey, settings);
+      start();
+    };
+    if (readStorage(cpuResumeKey)) ask('中断した対局の代わりに、新しい対局を始めますか？', '新しい対局を始める', begin);
+    else begin();
   });
 
   function playable() {
@@ -132,18 +146,19 @@ const cpuPage = (() => {
       return played;
     },
     onMove() {
-      if (job?.kind === 'hint') disposeWorker();
+      if (job?.kind === 'hint') disposeEngine();
       hint = [];
+      remember();
       synchronize();
     },
   });
 
-  function disposeWorker() {
-    clearTimeout(watchdog);
-    worker?.terminate();
-    worker = null;
+  function disposeEngine() {
+    const current = engine;
+    engine = null;
     job = null;
     ready = false;
+    current?.close();
   }
 
   function stopClock() {
@@ -163,57 +178,50 @@ const cpuPage = (() => {
     else renderClocks();
   }
 
-  function workerFailed() {
+  function engineFailed() {
     if (!match || match.outcome) return;
     if (match.flag()) { synchronize(); return; }
-    disposeWorker();
+    disposeEngine();
     stopClock();
+    remember();
     board.reset();
     failure = location.protocol === 'file:'
       ? 'このページをファイルから直接開いています。Rookoriの公開サイトかローカルサーバーで開いてください。'
-      : 'エンジンとの通信が途切れました。局面と持ち時間を保持しています。再読み込みすると続けられます。';
+      : 'Stockfishを読み込めないか、通信が途切れました。再読み込みすると同じ局面から続けられます。';
     render();
     node('retry').focus({ preventScroll: true });
   }
 
-  function loadWorker() {
+  async function loadEngine() {
     failure = '';
     const activeMatch = match;
+    const current = engine = createStockfishSession();
     try {
-      const current = worker = new Worker(workerUrl);
-      const isCurrent = () => worker === current && match === activeMatch;
-      watchdog = setTimeout(() => { if (isCurrent()) workerFailed(); }, 8000);
-      current.addEventListener('error', event => {
-        event.preventDefault();
-        if (isCurrent()) workerFailed();
-      });
-      current.addEventListener('messageerror', () => { if (isCurrent()) workerFailed(); });
-      current.addEventListener('message', ({ data }) => {
-        if (!isCurrent()) return;
-        clearTimeout(watchdog);
-        if (!ready && data?.ready === true) {
-          ready = true;
-          if (!paused) startClock();
-          synchronize();
-        } else if (job) acceptMove(data);
-      });
+      await current.start();
+      if (engine !== current || match !== activeMatch) return;
+      ready = true;
+      if (!paused) startClock();
+      synchronize();
     } catch {
-      workerFailed();
+      if (engine === current && match === activeMatch) engineFailed();
     }
   }
 
-  function requestMove(kind) {
+  async function requestMove(kind) {
+    const purpose = kind === 'hint' ? 'hint' : 'opponent';
     if (!ready || job) return;
     const fen = match.game.fen();
-    const level = kind === 'hint' ? cpuHintLevel : cpuLevels[match.settings.level - 1];
     const remaining = match.clocks()[match.game.turn()];
     const increment = match.time?.increment ?? 0;
-    const ms = Math.max(1, Math.min(level.ms, remaining * .08 + increment * .15, remaining * .45));
-    job = { kind, fen };
+    const request = job = { kind, fen, id: match.id };
     try {
-      watchdog = setTimeout(workerFailed, 8000);
-      worker.postMessage({ fen, level: { ...level, ms } });
-    } catch { workerFailed(); }
+      const result = await engine.search(purpose,
+        { fen: match.initialFen, moves: match.turns.map(({ move }) => cpuMoveCode(move)) },
+        { level: match.settings.level, remaining, increment });
+      if (job === request && match.id === request.id) acceptMove(result);
+    } catch {
+      if (job === request) engineFailed();
+    }
   }
 
   function acceptMove(data) {
@@ -221,37 +229,43 @@ const cpuPage = (() => {
     job = null;
     if (match.flag()) { synchronize(); return; }
     if (match.outcome || match.game.fen() !== fen || match.anchor === null) return;
-    if (!match.legalMove(data?.move)) { workerFailed(); return; }
+    const code = kind === 'hint' ? data.move
+      : chooseStockfishMove(data, match.settings.level, match.game.moves({ verbose: true }).map(cpuMoveCode));
+    if (!match.legalMove(code)) { engineFailed(); return; }
     if (kind === 'hint') {
-      hint = [data.move];
-      const from = data.move.slice(0, 2);
-      const to = data.move.slice(2, 4);
-      const promotion = { q: 'クイーン', r: 'ルーク', b: 'ビショップ', n: 'ナイト' }[data.move[4]];
+      match.hintCount++;
+      hint = [code];
+      const from = code.slice(0, 2);
+      const to = code.slice(2, 4);
+      const promotion = { q: 'クイーン', r: 'ルーク', b: 'ビショップ', n: 'ナイト' }[code[4]];
       node('feedback').textContent = `ヒント：${from} の駒を ${to} へ。${promotion ? promotion + 'に昇格します。' : ''}`;
     } else {
-      match.play(data.move, otherChessColor(match.player));
+      match.play(code, otherChessColor(match.player));
     }
+    remember();
     synchronize();
   }
 
   function synchronize() {
     if (!match) return;
     if (match.outcome) {
-      disposeWorker();
+      disposeEngine();
       stopClock();
       confirmation = null;
       if (confirmDialog.open) confirmDialog.close();
       board.close();
     } else if (!paused && !failure) {
-      if (!worker) loadWorker();
+      if (!engine) loadEngine();
       if (ready && match.game.turn() !== match.player) requestMove('cpu');
     }
     render();
   }
 
-  function start() {
+  function start(restored = null) {
     close();
-    match = new CpuMatch(settings);
+    match = restored ?? new CpuMatch(settings);
+    settings = match.settings;
+    remember(true);
     node('setup').hidden = true;
     node('session').hidden = false;
     board.reset();
@@ -262,23 +276,34 @@ const cpuPage = (() => {
 
   function close() {
     if (!match) return;
-    disposeWorker();
+    disposeEngine();
+    if (!match.outcome) remember();
     stopClock();
     board.reset();
     confirmation = null;
     if (confirmDialog.open) confirmDialog.close();
     match = null;
-    paused = saved = resultShown = false;
+    paused = resultShown = false;
     hint = [];
-    failure = timeLimitResult = '';
+    failure = '';
+    archive = null;
     node('pgn').hidden = true;
     node('view-pgn').setAttribute('aria-expanded', 'false');
     node('export-status').textContent = '';
   }
 
-  function open() {
+  function open(replay) {
+    node('resume-status').textContent = '';
     showSettings();
     showScreen('cpu', 'cpu-title');
+    if (!replay) return;
+    const begin = () => {
+      settings = normalizeCpuSettings(replay);
+      writeStorage(cpuSettingsKey, settings);
+      start();
+    };
+    if (readStorage(cpuResumeKey)) ask('中断した対局の代わりに、履歴と同じ設定で対局しますか？', '新しい対局を始める', begin);
+    else begin();
   }
 
   function renderClocks() {
@@ -308,37 +333,51 @@ const cpuPage = (() => {
   function resultText(outcome) {
     const prefix = outcome.winner === null ? '引き分け' : outcome.winner === match.player ? '勝利' : '敗北';
     const reason = outcome.reason === 'flag'
-      ? (match.game.turn() === match.player ? '時間切れ' : 'コンピューターの時間切れ') : reasons[outcome.reason];
+      ? (match.game.turn() === match.player ? '時間切れ' : 'コンピューターの時間切れ') : cpuReasons[outcome.reason];
     return prefix + '：' + reason;
   }
 
   function showResult() {
-    const result = resultText(match.outcome);
-    node('result-title').textContent = result;
+    if (resultShown) return;
+    resultShown = true;
+    clearSnapshot();
+    node('result-title').textContent = resultText(match.outcome);
+    node('result-details').textContent = `${describe(match)} · ${match.turns.length}手${match.resumeCount ? ' · 中断から再開' : ''}`;
     const canContinue = match.settings.mode === 'practice' && match.outcome.reason === 'flag';
     node('continue').hidden = !canContinue;
-    let note = canContinue ? 'この局面から、時間を気にせず練習を続けられます。' : '';
-    if (match.continued) note = `時間切れ後の練習結果です。継続前の結果は「${timeLimitResult}」でした。`;
-    if (match.settings.mode === 'match' && !saved) {
-      records.unshift({ date: match.started.toISOString(), level: match.settings.level, color: match.player,
-        time: timeLabel(match.settings), result });
-      records = records.slice(0, recordLimit);
-      note = writeStorage(cpuResultsKey, records) ? 'このブラウザーに実戦結果を保存しました。' : '実戦結果はこのタブを開いている間だけ確認できます。';
-      saved = true;
-    }
-    if (resultShown) return;
-    node('result-note').textContent = note;
+    node('result-note').textContent = canContinue ? 'この局面から、時間を気にせず練習を続けられます。'
+      : match.continued ? '時間切れ後の継続練習として記録します。' : '';
     node('pgn').value = cpuPgn(match);
+    node('review').hidden = !match.turns.length;
+    node('review').disabled = false;
+    if (match.turns.length) {
+      try {
+        const game = cpuReviewGame(match, stockfishEngine);
+        const entry = archive = { game };
+        node('save-status').textContent = '対局履歴に保存しています…';
+        entry.saved = gameReviewPages.saveCpu(game, match.id).then(record => {
+          if (archive === entry) node('save-status').textContent = '対局履歴に保存しました。';
+          return record;
+        }, () => {
+          if (archive === entry) node('save-status').textContent = '対局履歴に保存できませんでした。このタブでは復習できます。';
+          return null;
+        });
+      } catch {
+        node('review').hidden = true;
+        node('save-status').textContent = '復習用の棋譜を作成できませんでした。';
+      }
+    } else {
+      node('save-status').textContent = 'まだ着手がないため、対局履歴には保存されません。';
+    }
     node('result-title').focus();
-    resultShown = true;
   }
 
   function render() {
     const live = !match.outcome;
     const practice = match.settings.mode === 'practice';
-    node('opponent').textContent = 'コンピューター · ' + levelLabel(match.settings.level);
-    node('opponent-color').textContent = labels[otherChessColor(match.player)];
-    node('player-color').textContent = labels[match.player];
+    node('opponent').textContent = 'コンピューター · ' + cpuLevelLabel(match.settings.level);
+    node('opponent-color').textContent = cpuLabels[otherChessColor(match.player)];
+    node('player-color').textContent = cpuLabels[match.player];
     node('retry').hidden = !failure;
     node('controls').hidden = !live;
     node('result').hidden = live;
@@ -351,10 +390,11 @@ const cpuPage = (() => {
     node('hint').disabled = !playable() || !ready || Boolean(job);
     node('draw').hidden = !playable() || !match.drawClaim();
     node('resign').disabled = !ready && match.anchor === null && !paused && !failure;
-    let status = live ? failure || (paused ? '一時停止中' : !ready && match.anchor === null ? 'エンジンを読み込み中…'
+    let status = live ? failure || (paused ? '一時停止中' : !ready && match.anchor === null ? 'Stockfishを読み込み中…'
       : playable() ? job?.kind === 'hint' ? 'ヒントを考えています…' : 'あなたの手番です。'
         : 'コンピューターが考えています…') : '対局が終了しました。';
     if (live && !paused && match.game.isCheck()) status += ' チェックです。';
+    if (live && match.resumeCount && match.settings.mode === 'match') status += ' 中断から再開した実戦です。';
     if (live && match.continued) status += ' 時間切れ後の練習中です。';
     if (node('status').textContent !== status) node('status').textContent = status;
     board.render();
@@ -379,7 +419,9 @@ const cpuPage = (() => {
 
   function leave(action) {
     if (!match || match.outcome) return false;
-    ask('途中の対局は保存されません。このページを離れますか？', 'ページを離れる', () => {
+    const persisted = remember();
+    ask(persisted ? '対局を中断します。あとから再開できます。' : 'この対局の中断データを保存できません。ページを離れますか？',
+      '対局を中断する', () => {
       close();
       action();
     });
@@ -394,11 +436,20 @@ const cpuPage = (() => {
   }
 
   node('retry').addEventListener('click', () => { failure = ''; synchronize(); });
+  node('resume').addEventListener('click', () => {
+    const snapshot = readStorage(cpuResumeKey);
+    if (!snapshot) { showSettings(); return; }
+    let restored;
+    try { restored = restoreCpuSnapshot(snapshot); }
+    catch { showSettings(); return; }
+    start(restored);
+  });
   node('undo').addEventListener('click', () => {
     if (!match.undo()) { synchronize(); return; }
-    disposeWorker();
+    disposeEngine();
     hint = [];
     board.reset();
+    remember();
     synchronize();
   });
   node('hint').addEventListener('click', () => {
@@ -412,11 +463,12 @@ const cpuPage = (() => {
     paused = !paused;
     if (paused) {
       stopClock();
-      disposeWorker();
+      disposeEngine();
       board.reset();
     } else {
       startClock();
     }
+    remember();
     synchronize();
   });
   node('draw').addEventListener('click', () => { if (playable()) { match.claim(); synchronize(); } });
@@ -424,20 +476,27 @@ const cpuPage = (() => {
     if (!match.flag()) match.finish('resign', otherChessColor(match.player));
     synchronize();
   }));
-  node('restart').addEventListener('click', () => ask('今の対局を終了し、同じ設定で新しい対局を始めます。', '再戦する', start));
+  node('restart').addEventListener('click', () => ask('今の対局を終了し、同じ設定で新しい対局を始めます。', '再戦する', () => start()));
   node('settings-back').addEventListener('click', () => leave(backToSettings));
-  node('rematch').addEventListener('click', start);
+  node('rematch').addEventListener('click', () => start());
   node('change').addEventListener('click', backToSettings);
   node('continue').addEventListener('click', () => {
-    const result = resultText(match.outcome);
     if (!match.continuePractice()) return;
-    timeLimitResult = result;
+    archive = null;
     resultShown = false;
     hint = [];
     board.reset();
+    remember(true);
     startClock();
     synchronize();
     node('title').focus();
+  });
+  node('review').addEventListener('click', async () => {
+    const entry = archive;
+    if (!entry) return;
+    node('review').disabled = true;
+    const record = await entry.saved;
+    if (archive === entry) gameReviewPages.reviewCpu(record, entry.game);
   });
 
   node('view-pgn').addEventListener('click', () => {
@@ -472,7 +531,7 @@ const cpuPage = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  document.addEventListener('visibilitychange', () => { tick(); if (document.hidden) remember(); });
   window.addEventListener('pagehide', () => { if (match && !match.outcome) close(); });
   window.addEventListener('pageshow', event => {
     if (event.persisted && location.hash === '#cpu' && !match) open();

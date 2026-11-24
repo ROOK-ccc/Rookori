@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 const { copyFileSync, cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
@@ -14,7 +15,6 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
     copyFileSync(join(__dirname, file), join(scratch, file));
   }
   for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
-  copyFileSync(join(__dirname, 'cpu-engine.LICENSE.txt'), join(scratch, 'cpu-engine.LICENSE.txt'));
   const configFile = join(scratch, 'site-config.json');
   writeFileSync(configFile, JSON.stringify({ ...siteConfig, googleSearchVerification: '', ga4MeasurementId: '' }));
   // Keep an earlier build in place to verify that CI receives the new directory.
@@ -54,9 +54,23 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="learning-progress-ui\.js"/);
   for (const file of ['game-review.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'opening-classification.js', 'chess-terms.js', 'chess-glossary.js',
-    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'cpu-engine-worker.js', 'cpu-engine.LICENSE.txt']) {
+    'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js']) {
     assert.ok(artifacts.includes(file));
   }
+  const engine = ['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm', 'stockfish.js-19.0.0-source.tar.gz',
+    'nn-61e7af4bb97d.nnue', 'Copying.txt', 'AUTHORS', 'NOTICE.txt'];
+  for (const file of engine) {
+    assert.deepEqual(readFileSync(join(published, 'vendor', 'stockfish', file)),
+      readFileSync(join(__dirname, 'vendor', 'stockfish', file)));
+  }
+  const engineDir = join(published, 'vendor', 'stockfish');
+  const notice = readFileSync(join(engineDir, 'NOTICE.txt'), 'utf8');
+  const hashes = [...notice.matchAll(/^(\S+)\s+([a-f0-9]{64})$/gm)];
+  assert.equal(hashes.length, 4);
+  for (const [, file, expected] of hashes) {
+    assert.equal(createHash('sha256').update(readFileSync(join(engineDir, file))).digest('hex'), expected, file);
+  }
+  assert.doesNotMatch(html, /<script[^>]+stockfish-19-lite-single/);
   assert.ok(!artifacts.some(file => file.startsWith('editor.')));
   assert.ok(!artifacts.some(file => file.endsWith('.test.cjs')));
   const pack = folder => runInNewContext(readFileSync(join(folder, 'course-problems.js'), 'utf8')

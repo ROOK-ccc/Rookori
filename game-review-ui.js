@@ -13,6 +13,7 @@ const gameReviewPages = (() => {
   let restorePending = false;
 
   function title(game) {
+    if (game.cpu) return `コンピューター対戦 · ${cpuLevelLabel(game.cpu.settings.level)}`;
     const { event, white, black } = game.metadata;
     if (event && event !== '?') return event;
     if (white && black) return `${white} 対 ${black}`;
@@ -21,6 +22,11 @@ const gameReviewPages = (() => {
 
   function resultText(metadata) {
     return metadata.result ? gameResults[metadata.result] : '記録なし';
+  }
+
+  function cpuHistoryResult(game) {
+    if (game.metadata.result === '1/2-1/2') return '引き分け';
+    return game.metadata.result === (game.cpu.player === 'w' ? '1-0' : '0-1') ? '勝利' : '敗北';
   }
 
   function describe(game) {
@@ -54,6 +60,11 @@ const gameReviewPages = (() => {
     previews.set(++previewId, game);
     if (previews.size > 12) previews.delete(previews.keys().next().value);
     goTo('game-review/preview', { gamePly: 0, gamePreviewId: previewId });
+  }
+
+  function reviewCpu(record, game) {
+    if (record) goTo(`game-review/${record.id}`, { gamePly: 0 });
+    else openPreview(game);
   }
 
   function loadPgn(text) {
@@ -349,21 +360,96 @@ const gameReviewPages = (() => {
 
   function renderHistory(page) {
     const query = byId('game-search').value.trim().toLocaleLowerCase();
+    const filter = byId('game-history-mode').value;
     const matching = page.games.filter(game =>
-      [game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
-        .some(text => text?.toLocaleLowerCase().includes(query)) || !query);
+      (filter === 'all' || (game.cpu?.settings.mode ?? 'imported') === filter)
+      && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
+        .some(text => text?.toLocaleLowerCase().includes(query))));
+    const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習' };
+    const counts = Object.fromEntries(Object.keys(types).map(key => [key, { 勝利: 0, 敗北: 0, 引き分け: 0 }]));
+    for (const game of page.games) {
+      const { cpu } = game;
+      if (!cpu) continue;
+      const group = cpu.continued ? 'continued' : cpu.settings.mode === 'match' && cpu.resumes ? 'resumed' : cpu.settings.mode;
+      counts[group][cpuHistoryResult(game)]++;
+    }
+    byId('game-history-counts').textContent = Object.keys(types)
+      .filter(key => Object.values(counts[key]).some(Boolean))
+      .map(key => `${types[key]} ${counts[key].勝利}勝 ${counts[key].敗北}敗 ${counts[key].引き分け}分`).join(' ／ ');
     byId('game-library-status').textContent = !page.games.length ? '保存した対局はまだありません。'
-      : matching.length ? `${matching.length}局` : '検索に一致する対局はありません。';
-    byId('game-history').replaceChildren(...matching.map(game => {
+      : matching.length ? `${matching.length}局` : '条件に一致する対局はありません。';
+    const lastPage = Math.max(0, Math.ceil(matching.length / 20) - 1);
+    page.index = Math.min(page.index, lastPage);
+    byId('game-history-pages').hidden = !lastPage;
+    byId('game-history-prev').disabled = page.index === 0;
+    byId('game-history-next').disabled = page.index === lastPage;
+    byId('game-history-page').textContent = `${page.index + 1} / ${lastPage + 1}`;
+    byId('game-history').replaceChildren(...matching.slice(page.index * 20, (page.index + 1) * 20).map(game => {
       const item = element('li', null, 'game-card');
       const heading = element('h2');
       const link = element('a', title(game), 'text-button');
       link.href = `#game-review/${game.id}`;
       heading.append(link);
       const { date, white, black, hasEndMarker } = game.metadata;
-      item.append(heading, element('p', `白：${white ?? '記録なし'} ／ 黒：${black ?? '記録なし'}`),
-        element('p', `対局日：${date ?? '記録なし'} ／ 結果：${resultText(game.metadata)} ／ ${game.positions.length - 1}手 ／ 振り返りポイント ${game.notes.length}件`));
+      const { cpu } = game;
+      const result = cpu ? cpuHistoryResult(game) : resultText(game.metadata);
+      item.append(heading);
+      if (cpu) {
+        const mode = cpu.continued ? types.continued : cpu.resumes && cpu.settings.mode === 'match' ? types.resumed : cpuLabels[cpu.settings.mode];
+        item.append(element('p', `${mode} ／ ${cpuLabels[cpu.player]} ／ ${cpu.continued ? '時間無制限' : cpuTimeLabel(cpu.settings)}`));
+      } else item.append(element('p', `白：${white ?? '記録なし'} ／ 黒：${black ?? '記録なし'}`));
+      const playedAt = cpu ? new Date(cpu.started).toLocaleString('ja-JP') : date ?? '記録なし';
+      item.append(element('p', `${playedAt} ／ ${result}${cpu ? '（' + cpuReasons[cpu.reason] + '）' : ''} ／ ${game.positions.length - 1}手 ／ メモ ${game.notes.length}件`));
       if (!hasEndMarker) item.append(element('p', '対局の終わりを示す記号のない棋譜'));
+      const actions = element('div', null, 'study-mode-links');
+      const review = element('a', '対局を復習する', 'text-button');
+      review.href = `#game-review/${game.id}`;
+      const exportPgn = element('button', 'PGNを保存', 'text-button');
+      exportPgn.type = 'button';
+      exportPgn.addEventListener('click', () => download(`rookori-${game.id}.pgn`, game.pgn, 'application/x-chess-pgn'));
+      const remove = element('button', '削除', 'text-button');
+      remove.type = 'button';
+      remove.addEventListener('click', async () => {
+        if (!window.confirm('この対局とメモを履歴から削除しますか？')) return;
+        remove.disabled = true;
+        try {
+          await library.remove(game.id);
+          if (activeHistory(page)) {
+            page.games = page.games.filter(record => record.id !== game.id);
+            renderHistory(page);
+            byId('game-history-action').textContent = '対局を削除しました。';
+          }
+        } catch {
+          if (activeHistory(page)) byId('game-history-action').textContent = '対局を削除できませんでした。';
+          remove.disabled = false;
+        }
+      });
+      actions.append(review);
+      if (cpu) {
+        const replay = element('button', '同じ設定で対局', 'text-button');
+        replay.type = 'button';
+        replay.addEventListener('click', () => goTo('cpu', {
+          cpuReplay: cpu.continued ? { ...cpu.settings, time: 'unlimited' } : cpu.settings,
+        }));
+        actions.append(replay);
+      }
+      if (game.notes.length) {
+        const notes = element('details');
+        notes.append(element('summary', '棋譜メモを確認・編集'));
+        const list = element('ul');
+        for (const note of game.notes) {
+          const point = element('li');
+          const edit = element('button', moveLabel(game.positions[note.ply]) + 'のメモを開く', 'text-button');
+          edit.type = 'button';
+          edit.addEventListener('click', () => goTo(`game-review/${game.id}`, { gamePly: note.ply }));
+          point.append(element('p', note.text || '（局面のみ保存）'), edit);
+          list.append(point);
+        }
+        notes.append(list);
+        item.append(notes);
+      }
+      actions.append(exportPgn, remove);
+      item.append(actions);
       return item;
     }));
   }
@@ -383,9 +469,15 @@ const gameReviewPages = (() => {
     }
   }
 
-  byId('game-search').addEventListener('input', () => {
-    if (historyPage?.games) renderHistory(historyPage);
-  });
+  function resetHistoryPage() {
+    if (!historyPage?.games) return;
+    historyPage.index = 0;
+    renderHistory(historyPage);
+  }
+  byId('game-search').addEventListener('input', resetHistoryPage);
+  byId('game-history-mode').addEventListener('change', resetHistoryPage);
+  byId('game-history-prev').addEventListener('click', () => { historyPage.index--; renderHistory(historyPage); });
+  byId('game-history-next').addEventListener('click', () => { historyPage.index++; renderHistory(historyPage); });
   byId('game-export-library').addEventListener('click', async () => {
     const page = historyPage;
     const status = byId('game-backup-status');
@@ -433,9 +525,12 @@ const gameReviewPages = (() => {
 
   async function open(route) {
     if (route.path === 'game-library') {
-      historyPage = {};
+      historyPage = { index: 0 };
       byId('game-library-status').textContent = '対局履歴を読み込んでいます。';
       byId('game-backup-status').textContent = '';
+      byId('game-history-action').textContent = '';
+      byId('game-history-counts').textContent = '';
+      byId('game-history-pages').hidden = true;
       byId('game-history').replaceChildren();
       showScreen('game-library', 'game-library-title');
       await loadHistory(historyPage);
@@ -468,5 +563,5 @@ const gameReviewPages = (() => {
     }
   }
 
-  return { open };
+  return { open, saveCpu: (game, id) => library.save(game, undefined, id), reviewCpu };
 })();

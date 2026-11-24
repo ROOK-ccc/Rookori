@@ -1,0 +1,29 @@
+Stockfish 19 Lite WASM (single-threaded), stockfish.js v19.0.0
+Stockfish.js (c) 2026 Chess.com, LLC. Browser port by Nathan Rugg.
+Stockfish (c) T. Romstad, M. Costalba, J. Kiiski, G. Linscott and contributors (see AUTHORS).
+Lite neural network by Chris Bao (sscg13).
+
+Licensed under GNU GPL version 3. See Copying.txt in this directory.
+The unmodified JS and WASM come from the following tagged release:
+https://github.com/nmrugg/stockfish.js/releases/tag/v19.0.0
+Upstream engine: https://github.com/official-stockfish/Stockfish
+
+Corresponding source is available without charge from this same directory:
+  stockfish.js-19.0.0-source.tar.gz
+  nn-61e7af4bb97d.nnue
+The archive contains the tagged source, browser glue, build scripts and license.
+Tagged source: https://github.com/nmrugg/stockfish.js/tree/v19.0.0
+Network source: https://tests.stockfishchess.org/api/nn/nn-61e7af4bb97d.nnue
+
+To build the same flavor, unpack the archive, put nn-61e7af4bb97d.nnue
+in its src directory, install the Emscripten toolchain as described in the
+tagged build.js and README, then run:
+  node build.js --single-threaded --lite --no-split -f
+Rookori does not patch the Stockfish release binaries. It exchanges UCI
+text with the separate engine worker and uses chess.js for game rules.
+
+SHA-256:
+stockfish-19-lite-single.js        d3344124ab067fb0b90ee77873bb8e9fbf5fc01bc525fe714b0f942581e889e6
+stockfish-19-lite-single.wasm      57ac2d72312aba346760e3f173f687a8c211208e97a87268436f7f0e10bb5387
+stockfish.js-19.0.0-source.tar.gz   183b576fa9c8610a9be48c6e5b97506502985e64a771e769a16dbecf2f125d54
+nn-61e7af4bb97d.nnue               61e7af4bb97d51eeeb25d322916f86513b5cd3a827ce189c98c6e31946f99e5b

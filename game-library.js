@@ -61,16 +61,20 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
   return {
     get: id => access('readonly', (store, read) => read(store.get(id))),
     all: () => access('readonly', (store, read) => read(store.getAll())),
-    save(game, point) {
+    save(game, point, preferredId) {
       return access('readwrite', (store, read, result) => {
         read(store.index('pgn').get(game.pgn), existing => {
           if (existing && !point) {
+            if (game.cpu && !existing.cpu) {
+              existing.cpu = game.cpu;
+              store.put(existing);
+            }
             result(existing);
             return;
           }
           let record = existing;
           if (!record) {
-            const id = Array.from(crypto.getRandomValues(new Uint8Array(16)), value =>
+            const id = preferredId ?? Array.from(crypto.getRandomValues(new Uint8Array(16)), value =>
               value.toString(16).padStart(2, '0')).join('');
             record = reviewGameRecord(game, id);
           }
@@ -81,10 +85,14 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
             record.notes.push(reviewNote(record, point.ply, point.text));
             record.notes.sort((a, b) => a.ply - b.ply);
           }
-          store.put(record);
+          if (existing) store.put(record);
+          else store.add(record);
           result(record);
         });
       });
+    },
+    remove(id) {
+      return access('readwrite', store => store.delete(id));
     },
     updateNote({ id, pgn }, ply, previous, text) {
       return access('readwrite', (store, read, result) => {

@@ -1,12 +1,11 @@
 const cpuLevels = [
-  { name: 'ポーン', piece: 'P', description: 'ルールを覚えたばかり', depth: 1, ms: 90, nodes: 120, random: .8, spread: 8 },
-  { name: 'ナイト', piece: 'N', description: '駒の動きを理解している', depth: 1, ms: 150, nodes: 260, random: .33, spread: 4 },
-  { name: 'ビショップ', piece: 'B', description: '簡単な戦術を理解している', depth: 2, ms: 250, nodes: 850, spread: 2 },
-  { name: 'ルーク', piece: 'R', description: '基本的な実戦経験がある', depth: 3, ms: 450, nodes: 2200 },
-  { name: 'クイーン', piece: 'Q', description: '手応えのある対局をしたい', depth: 4, ms: 750, nodes: 5200 },
-  { name: 'キング', piece: 'K', description: '強い相手に挑戦したい', depth: 5, ms: 1300, nodes: 14000 },
+  { name: 'ポーン', piece: 'P', description: 'ルールを覚えたばかり' },
+  { name: 'ナイト', piece: 'N', description: '駒の動きを理解している' },
+  { name: 'ビショップ', piece: 'B', description: '簡単な戦術を理解している' },
+  { name: 'ルーク', piece: 'R', description: '基本的な実戦経験がある' },
+  { name: 'クイーン', piece: 'Q', description: '手応えのある対局をしたい' },
+  { name: 'キング', piece: 'K', description: '強い相手に挑戦したい' },
 ];
-const cpuHintLevel = { depth: 4, ms: 900, nodes: 8000 };
 const cpuTimePresets = {
   Bullet: ['1+0', '2+1'], Blitz: ['3+0', '3+2', '5+0', '5+3'],
   Rapid: ['10+0', '10+5', '15+10'], Classical: ['30+0', '30+20'],
@@ -14,8 +13,21 @@ const cpuTimePresets = {
 const cpuDefaultSettings = { mode: 'practice', level: 1, color: 'random', time: 'unlimited', minutes: 10, seconds: 0 };
 const cpuSettingsKey = 'rookori.cpu-settings.v1';
 const cpuResultsKey = 'rookori.cpu-results.v1';
+const cpuResumeKey = 'rookori.cpu-resume.v1';
+const cpuLabels = { practice: '練習モード', match: '実戦モード', w: '白番', b: '黒番', random: 'ランダム' };
+const cpuReasons = {
+  mate: 'チェックメイト', stalemate: 'ステイルメイト', material: '駒不足',
+  threefold: '同一局面の3回出現（請求）', fivefold: '同一局面の5回出現',
+  fifty: '50手ルール（請求）', seventyFive: '75手ルール', resign: '投了', flag: '時間切れ',
+};
 const otherChessColor = color => color === 'w' ? 'b' : 'w';
 const cpuMoveCode = move => move.from + move.to + (move.promotion ?? '');
+const newCpuGameId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), value =>
+  value.toString(16).padStart(2, '0')).join('');
+const validCpuId = id => typeof id === 'string' && /^[a-f0-9]{32}$/.test(id);
+const cpuTimestamp = value => typeof value === 'string' && Number.isFinite(Date.parse(value))
+  && new Date(value).toISOString() === value;
+const cpuLevelLabel = level => `Lv.${level} ${cpuLevels[level - 1].name}`;
 
 function validCpuTime(minutes, seconds) {
   const integer = value => (typeof value === 'string' || typeof value === 'number') && /^[0-9]+$/.test(value);
@@ -45,16 +57,23 @@ function cpuTimeControl(settings) {
   return { initial: minutes * 60000, increment: seconds * 1000 };
 }
 
+function cpuTimeLabel(settings) {
+  const time = cpuTimeControl(settings);
+  return time ? `${time.initial / 60000}分 ＋ ${time.increment / 1000}秒` : '時間無制限';
+}
+
 function cpuPlayerColor(choice, random = Math.random) {
   return choice === 'random' ? (random() < .5 ? 'w' : 'b') : choice;
 }
 
 class CpuMatch {
-  constructor(settings, { fen, now = () => performance.now(), random = Math.random, started = new Date() } = {}) {
+  constructor(settings, { fen, now = () => performance.now(), random = Math.random, started = new Date(),
+    id = newCpuGameId(), player } = {}) {
     this.game = new chessRules.Chess(fen);
     this.initialFen = this.game.fen();
     this.settings = normalizeCpuSettings(settings);
-    this.player = cpuPlayerColor(this.settings.color, random);
+    this.id = id;
+    this.player = player ?? cpuPlayerColor(this.settings.color, random);
     this.time = cpuTimeControl(this.settings);
     this.started = started;
     this.now = now;
@@ -65,6 +84,10 @@ class CpuMatch {
     this.positions = [this.positionKey()];
     this.outcome = null;
     this.continued = false;
+    this.parentId = null;
+    this.hintCount = 0;
+    this.undoCount = 0;
+    this.resumeCount = 0;
   }
 
   get lastMove() { return this.turns.at(-1)?.move; }
@@ -160,18 +183,106 @@ class CpuMatch {
       this.positions.pop();
     }
     if (this.anchor !== null) this.anchor = this.now();
+    this.undoCount++;
     return true;
   }
 
   continuePractice() {
     if (this.settings.mode !== 'practice' || this.outcome?.reason !== 'flag') return false;
     this.continued = true;
+    this.parentId = this.id;
+    this.id = newCpuGameId();
     this.outcome = null;
     this.time = null;
     this.remaining = { w: Infinity, b: Infinity };
     this.turnStart = { ...this.remaining };
     return true;
   }
+}
+
+function cpuSnapshot(match, updatedAt = new Date()) {
+  const encodeClock = values => ({ w: Number.isFinite(values.w) ? values.w : null, b: Number.isFinite(values.b) ? values.b : null });
+  return {
+    id: match.id, started: match.started.toISOString(), updatedAt: updatedAt.toISOString(),
+    settings: match.settings, player: match.player, initialFen: match.initialFen, fen: match.game.fen(), turn: match.game.turn(),
+    remaining: encodeClock(match.clocks()), turnStart: encodeClock(match.turnStart),
+    moves: match.turns.map(({ move, start }) => ({ code: cpuMoveCode(move), start: encodeClock(start) })),
+    continued: match.continued, parentId: match.parentId, hintCount: match.hintCount,
+    undoCount: match.undoCount, resumeCount: match.resumeCount,
+  };
+}
+
+function restoreCpuSnapshot(snapshot, now) {
+  const counter = value => Number.isSafeInteger(value) && value >= 0;
+  const clock = (values, timed) => {
+    const result = {};
+    for (const color of ['w', 'b']) {
+      const value = values?.[color];
+      if (value === null && timed !== true) result[color] = Infinity;
+      else if (Number.isFinite(value) && value >= 0 && timed !== false) result[color] = value;
+      else throw new Error('持ち時間を復元できません。');
+    }
+    return result;
+  };
+  const settings = normalizeCpuSettings(snapshot?.settings);
+  if (!validCpuId(snapshot?.id) || !cpuTimestamp(snapshot.started) || !cpuTimestamp(snapshot.updatedAt)
+    || !['w', 'b'].includes(snapshot.player) || Object.keys(settings).some(key => settings[key] !== snapshot.settings?.[key])
+    || (settings.color !== 'random' && settings.color !== snapshot.player)
+    || !Array.isArray(snapshot.moves) || snapshot.moves.length > 12000
+    || typeof snapshot.initialFen !== 'string' || ![snapshot.hintCount, snapshot.undoCount, snapshot.resumeCount].every(counter)
+    || typeof snapshot.continued !== 'boolean' || (snapshot.continued
+      ? settings.mode !== 'practice' || !validCpuId(snapshot.parentId) || snapshot.parentId === snapshot.id : snapshot.parentId !== null)) {
+    throw new Error('中断した対局のデータを確認できません。');
+  }
+  const match = new CpuMatch(settings, { id: snapshot.id, player: snapshot.player, fen: snapshot.initialFen,
+    started: new Date(snapshot.started), now: () => 0 });
+  match.start();
+  const timed = Boolean(match.time);
+  for (const entry of snapshot.moves) {
+    if (!match.play(entry?.code, match.game.turn())) throw new Error('中断した対局の着手が正しくありません。');
+    match.turns.at(-1).start = clock(entry.start, snapshot.continued ? undefined : timed);
+  }
+  if (match.outcome || match.game.fen() !== snapshot.fen || match.game.turn() !== snapshot.turn) {
+    throw new Error('中断した対局の局面が一致しません。');
+  }
+  match.anchor = null;
+  match.now = now ?? (() => performance.now());
+  match.continued = snapshot.continued;
+  match.parentId = snapshot.parentId;
+  if (match.continued) match.time = null;
+  match.remaining = clock(snapshot.remaining, Boolean(match.time));
+  match.turnStart = clock(snapshot.turnStart, Boolean(match.time));
+  match.hintCount = snapshot.hintCount;
+  match.undoCount = snapshot.undoCount;
+  match.resumeCount = snapshot.resumeCount + 1;
+  return match;
+}
+
+function cpuReviewGame(match, engine) {
+  const [game] = parseReviewGames(cpuPgn(match));
+  game.cpu = {
+    settings: match.settings, player: match.player, started: match.started.toISOString(),
+    engine: { name: engine.name, version: engine.version, distribution: engine.distribution },
+    reason: match.outcome.reason, continued: match.continued, parentId: match.parentId,
+    hints: match.hintCount, undos: match.undoCount, resumes: match.resumeCount,
+  };
+  return game;
+}
+
+function validateCpuGameDetails(details) {
+  const settings = normalizeCpuSettings(details?.settings);
+  const engine = details?.engine;
+  if (!details || !['w', 'b'].includes(details.player)
+    || !cpuTimestamp(details.started) || !Object.hasOwn(cpuReasons, details.reason)
+    || !['name', 'version', 'distribution'].every(key => typeof engine?.[key] === 'string' && engine[key].length > 0 && engine[key].length <= 120)
+    || !['hints', 'undos', 'resumes'].every(key => Number.isSafeInteger(details[key]) && details[key] >= 0)
+    || typeof details.continued !== 'boolean'
+    || (details.continued ? settings.mode !== 'practice' || !validCpuId(details.parentId) : details.parentId !== null)
+    || Object.keys(settings).some(key => settings[key] !== details.settings?.[key])
+    || (settings.color !== 'random' && settings.color !== details.player)) throw new Error('CPU対局の記録を確認してください。');
+  return { settings, engine: { name: engine.name, version: engine.version, distribution: engine.distribution },
+    player: details.player, started: details.started, reason: details.reason, continued: details.continued,
+    parentId: details.parentId, hints: details.hints, undos: details.undos, resumes: details.resumes };
 }
 
 function cpuResultCode(outcome) {
@@ -189,6 +300,7 @@ function cpuPgn(match) {
     White: match.player === 'w' ? 'Player' : opponent, Black: match.player === 'b' ? 'Player' : opponent,
     Result: cpuResultCode(match.outcome), TimeControl: time,
     Termination: match.outcome?.reason === 'flag' ? 'time forfeit' : match.outcome ? 'normal' : 'unterminated',
+    RookoriGameId: match.id,
   };
   for (const [tag, value] of Object.entries(tags)) pgn.setHeader(tag, value);
   for (const { move } of match.turns) pgn.move(move);

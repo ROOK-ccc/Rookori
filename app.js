@@ -220,7 +220,13 @@ function renderSite() {
   if (path === 'glossary' || route.termId) {
     chessGlossary.open(route.termId);
   } else if (path === 'cpu') {
-    if (previous?.path !== 'cpu') cpuPage.open();
+    if (previous?.path !== 'cpu') {
+      if (route.cpuReplay) {
+        const { cpuReplay, ...entry } = history.state;
+        history.replaceState(entry, '');
+      }
+      cpuPage.open(route.cpuReplay);
+    }
   } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);
   } else if (route.reviewId) {

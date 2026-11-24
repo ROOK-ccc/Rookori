@@ -39,6 +39,7 @@
   <script src="intro-course.js" defer></script>
   <script src="chess-board.js" defer></script>
   <script src="cpu-game.js" defer></script>
+  <script src="uci-engine.js" defer></script>
   <script src="navigation.js" defer></script>
   <script src="learning.js" defer></script>
   <script src="analytics.js" defer></script>
@@ -567,6 +568,12 @@
         <p>自分のペースで、はじめの一手を。</p>
       </header>
       <div id="cpu-setup">
+        <section id="cpu-resume-panel" class="cpu-result cpu-resume-panel" hidden aria-labelledby="cpu-resume-title">
+          <h2 id="cpu-resume-title">中断した対局</h2>
+          <p id="cpu-resume-detail"></p>
+          <button class="button primary" id="cpu-resume" type="button">中断した対局を再開する</button>
+        </section>
+        <p id="cpu-resume-status" role="status"></p>
         <form id="cpu-form" class="cpu-form">
           <fieldset>
             <legend>対戦モード</legend>
@@ -591,11 +598,13 @@
           <p id="cpu-form-error" role="alert"></p>
           <button class="button primary" type="submit">対局を始める</button>
         </form>
-        <details id="cpu-records" class="cpu-details" hidden><summary>このブラウザーの実戦記録</summary><ul id="cpu-record-list"></ul></details>
+        <a class="text-button" href="#game-library">対局履歴を見る</a>
+        <details id="cpu-records" class="cpu-details" hidden><summary>v3.2.1までの実戦結果</summary><ul id="cpu-record-list"></ul></details>
         <details class="cpu-details"><summary>対局ルールとエンジン</summary>
           <p>同じ局面が3回、またはポーン移動と駒取りなしで双方が50手指すと、成立した局面で引き分けを請求できます。5回・75手では自動的に引き分けになります。</p>
           <p>時間切れでは、相手がキングだけの場合など、判定できる範囲で引き分けになります。</p>
-          <p>Rookori CPU 1.0.0 はこのブラウザー内で動作します。<a href="cpu-engine.LICENSE.txt">エンジンのライセンス</a>・<a href="vendor/chess.LICENSE.txt">chess.jsのライセンス</a></p>
+          <p>Stockfish 19 Liteは、このブラウザー内で動作します。<a href="vendor/stockfish/NOTICE.txt">ライセンスとソースコードの案内</a>・<a href="vendor/chess.LICENSE.txt">chess.jsのライセンス</a></p>
+          <p><a href="vendor/stockfish/stockfish.js-19.0.0-source.tar.gz" download>Stockfishの対応ソース</a>・<a href="vendor/stockfish/nn-61e7af4bb97d.nnue" download>対応する評価ネットワーク</a></p>
         </details>
       </div>
       <div id="cpu-session" hidden>
@@ -618,10 +627,13 @@
             </div>
             <section id="cpu-result" class="cpu-result" aria-labelledby="cpu-result-title" hidden>
               <h2 id="cpu-result-title" tabindex="-1"></h2>
+              <p id="cpu-result-details"></p>
               <p id="cpu-result-note"></p>
+              <p id="cpu-save-status" role="status"></p>
               <div class="study-complete-actions">
-                <button class="button primary" id="cpu-continue" type="button" hidden>時間無制限で続きを指す</button>
-                <button class="button secondary" id="cpu-rematch" type="button">同じ設定で再戦</button>
+                <button class="button primary" id="cpu-review" type="button">この対局を復習する</button>
+                <button class="button secondary" id="cpu-continue" type="button" hidden>時間無制限で続きを指す</button>
+                <button class="button secondary" id="cpu-rematch" type="button">同じ設定でもう一局</button>
                 <button class="button secondary" id="cpu-change" type="button">対局設定を変更</button>
                 <a class="text-button" href="#home">ホームに戻る</a>
               </div>
@@ -788,8 +800,17 @@
       <p>保存した対局とメモは、同じブラウザーで開き直せます。</p>
       <label for="game-search">対局名・対局者・メモで検索</label>
       <input type="search" id="game-search">
+      <label for="game-history-mode">対局の種類</label>
+      <select id="game-history-mode"><option value="all">すべて</option><option value="practice">練習モード</option><option value="match">実戦モード</option><option value="imported">取り込んだ棋譜</option></select>
+      <p id="game-history-counts"></p>
       <p class="game-status" id="game-library-status" role="status"></p>
+      <p id="game-history-action" role="status"></p>
       <ul class="game-history" id="game-history"></ul>
+      <div class="study-mode-links" id="game-history-pages" hidden>
+        <button type="button" class="text-button" id="game-history-prev">前の20局</button>
+        <span id="game-history-page"></span>
+        <button type="button" class="text-button" id="game-history-next">次の20局</button>
+      </div>
       <details class="game-card">
         <summary>対局とメモのバックアップ</summary>
         <p>保存済みの対局とメモをまとめてファイルにできます。復元すると、現在の対局履歴がファイルの内容に置き換わります。</p>

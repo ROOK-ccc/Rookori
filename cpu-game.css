@@ -76,6 +76,8 @@
 .cpu-score, .cpu-result { padding: 14px; background: var(--white); border: 1px solid var(--line); border-radius: 10px; }
 .cpu-score h2, .cpu-result h2 { font-size: 1.2rem; }
 .cpu-result { margin-top: 14px; border-color: #a98649; }
+.cpu-resume-panel { margin: 0 0 16px; }
+.cpu-resume-panel .button { margin-top: 8px; }
 .cpu-result p { margin-top: 8px; }
 .cpu-moves { max-height: 12em; overflow: auto; padding-inline-start: 2.5em; margin-block: 8px; }
 .cpu-moves li { padding: 4px 8px; font-variant-numeric: tabular-nums; }
