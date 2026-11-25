@@ -110,6 +110,7 @@ const openingMemoryScreen = (() => {
   }
 
   function open(opening, color, target = null) {
+    byId('practice-cpu').href = `#cpu-opening/${opening.id}`;
     close();
     practice = new OpeningPractice(opening, color, target);
     recordedCompletion = false;

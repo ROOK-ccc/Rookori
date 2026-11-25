@@ -24,7 +24,7 @@ function play(match, ...codes) {
 
 test('初期値・色の抽選・プリセット・自由設定・壊れた値を扱う', () => {
   const invalid = normalizeCpuSettings({ level: 7, mode: false, time: 'custom', minutes: { toString: 1 }, seconds: null });
-  assert.deepEqual({ ...invalid }, { mode: 'practice', level: 1, color: 'random', time: 'unlimited', minutes: 10, seconds: 0 });
+  assert.deepEqual({ ...invalid }, { mode: 'practice', level: 1, color: 'random', time: 'unlimited', minutes: 10, seconds: 0, style: 'balanced' });
   assert.equal(new CpuMatch({}, { random: () => .2 }).player, 'w');
   assert.equal(new CpuMatch({}, { random: () => .8 }).player, 'b');
   for (const [time, initial, increment] of [['1+0', 60000, 0], ['3+2', 180000, 2000], ['10+5', 600000, 5000], ['custom', 10800000, 60000]]) {

@@ -58,6 +58,7 @@
   <script src="game-study.js" defer></script>
   <script src="lichess-api.js" defer></script>
   <script src="personal-practice.js" defer></script>
+  <script src="play-style.js" defer></script>
   <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
   <script src="game-study-ui.js" defer></script>
@@ -65,6 +66,7 @@
   <script src="personal-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
   <script src="migration.js" defer></script>
+  <script src="play-style-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
 </head>
 <body>
@@ -106,6 +108,7 @@
         </section>
         <section class="menu-group">
           <h3>自分を知る</h3>
+          <a href="#your-style"><span aria-hidden="true">♙</span>あなたの棋風</a>
           <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
           <a href="#opening-quiz"><span aria-hidden="true">◇</span>オープニング診断</a>
         </section>
@@ -308,6 +311,7 @@
         <p id="result-mode" class="eyebrow"></p>
         <p id="result-code" class="result-code"></p>
         <h1 id="result-title" tabindex="-1"></h1>
+        <a class="text-button" href="#your-style">棋譜から見える自分の傾向も見る</a>
         <p id="result-description"></p>
       </div>
       <p class="result-note" id="result-note"></p>
@@ -365,6 +369,7 @@
       <div class="study-mode-links">
         <span aria-current="page">解説モード</span>
         <a class="button primary" id="study-practice" href="#openings">暗記モードで練習</a>
+        <a class="text-button" id="study-cpu" href="#cpu">この定跡からCPUと対戦する</a>
         <button class="text-button" id="study-compare" type="button" hidden>8バリエーションを比べる</button>
         <a class="text-button" id="study-parent" href="#study/sicilian-defense" hidden>シシリアンの比較へ</a>
       </div>
@@ -518,6 +523,7 @@
     <section id="opening-practice" class="screen inner-screen" hidden>
       <div class="study-navigation">
         <a class="text-button" id="practice-explain" href="#openings">解説モード</a>
+        <a class="text-button" id="practice-cpu" href="#cpu">この定跡からCPUと対戦する</a>
         <a class="text-button" href="#review">復習一覧へ</a>
       </div>
       <p class="eyebrow">暗記モード</p>
@@ -606,6 +612,21 @@
             <label for="cpu-time">持ち時間 <select id="cpu-time" name="time" aria-describedby="cpu-time-help"><option value="unlimited">時間無制限</option></select></label>
           </div>
           <p id="cpu-time-help" class="cpu-help">「10＋5」は、一人10分で、1手指すたびに5秒が増える設定です。</p>
+          <details class="cpu-details" id="cpu-advanced">
+            <summary>棋風・定跡を選ぶ</summary>
+            <div class="cpu-setup-row">
+              <label>コンピューターの棋風 <select id="cpu-style" name="style" aria-describedby="cpu-style-help">
+                <option value="balanced">バランス型</option><option value="attack">攻撃型</option><option value="defense">守備型</option>
+                <option value="tactics">戦術型</option><option value="strategy">戦略型</option><option value="random">ランダム</option>
+              </select></label>
+            </div>
+            <p id="cpu-style-help" class="cpu-help"></p>
+            <div id="cpu-opening-settings">
+              <div class="cpu-setup-row"><label>開始する定跡 <select id="cpu-opening"><option value="">指定なし</option></select></label>
+              <label id="cpu-opening-ply-label" hidden>開始局面 <select id="cpu-opening-ply"></select></label></div>
+              <p id="cpu-opening-help" class="cpu-help"></p>
+            </div>
+          </details>
           <div id="cpu-custom" class="cpu-setup-row" hidden>
             <label for="cpu-minutes">初期持ち時間（1〜180分）<input id="cpu-minutes" name="minutes" inputmode="numeric" value="10"></label>
             <label for="cpu-seconds">1手ごとの加算（0〜60秒）<input id="cpu-seconds" name="seconds" inputmode="numeric" value="0"></label>
@@ -1068,6 +1089,7 @@
       <div id="dashboard-plan"></div>
       <div id="dashboard-progress"></div>
       <div id="dashboard-personal-progress" class="dashboard-task" hidden></div>
+      <section id="dashboard-style" class="dashboard-task"></section>
       <button class="text-button" id="home-intro-mode" type="button">紹介型ホームを使う</button>
       <button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button>
     </section>
@@ -1078,6 +1100,32 @@
       <label>出題する問題 <select id="personal-daily-mode"><option value="recommended">おすすめ</option><option value="general">一般問題のみ</option><option value="personal">自分の対局からの問題のみ</option></select></label>
       <p><a class="text-button" href="#personal">自分だけの練習問題を見る</a></p>
       <ol class="daily-list" id="daily-list"></ol>
+    </section>
+    <section id="your-style" class="screen inner-screen guide-screen" hidden>
+      <h1 id="your-style-title" tabindex="-1">あなたの棋風</h1>
+      <p class="guide-intro">自分の一手から、自分らしさを見つける。</p>
+      <p>保存した終了済みの対局から、どんな手を選んできたかを確かめます。相手や持ち時間によって傾向は変わります。</p>
+      <details class="opening-card">
+        <summary>自分の対局を選ぶ</summary>
+        <p>CPU対局は自分が使った色で集計します。取り込んだ対局は、自分で指した色を選んだ場合だけ集計します。</p>
+        <p id="style-selection-count"></p><ul class="game-history" id="style-games"></ul>
+        <div class="study-mode-links"><button id="style-previous" class="text-button" type="button" hidden>前の棋譜</button><button id="style-next" class="text-button" type="button" hidden>次の棋譜</button></div>
+      </details>
+      <div class="glossary-controls">
+        <label>対象の局数 <select id="style-filter-limit"></select></label>
+        <label>対局の種類 <select id="style-filter-source"></select></label>
+        <label>自分の色 <select id="style-filter-side"></select></label>
+        <label>持ち時間 <select id="style-filter-time"></select></label>
+      </div>
+      <p>持ち時間は開始時の時間に40手分の加算を足して分類します。</p>
+      <div class="study-mode-links"><button id="style-run" class="button primary" type="button">棋風を分析する</button><button id="style-cancel" class="text-button" type="button" hidden>分析を中止する</button><a class="text-button" href="#game-review">対局を振り返る</a></div>
+      <p id="style-status" role="status"></p>
+      <section id="style-results" hidden>
+        <h2>対局から見えた傾向</h2><p id="style-overview"></p><ul class="game-history" id="style-metrics"></ul>
+        <section class="opening-card"><h2>次に試せること</h2><div id="style-advice"></div></section>
+        <section class="opening-card"><h2>過去の分析と比べる</h2><p id="style-past"></p><button id="style-save" class="button secondary" type="button">この分析を保存する</button></section>
+      </section>
+      <section class="opening-card"><h2>16タイプ診断と比べる</h2><div id="style-diagnosis"></div></section>
     </section>
     <section id="personal" class="screen inner-screen guide-screen" hidden>
       <h1 id="personal-title" tabindex="-1">自分だけの練習問題</h1>
@@ -1267,7 +1315,7 @@
       <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
       <h2>このブラウザーに保存される情報と削除方法</h2>
       <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。オープニング診断は、結果の再表示に必要な選択肢番号を端末に保存します。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
-      <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。ファイルには棋譜、メモ、診断記録、個別練習問題とその履歴が含まれる場合があります。これらの情報はアクセス解析に送りません。</p>
+      <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。棋譜、メモ、診断記録、個別練習問題とその履歴、保存した棋風分析はアクセス解析に送りません。</p>
       <ul>
         <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
         <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
@@ -1286,7 +1334,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.2.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.3.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

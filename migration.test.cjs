@@ -6,7 +6,7 @@ const { runInNewContext } = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
-  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'migration.js'];
+  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'migration.js'];
 const api = runInNewContext(scripts.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
   + '\n({ validateMigration, addMigrationSettings, learningBackup, makeGameBackup, parseReviewGames, reviewGameRecord, studyContentKey, studyEngineResult })',
 { window: { addEventListener() {} }, TextEncoder, crypto: webcrypto });
@@ -21,7 +21,10 @@ test('移行バックアップは棋譜の局面と解析・検討を検証し�
   const backup = { type: 'rookori.site-backup', version: 1, learning: api.learningBackup({ getItem: () => null }),
     settings: { 'rookori.type-result.v1': { code: 'ATCI', mode: 'beginner' }, 'rookori.lichess-username.v1': 'alice' },
     library: api.makeGameBackup([game]), studies: [[key, row]] };
+  backup.settings['rookori.style-games.v1'] = { [game.id]: 'b' };
+  backup.settings['rookori.style-snapshots.v1'] = [];
   const imported = await api.validateMigration(backup);
+  assert.equal(imported.values['rookori.style-games.v1'][game.id], 'b');
   assert.equal(imported.games[0].id, game.id);
   assert.equal(imported.studies[0][1].variations[0].moves[0], 'd2d4');
   row.variations[0].moves = ['d2d5'];

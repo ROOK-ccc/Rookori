@@ -7,9 +7,9 @@ const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 
 const source = name => readFileSync(join(__dirname, name), 'utf8');
-const { createUciEngine, stockfishProfile, chooseStockfishMove, engineUseAllowed, Chess } =
-  runInNewContext(source('vendor/chess.js') + '\n' + source('uci-engine.js') +
-    '\n({ createUciEngine, stockfishProfile, chooseStockfishMove, engineUseAllowed, Chess: chessRules.Chess })',
+const { createUciEngine, stockfishProfile, chooseStockfishMove, chooseStyledCpuMove, engineUseAllowed, Chess } =
+  runInNewContext(source('vendor/chess.js') + '\n' + source('cpu-game.js') + '\n' + source('uci-engine.js') +
+    '\n({ createUciEngine, stockfishProfile, chooseStockfishMove, chooseStyledCpuMove, engineUseAllowed, Chess: chessRules.Chess })',
     { setTimeout, clearTimeout, URL, document: { currentScript: { src: 'https://example.test/Rookori/uci-engine.js' } } });
 
 const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -82,4 +82,22 @@ test('配布されたStockfish WASMが6難易度で合法手を返し、弱体�
   const restricted = await client.search({ fen, onlyMove: 'd2d4', ...stockfishProfile('analysis-lesson', 1, Infinity, 0, 1) });
   assert.equal(restricted.move, 'd2d4');
   assert.ok(restricted.lines.every(line => line.pv[0] === 'd2d4'));
+  const styles = new Set(['attack', 'defense', 'tactics', 'strategy']);
+  const changed = new Set();
+  for (const sans of [
+    'd4 d5 Nf3 Nf6 Bf4 e6 e3 c5 c3 Nc6', 'e4 e5 Nf3 Nc6 Bc4 Nf6 d3 Bc5 O-O d6',
+    'd4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O', 'e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6',
+    'e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7', 'e4 e5 Nf3 Nc6 Nc3 Nf6 d4 exd4 Nxd4 Bb4',
+  ]) {
+    const board = new Chess();
+    for (const san of sans.split(' ')) board.move(san);
+    const data = await client.search({ ...stockfishProfile('analysis-lesson', 1, Infinity, 0, 5), fen: board.fen(), depth: 10, ms: 1500 });
+    const balanced = chooseStyledCpuMove(board, data, { level: 3, style: 'balanced' });
+    for (const style of styles) {
+      const chosen = chooseStyledCpuMove(board, data, { level: 3, style });
+      assert.ok(board.moves({ verbose: true }).some(move => moveCode(move) === chosen));
+      if (chosen !== balanced) changed.add(style);
+    }
+  }
+  assert.deepEqual([...changed].sort(), [...styles].sort());
 });

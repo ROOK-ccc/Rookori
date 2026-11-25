@@ -11,6 +11,7 @@ const siteHeadings = {
   'game-review': 'game-review-title', 'game-library': 'game-library-title',
   external: 'external-title',
   personal: 'personal-title',
+  'your-style': 'your-style-title',
   glossary: 'glossary-title', privacy: 'privacy-title', cpu: 'cpu-title',
 };
 
@@ -31,6 +32,8 @@ function readSiteRoute(address, state) {
   // 履歴の各項目には、その画面の回答や学習の進行だけを保存します。
   const entry = state?.path === path ? state : {};
   if (path === 'cpu') return { path, cpuReplay: entry.cpuReplay, cpuPosition: entry.cpuPosition };
+  const openingCpu = /^cpu-opening\/([a-z0-9-]+)(?:\/([0-9]+))?$/.exec(path);
+  if (openingCpu) return { path, cpuOpening: openingCpu[1], cpuOpeningPly: openingCpu[2] ? Number(openingCpu[2]) : undefined };
   const personal = /^personal\/([a-f0-9]{64})(\/daily)?$/.exec(path);
   if (personal) return { path, personalId: personal[1], personalDaily: Boolean(personal[2]) };
   if (Object.hasOwn(siteHeadings, path)) return { path };

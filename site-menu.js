@@ -35,6 +35,7 @@ const siteMenu = (() => {
   function mark(route) {
     const path = route.path;
     const current = route.termId ? 'glossary'
+      : route.cpuOpening ? 'cpu'
       : route.personalId ? 'personal'
       : route.reviewId ? 'review'
       : route.game ? 'game-review'

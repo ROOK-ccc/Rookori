@@ -135,9 +135,11 @@ function createStockfishSession(provider = stockfishEngine, context = {}) {
         throw new Error('想定したStockfishのバージョンを確認できません。');
       }
     },
-    search(purpose, position, { level, remaining, increment, candidates, onlyMove } = {}) {
+    search(purpose, position, { level, remaining, increment, candidates, onlyMove, styled = false } = {}) {
       if (!engineUseAllowed(purpose, context)) return Promise.reject(new Error('この対局ではエンジンを使用できません。'));
-      return client.search({ ...position, ...stockfishProfile(purpose, level, remaining, increment, candidates), onlyMove });
+      const profile = stockfishProfile(purpose, level, remaining, increment, candidates);
+      if (purpose === 'opponent' && styled) profile.options.MultiPV = Math.max(profile.options.MultiPV, 3);
+      return client.search({ ...position, ...profile, onlyMove });
     },
     close: client.close,
   };

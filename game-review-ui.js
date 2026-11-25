@@ -14,7 +14,7 @@ const gameReviewPages = (() => {
   let recentRequest = 0;
 
   function title(game) {
-    if (game.cpu) return `${game.cpu.origin ? '局面指定CPU対戦' : 'コンピューター対戦'} · ${cpuLevelLabel(game.cpu.settings.level)}`;
+    if (game.cpu) return `${game.cpu.origin?.opening ? '定跡指定CPU対戦' : game.cpu.origin ? '局面指定CPU対戦' : 'コンピューター対戦'} · ${cpuLevelLabel(game.cpu.settings.level)} · ${cpuStyles[game.cpu.settings.style ?? 'balanced'][0]}`;
     const { event, white, black } = game.metadata;
     if (event && event !== '?') return event;
     if (white && black) return `${white} 対 ${black}`;
@@ -429,12 +429,12 @@ const gameReviewPages = (() => {
       && (sourceFilter === 'all' || origin(game) === sourceFilter)
       && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
         .some(text => text?.toLocaleLowerCase().includes(query))));
-    const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習', positioned: '局面指定' };
+    const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習', positioned: '局面指定', opening: '定跡指定' };
     const counts = Object.fromEntries(Object.keys(types).map(key => [key, { 勝利: 0, 敗北: 0, 引き分け: 0 }]));
     for (const game of page.games) {
       const { cpu } = game;
       if (!cpu) continue;
-      const group = cpu.origin ? 'positioned' : cpu.continued ? 'continued' : cpu.settings.mode === 'match' && cpu.resumes ? 'resumed' : cpu.settings.mode;
+      const group = cpu.origin?.opening ? 'opening' : cpu.origin ? 'positioned' : cpu.continued ? 'continued' : cpu.settings.mode === 'match' && cpu.resumes ? 'resumed' : cpu.settings.mode;
       counts[group][cpuHistoryResult(game)]++;
     }
     byId('game-history-counts').textContent = Object.keys(types)
@@ -459,6 +459,7 @@ const gameReviewPages = (() => {
       const result = cpu ? cpuHistoryResult(game) : resultText(game.metadata);
       item.append(heading);
       item.append(element('p', { cpu: 'Rookori CPU対戦', lichess: 'Lichess', manual: '手動取り込み' }[origin(game)]));
+      if (cpu?.origin?.opening) item.append(element('p', '開始した定跡：' + (findStudyOpening(cpu.origin.opening)?.name ?? cpu.origin.opening)));
       if (cpu) {
         const mode = cpu.continued ? types.continued : cpu.resumes && cpu.settings.mode === 'match' ? types.resumed : cpuLabels[cpu.settings.mode];
         item.append(element('p', `${mode} ／ ${cpuLabels[cpu.player]} ／ ${cpu.continued ? '時間無制限' : cpuTimeLabel(cpu.settings)}`));

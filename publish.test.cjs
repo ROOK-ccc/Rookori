@@ -29,7 +29,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.2\.0/);
+  assert.match(html, /Rookori v4\.3\.0/);
+  assert.match(html, /src="play-style-ui\.js\?v=/);
   assert.match(html, /id="external-title"/);
   assert.match(html, /id="lichess-form"[^>]*data-browser-api-approved="false"[^>]*\bhidden\b/);
   assert.match(html, /id="lichess-api-paused"/);

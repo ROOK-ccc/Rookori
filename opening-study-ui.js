@@ -83,6 +83,7 @@ const openingStudyScreen = (() => {
   }
 
   function render() {
+    byId('study-cpu').href = `#cpu-opening/${candidate.id}${study.guided && study.step ? '/' + study.step : ''}`;
     const last = study.lastMove;
     const turn = study.game.turn();
     const outcome = study.outcome;

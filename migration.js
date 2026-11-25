@@ -9,8 +9,7 @@ function validSavedTypeResult(value) {
 }
 
 const migrationSettings = new Map([
-  [cpuSettingsKey, value => learningObject(value)
-    && Object.entries(normalizeCpuSettings(value)).every(([key, setting]) => setting === value[key])],
+  [cpuSettingsKey, value => learningObject(value) && cpuSettingsMatch(normalizeCpuSettings(value), value)],
   [cpuMaterialKey, value => ['practice', 'match'].every(mode =>
     ['captures', 'score'].every(key => typeof value?.[mode]?.[key] === 'boolean'))],
   [cpuResumeKey, value => Boolean(restoreCpuSnapshot(value))],
@@ -23,6 +22,8 @@ const migrationSettings = new Map([
   [savedOpeningResultKey, validOpeningAnswers],
   [personalAutoKey, value => typeof value === 'boolean'],
   [personalDailyKey, value => ['recommended', 'general', 'personal'].includes(value)],
+  [styleOwnershipKey, validStyleOwnership],
+  [styleSnapshotsKey, validStyleSnapshots],
 ]);
 
 function migrationRead(key) {

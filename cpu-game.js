@@ -10,7 +10,16 @@ const cpuTimePresets = {
   Bullet: ['1+0', '2+1'], Blitz: ['3+0', '3+2', '5+0', '5+3'],
   Rapid: ['10+0', '10+5', '15+10'], Classical: ['30+0', '30+20'],
 };
-const cpuDefaultSettings = { mode: 'practice', level: 1, color: 'random', time: 'unlimited', minutes: 10, seconds: 0 };
+const cpuDefaultSettings = { mode: 'practice', level: 1, color: 'random', time: 'unlimited', minutes: 10, seconds: 0, style: 'balanced' };
+const cpuStyles = {
+  balanced: ['バランス型', '従来と同じ指し手選びです。'],
+  attack: ['攻撃型', '評価が近い候補では、王の近くを攻める手を優先します。'],
+  defense: ['守備型', '評価が近い候補では、自分の王や攻められている駒を守る手を優先します。'],
+  tactics: ['戦術型', '評価が近い候補では、駒を取る手や複数の駒を狙う手を優先します。'],
+  strategy: ['戦略型', '評価が近い候補では、中央への働きや駒の展開を優先します。'],
+  random: ['ランダム', '対局ごとに棋風を一つ選び、その一局で使います。'],
+};
+const selectableCpuStyles = Object.keys(cpuStyles).filter(style => style !== 'random');
 const cpuSettingsKey = 'rookori.cpu-settings.v1';
 const cpuResultsKey = 'rookori.cpu-results.v1';
 const cpuResumeKey = 'rookori.cpu-resume.v1';
@@ -50,6 +59,7 @@ function normalizeCpuSettings(saved) {
     if (saved.time === 'custom') settings.time = 'custom';
   }
   if (Object.values(cpuTimePresets).flat().includes(saved.time)) settings.time = saved.time;
+  if (typeof saved.style === 'string' && Object.hasOwn(cpuStyles, saved.style)) settings.style = saved.style;
   return settings;
 }
 
@@ -107,8 +117,75 @@ function cpuStartingPosition(origin) {
     || Number(origin.fen.split(' ')[4]) >= 150 || positions.filter(key => key === positions.at(-1)).length >= 5) {
     throw new Error('この局面からは対局できません。');
   }
-  const { fen, initialFen, moves, ply, gameId, color } = origin;
-  return { origin: { fen, initialFen, moves: moves.slice(), ply, gameId, color }, game, positions };
+  const { fen, initialFen, moves, ply, gameId, color, opening } = origin;
+  if (opening !== undefined && (typeof opening !== 'string' || !/^[a-z0-9-]{1,100}$/.test(opening))) throw new Error('定跡IDを確認できません。');
+  return { origin: { fen, initialFen, moves: moves.slice(), ply, gameId, color, ...(opening && { opening }) }, game, positions };
+}
+
+function cpuOpeningPosition(opening, ply = opening?.moves.length) {
+  if (!opening || !Number.isInteger(ply) || ply < 1 || ply > opening.moves.length) throw new Error('定跡の開始手数を選んでください。');
+  const board = new chessRules.Chess();
+  const initialFen = board.fen();
+  const moves = opening.moves.slice(0, ply).map(code => {
+    const move = typeof code === 'string' ? { from: code.slice(0, 2), to: code.slice(2, 4), promotion: code[4] } : code;
+    return cpuMoveCode(board.move(move));
+  });
+  return cpuStartingPosition({ fen: board.fen(), initialFen, moves, ply, gameId: null,
+    color: openingDefaultColor(opening), opening: opening.id }).origin;
+}
+
+function cpuSettingsMatch(settings, saved) {
+  return Object.entries(settings).every(([key, value]) => value === (key === 'style' && saved?.style === undefined ? 'balanced' : saved?.[key]));
+}
+
+function cpuStyleFeatures(board, move, side) {
+  const enemy = otherChessColor(side);
+  const around = (position, color) => {
+    const king = position.findPiece({ type: 'k', color })[0];
+    const zone = [];
+    for (const x of [-1, 0, 1]) for (const y of [-1, 0, 1]) {
+      const file = 'abcdefgh'['abcdefgh'.indexOf(king[0]) + x], rank = Number(king[1]) + y;
+      if (file && rank >= 1 && rank <= 8) zone.push(file + rank);
+    }
+    return zone.filter(square => position.isAttacked(square, otherChessColor(color))).length;
+  };
+  const exposed = position => position.board().flat().reduce((total, piece) => total + (piece?.color === side
+    && cpuPieceValues[piece.type] >= 3 && position.isAttacked(piece.square, enemy) && !position.isAttacked(piece.square, side)
+    ? cpuPieceValues[piece.type] : 0), 0);
+  const after = new chessRules.Chess(board.fen());
+  const played = after.move(move);
+  const targets = after.board().flat().filter(piece => piece?.color === enemy && cpuPieceValues[piece.type] >= 3
+    && after.attackers(piece.square, side).includes(played.to)).length;
+  const center = ['d4', 'e4', 'd5', 'e5'].filter(square => after.attackers(square, side).includes(played.to)).length;
+  const rank = side === 'w' ? '1' : '8';
+  return {
+    attack: 3 * (around(after, enemy) - around(board, enemy)) + (after.isCheck() ? 4 : 0),
+    defense: 3 * (around(board, side) - around(after, side)) + 2 * (exposed(board) - exposed(after))
+      + (played.san.startsWith('O-O') ? 3 : 0),
+    tactics: 3 * (cpuPieceValues[played.captured] ?? 0) + (targets >= 2 ? 5 : targets) + (after.isCheck() ? 1 : 0)
+      - (after.isAttacked(played.to, enemy) ? (cpuPieceValues[played.piece] ?? 0) : 0),
+    strategy: 2 * center + (['b', 'n'].includes(played.piece) && played.from[1] === rank && played.to[1] !== rank ? 3 : 0)
+      + (['d4', 'e4', 'd5', 'e5'].includes(played.to) ? 2 : 0),
+  };
+}
+
+function chooseStyledCpuMove(board, result, settings) {
+  const legal = board.moves({ verbose: true });
+  const codes = legal.map(cpuMoveCode);
+  if (settings.style === 'balanced') return chooseStockfishMove(result, settings.level, codes);
+  const mating = legal.find(move => move.san.endsWith('#'));
+  if (mating) return cpuMoveCode(mating);
+  const lines = result.lines.filter(line => !line.score?.bound && line.score && codes.includes(line.pv[0]));
+  const best = lines[0];
+  if (!best) return codes.includes(result.move) ? result.move : null;
+  if (legal.length === 1 || best.score.unit === 'mate') return best.pv[0];
+  const limit = [65, 55, 42, 30, 20, 12][settings.level - 1];
+  const base = lines.find(line => line.pv[0] === result.move) ?? best;
+  const candidates = lines.filter(line => line.score.unit === 'cp' && Math.abs(best.depth - line.depth) <= 2
+    && best.score.value - line.score.value <= limit && Math.abs(base.score.value - line.score.value) <= limit);
+  if (!candidates.length) return best.pv[0];
+  return candidates.map(line => ({ line, value: cpuStyleFeatures(board, legal[codes.indexOf(line.pv[0])], board.turn())[settings.style] }))
+    .sort((a, b) => b.value - a.value || b.line.score.value - a.line.score.value)[0].line.pv[0];
 }
 
 class CpuMatch {
@@ -119,6 +196,7 @@ class CpuMatch {
     this.game = setup?.game ?? new chessRules.Chess(fen);
     this.initialFen = this.game.fen();
     this.settings = normalizeCpuSettings(settings);
+    if (this.settings.style === 'random') this.settings.style = selectableCpuStyles[Math.floor(random() * selectableCpuStyles.length)];
     this.id = id;
     this.player = player ?? cpuPlayerColor(this.settings.color, random);
     this.time = cpuTimeControl(this.settings);
@@ -274,7 +352,7 @@ function restoreCpuSnapshot(snapshot, now) {
   };
   const settings = normalizeCpuSettings(snapshot?.settings);
   if (!validCpuId(snapshot?.id) || !cpuTimestamp(snapshot.started) || !cpuTimestamp(snapshot.updatedAt)
-    || !['w', 'b'].includes(snapshot.player) || Object.keys(settings).some(key => settings[key] !== snapshot.settings?.[key])
+    || !['w', 'b'].includes(snapshot.player) || !cpuSettingsMatch(settings, snapshot.settings)
     || (settings.color !== 'random' && settings.color !== snapshot.player)
     || !Array.isArray(snapshot.moves) || snapshot.moves.length > 12000
     || typeof snapshot.initialFen !== 'string' || ![snapshot.hintCount, snapshot.undoCount, snapshot.resumeCount].every(counter)
@@ -328,7 +406,7 @@ function validateCpuGameDetails(details) {
     || !['hints', 'undos', 'resumes'].every(key => Number.isSafeInteger(details[key]) && details[key] >= 0)
     || typeof details.continued !== 'boolean'
     || (details.continued ? settings.mode !== 'practice' || !validCpuId(details.parentId) : details.parentId !== null)
-    || Object.keys(settings).some(key => settings[key] !== details.settings?.[key])
+    || !cpuSettingsMatch(settings, details.settings)
     || (settings.color !== 'random' && settings.color !== details.player)) throw new Error('CPU対局の記録を確認してください。');
   const origin = details.origin ? cpuStartingPosition(details.origin).origin : null;
   return { settings, engine: { name: engine.name, version: engine.version, distribution: engine.distribution },
@@ -347,13 +425,15 @@ function cpuPgn(match) {
   const time = match.continued ? '?' : match.time ? `${match.time.initial / 1000}+${match.time.increment / 1000}` : '-';
   const date = match.started.toISOString().slice(0, 10).replaceAll('-', '.');
   const tags = {
-    Event: match.continued ? 'Rookori Practice Continuation' : match.origin ? 'Rookori Position Practice'
+    Event: match.continued ? 'Rookori Practice Continuation' : match.origin?.opening ? 'Rookori Opening Practice' : match.origin ? 'Rookori Position Practice'
       : match.settings.mode === 'practice' ? 'Rookori Practice' : 'Rookori Match',
     Site: 'Rookori', Date: date, Round: '-',
     White: match.player === 'w' ? 'Player' : opponent, Black: match.player === 'b' ? 'Player' : opponent,
     Result: cpuResultCode(match.outcome), TimeControl: time,
     Termination: match.outcome?.reason === 'flag' ? 'time forfeit' : match.outcome ? 'normal' : 'unterminated',
     RookoriGameId: match.id,
+    ...(match.settings.style !== 'balanced' && { RookoriCPUStyle: match.settings.style }),
+    ...(match.origin?.opening && { RookoriOpening: match.origin.opening, RookoriOpeningMoves: match.origin.moves.join(' ') }),
   };
   for (const [tag, value] of Object.entries(tags)) pgn.setHeader(tag, value);
   for (const { move } of match.turns) pgn.move(move);

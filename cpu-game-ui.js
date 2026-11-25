@@ -44,7 +44,7 @@ const cpuPage = (() => {
   }
 
   function describe(game) {
-    return `${cpuLabels[game.settings.mode]} · ${cpuLevelLabel(game.settings.level)} · ${cpuLabels[game.player]} · ${game.continued ? '時間無制限の継続練習' : cpuTimeLabel(game.settings)}`;
+    return `${cpuLabels[game.settings.mode]} · ${cpuLevelLabel(game.settings.level)} · ${cpuStyles[game.settings.style][0]} · ${cpuLabels[game.player]} · ${game.continued ? '時間無制限の継続練習' : cpuTimeLabel(game.settings)}`;
   }
 
   cpuLevels.forEach((level, index) => {
@@ -79,15 +79,13 @@ const cpuPage = (() => {
 
   function showSettings() {
     for (const [key, value] of Object.entries(settings)) form.elements.namedItem(key).value = String(value);
+    node('opening').value = startPosition?.opening ?? '';
+    fillOpeningPlies(startPosition?.ply);
+    node('opening-settings').hidden = Boolean(startPosition && !startPosition.opening);
+    if (startPosition?.opening) node('advanced').open = true;
     node('choose-color').hidden = !chooseStartingColor;
     if (chooseStartingColor) node('color').value = '';
-    node('start-position').hidden = !startPosition;
-    node('start-preview').hidden = !startPosition;
-    if (startPosition) {
-      node('start-position').textContent = `復習からの局面指定 · 本譜 ${startPosition.ply}手の直後を基点 · ${chessColorNames[startPosition.fen.split(' ')[1]]}の手番`;
-      node('start-board').replaceChildren(studyMiniature(startPosition.fen));
-      node('start-fen').textContent = startPosition.fen;
-    }
+    previewStartingPosition();
     updateSettings();
     node('session').hidden = true;
     node('setup').hidden = false;
@@ -116,8 +114,50 @@ const cpuPage = (() => {
     node('summary').textContent = `${cpuLabels[value.mode]} · ${cpuLevelLabel(Number(value.level))} · ${cpuLabels[value.color] ?? '駒の色を選択'} · ${time}`;
     node('show-captures').checked = materialSettings[value.mode].captures;
     node('show-material').checked = materialSettings[value.mode].score;
+    node('style-help').textContent = cpuStyles[value.style]?.[1] ?? '';
     return value;
   }
+
+  for (const opening of [...openings, ...openingVariations]) {
+    const option = element('option', opening.parentId ? `${findStudyOpening(opening.parentId).name}：${opening.name}` : opening.name);
+    option.value = opening.id;
+    node('opening').append(option);
+  }
+
+  function fillOpeningPlies(ply) {
+    const opening = findStudyOpening(node('opening').value);
+    node('opening-ply').replaceChildren(...(opening?.moves ?? []).map((_, i) => {
+      const option = element('option', `${i + 1}手の直後`);
+      option.value = i + 1;
+      return option;
+    }));
+    node('opening-ply-label').hidden = !opening;
+    node('opening-ply').value = ply ?? opening?.moves.length ?? '';
+    node('opening-help').textContent = opening ? `${opening.description ?? ''} 推奨は${chessColorNames[openingDefaultColor(opening)]}番です。` : '';
+  }
+
+  function previewStartingPosition() {
+    let preview = startPosition?.opening ? null : startPosition;
+    if (node('opening').value) {
+      try { preview = cpuOpeningPosition(findStudyOpening(node('opening').value), Number(node('opening-ply').value)); }
+      catch { preview = null; }
+    }
+    node('start-position').hidden = node('start-preview').hidden = !preview;
+    if (preview) {
+      node('start-position').textContent = `${findStudyOpening(preview.opening)?.name ?? '復習からの局面指定'} · ${preview.ply}手の直後 · ${chessColorNames[preview.fen.split(' ')[1]]}の手番`;
+      node('start-board').replaceChildren(studyMiniature(preview.fen));
+      node('start-fen').textContent = preview.fen;
+    }
+  }
+
+  node('opening').addEventListener('change', () => {
+    fillOpeningPlies();
+    const opening = findStudyOpening(node('opening').value);
+    if (opening) node('color').value = openingDefaultColor(opening);
+    previewStartingPosition();
+    updateSettings();
+  });
+  node('opening-ply').addEventListener('change', previewStartingPosition);
 
   form.addEventListener('input', event => {
     const field = event.target;
@@ -150,10 +190,17 @@ const cpuPage = (() => {
       return;
     }
     const selected = normalizeCpuSettings({ ...value, level: Number(value.level) });
+    let origin = startPosition?.opening ? null : startPosition;
+    if (node('opening').value) {
+      try { origin = cpuOpeningPosition(findStudyOpening(node('opening').value), Number(node('opening-ply').value)); }
+      catch { node('form-error').textContent = '定跡の開始局面を確認できませんでした。'; return; }
+    }
     const begin = () => {
       settings = selected;
       chooseStartingColor = false;
+      startPosition = origin;
       if (!startPosition) writeStorage(cpuSettingsKey, settings);
+      else writeStorage(cpuSettingsKey, { ...normalizeCpuSettings(readStorage(cpuSettingsKey)), style: settings.style });
       start();
     };
     if (readStorage(cpuResumeKey)) ask('中断した対局の代わりに、新しい対局を始めますか？', '新しい対局を始める', begin);
@@ -246,7 +293,7 @@ const cpuPage = (() => {
       const result = await engine.search(purpose,
         { fen: match.origin?.initialFen ?? match.initialFen,
           moves: [...(match.origin?.moves ?? []), ...match.turns.map(({ move }) => cpuMoveCode(move))] },
-        { level: match.settings.level, remaining, increment });
+        { level: match.settings.level, remaining, increment, styled: match.settings.style !== 'balanced' });
       if (job === request && match.id === request.id) acceptMove(result);
     } catch {
       if (job === request) engineFailed();
@@ -258,8 +305,7 @@ const cpuPage = (() => {
     job = null;
     if (match.flag()) { synchronize(); return; }
     if (match.outcome || match.game.fen() !== fen || match.anchor === null) return;
-    const code = kind === 'hint' ? data.move
-      : chooseStockfishMove(data, match.settings.level, match.game.moves({ verbose: true }).map(cpuMoveCode));
+    const code = kind === 'hint' ? data.move : chooseStyledCpuMove(match.game, data, match.settings);
     if (!match.legalMove(code)) { engineFailed(); return; }
     if (kind === 'hint') {
       match.hintCount++;
@@ -295,7 +341,7 @@ const cpuPage = (() => {
     match = restored ?? new CpuMatch(settings, { origin: startPosition });
     startPosition = match.origin;
     chooseStartingColor = false;
-    settings = match.settings;
+    settings = { ...match.settings, style: restored ? match.settings.style : settings.style };
     remember(true);
     node('setup').hidden = true;
     node('session').hidden = false;
@@ -445,7 +491,7 @@ const cpuPage = (() => {
   function render() {
     const live = !match.outcome;
     const practice = match.settings.mode === 'practice';
-    node('opponent').textContent = 'コンピューター · ' + cpuLevelLabel(match.settings.level);
+    node('opponent').textContent = 'コンピューター · ' + cpuLevelLabel(match.settings.level) + ' · ' + cpuStyles[match.settings.style][0];
     node('opponent-color').textContent = cpuLabels[otherChessColor(match.player)];
     node('player-color').textContent = cpuLabels[match.player];
     renderMaterial();

@@ -147,7 +147,7 @@ function renderOpeningResult(resultAnswers, studyId) {
       element('h3', 'おすすめした理由'),
       element('p', reason),
       ratings,
-      learn,
+      learn, Object.assign(element('a', 'この定跡からCPUと対戦する', 'text-button'), { href: `#cpu-opening/${candidate.id}` }),
     );
     return card;
   }));
@@ -161,7 +161,7 @@ function updateEntry(data) {
 function goTo(path, data = {}) {
   const from = displayedRoute?.path ?? 'home';
   siteMenu.close(path === from);
-  if (from === 'cpu' && path !== 'cpu' && cpuPage.leave(() => goTo(path, data))) return;
+  if ((from === 'cpu' || displayedRoute?.cpuOpening) && path !== from && cpuPage.leave(() => goTo(path, data))) return;
   if (path === from && !Object.keys(data).length) {
     if (path === 'home' || path === 'learn') renderSite();
     return;
@@ -208,12 +208,15 @@ function renderSite() {
   if (previous?.opening) openingStudyScreen.close();
   if (previous?.practice || previous?.reviewId) openingMemoryScreen.close();
   if (previous?.lesson) introScreen.close();
-  if (previous?.path === 'cpu' && path !== 'cpu') cpuPage.close();
+  if ((previous?.path === 'cpu' || previous?.cpuOpening) && previous.path !== path) cpuPage.close();
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
   if (previous?.game && previous.path !== path) gameReviewPages.close();
   if (previous?.personalId && previous.path !== path) personalPages.close();
+  if (previous?.path === 'your-style' && path !== 'your-style') stylePage.cancel();
 
-  if (route.personalId) {
+  if (path === 'your-style') {
+    stylePage.open();
+  } else if (route.personalId) {
     personalPages.openProblem(route);
   } else if (path === 'personal') {
     personalPages.openList();
@@ -221,13 +224,18 @@ function renderSite() {
     chessGlossary.open(route.termId);
   } else if (path === 'external') {
     lichessPage.open();
-  } else if (path === 'cpu') {
-    if (previous?.path !== 'cpu') {
+  } else if (path === 'cpu' || route.cpuOpening) {
+    if (previous?.path !== path) {
       if (route.cpuReplay) {
         const { cpuReplay, ...entry } = history.state;
         history.replaceState(entry, '');
       }
-      cpuPage.open(route.cpuReplay, route.cpuPosition);
+      let position = route.cpuPosition;
+      if (route.cpuOpening) {
+        try { position = cpuOpeningPosition(findStudyOpening(route.cpuOpening), route.cpuOpeningPly); }
+        catch { position = {}; }
+      }
+      cpuPage.open(route.cpuReplay, position);
     }
   } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);
@@ -246,6 +254,7 @@ function renderSite() {
     learningPages.todayReview('today-review', true);
   } else if (path === 'dashboard' || (path === 'home' && learningTracker.home() === 'dashboard')) {
     learningPages.dashboard();
+    stylePage.dashboard();
     showScreen('dashboard', 'dashboard-title');
   } else if (path === 'daily') {
     learningPages.daily();
