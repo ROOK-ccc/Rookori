@@ -159,17 +159,111 @@ function addMigrationSettings(storage, values) {
     if (storage.getItem(key) === null) {
       storage.setItem(key, key === lichessUsernameKey ? value : JSON.stringify(value));
       added++;
-    } else if (key === styleOwnershipKey) {
+    } else if ([styleOwnershipKey, learningKey, introStorageKey, openingHistoryKey, styleSnapshotsKey, cpuResultsKey].includes(key)) {
       let current;
       try { current = JSON.parse(storage.getItem(key)); } catch { /* Preserve unreadable settings. */ }
-      if (!validStyleOwnership(current)) { skipped++; continue; }
-      const incoming = Object.entries(value).filter(([id]) => !Object.hasOwn(current, id));
-      if (!incoming.length) { skipped++; continue; }
-      storage.setItem(key, JSON.stringify({ ...current, ...Object.fromEntries(incoming) }));
+      const baseline = { [learningKey]: null, [introStorageKey]: null, [openingHistoryKey]: null, [key]: current };
+      const valid = migrationSettings.has(key) ? migrationSettings.get(key)(current)
+        : current && validateLearningBackup({ schemaVersion: 1, data: baseline });
+      if (!valid || JSON.stringify(current) === JSON.stringify(value)) { skipped++; continue; }
+      let combined;
+      if (key === learningKey) combined = mergeLearningProgress(current, value);
+      else if (key === introStorageKey) combined = mergeIntroProgress(current, value);
+      else if (key === openingHistoryKey) combined = { ...current, records:
+        [...new Map([...value.records, ...current.records].map(row => [row.id, row])).values()] };
+      else if (key === styleSnapshotsKey || key === cpuResultsKey) {
+        const limit = key === styleSnapshotsKey ? 30 : 50;
+        const signature = row => key === cpuResultsKey
+          ? JSON.stringify([row.date, row.level, row.color, row.time, row.result])
+          : JSON.stringify([row.date, row.engine, row.filters, row.outline]);
+        const rows = new Map(current.map(row => [signature(row), row]));
+        for (const row of value) if (rows.size < limit && !rows.has(signature(row))) rows.set(signature(row), row);
+        combined = [...rows.values()].sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+      }
+      else combined = { ...value, ...current };
+      if (JSON.stringify(combined) === JSON.stringify(current)) { skipped++; continue; }
+      storage.setItem(key, JSON.stringify(combined));
       added++;
     } else skipped++;
   }
   return { added, skipped };
+}
+
+async function prepareMigrationLinks(staged, { links, records }) {
+  const hashes = new Map();
+  for (const game of staged.games) {
+    const destination = records.get(links.get(game.id));
+    if (!destination) continue;
+    const before = await studyContentKey(game);
+    const after = await studyContentKey(destination);
+    if (before !== after) hashes.set(before, after);
+  }
+  const gameId = id => links.get(id) ?? id;
+  const sourceKey = key => hashes.get(key) ?? key;
+  const values = { ...staged.values };
+  if (values[styleOwnershipKey]) {
+    values[styleOwnershipKey] = Object.fromEntries(Object.entries(values[styleOwnershipKey]).map(([id, side]) => [gameId(id), side]));
+  }
+  const resume = values[cpuResumeKey];
+  if (resume) {
+    const { origin, parentId } = resume;
+    values[cpuResumeKey] = { ...resume, parentId: gameId(parentId),
+      ...(origin && { origin: { ...origin, gameId: gameId(origin.gameId) } }) };
+  }
+  const studies = new Map();
+  for (const [key, row] of staged.studies) {
+    const target = sourceKey(key);
+    const linked = { ...row, gameId: gameId(row.gameId) };
+    studies.set(target, studies.has(target) ? mergeMigrationStudy(studies.get(target), linked) : linked);
+  }
+  return { values, studies: [...studies],
+    personal: staged.personal.map(({ question, history }) => ({
+      question: { ...question, gameId: gameId(question.gameId), sourceKey: sourceKey(question.sourceKey) }, history,
+    })) };
+}
+
+function mergeMigrationStudy(current, incoming) {
+  const empty = !current.scores.some(Boolean);
+  const compatible = empty || current.version === incoming.version && current.mode === incoming.mode;
+  const scores = compatible
+    ? Array.from({ length: Math.max(current.scores.length, incoming.scores.length) }, (_, i) =>
+      current.scores[i] ?? incoming.scores[i] ?? null)
+    : current.scores;
+  const single = { ...current.single };
+  for (const [key, entry] of Object.entries(incoming.single)) {
+    if (!Object.hasOwn(single, key) && Object.keys(single).length < 120) single[key] = entry;
+  }
+  const variations = [...current.variations];
+  const signature = row => JSON.stringify([row.ply, row.moves, row.name]);
+  const seen = new Set(variations.map(signature));
+  for (const variation of incoming.variations) {
+    const key = signature(variation);
+    if (seen.has(key) || variations.length >= 100) continue;
+    variations.push(variations.some(row => row.id === variation.id) ? { ...variation, id: newCpuGameId() } : variation);
+    seen.add(key);
+  }
+  return { ...current, ...(empty && incoming.scores.some(Boolean)
+    && { version: incoming.version, mode: incoming.mode, analyzed: incoming.analyzed }),
+  scores, single, variations, gameId: current.gameId ?? incoming.gameId };
+}
+
+function mergePersonalHistory(current, incoming) {
+  if (!current || !incoming) return current ?? incoming;
+  const signature = event => JSON.stringify([event.at, event.kind, event.hints]);
+  const occupied = new Set(current.events.map(signature));
+  const added = [...new Map(incoming.events.filter(event => !occupied.has(signature(event)))
+    .map(event => [signature(event), event])).values()];
+  const events = [...current.events, ...added];
+  const remaining = Math.max(0, personalRules.historyLimit - current.events.length);
+  const retained = [...current.events, ...added.slice(added.length - Math.min(remaining, added.length))]
+    .sort((a, b) => a.at.localeCompare(b.at));
+  const progress = incoming.lastAt > current.lastAt ? incoming : current;
+  const correct = events.filter(event => event.kind === 'good').length;
+  return { ...progress, events: retained,
+    correct: Math.max(current.correct, incoming.correct, correct),
+    wrong: Math.max(current.wrong, incoming.wrong, events.length - correct),
+    hints: Math.max(current.hints, incoming.hints),
+    mistakes: Math.max(current.mistakes, incoming.mistakes) };
 }
 
 function initializeMigration() {
@@ -232,15 +326,14 @@ function initializeMigration() {
   restore.addEventListener('click', async () => {
     if (!staged || restore.disabled) return;
     restore.disabled = input.disabled = download.disabled = true;
-    let games = 0;
-    let analysis = 0;
     try {
-      games = await library.merge(staged.games);
-      analysis = await studies.merge(staged.studies);
-      const personal = await personalStore.merge(staged.personal);
-      const settings = addMigrationSettings(localStorage, staged.values);
-      status.textContent = `追加した棋譜 ${games} 件、解析と検討 ${analysis} 件、個別問題 ${personal} 件、学習・設定の項目 ${settings.added} 件。`
-        + ` 重複または移行先にデータがある項目 ${staged.games.length - games + staged.studies.length - analysis + staged.personal.length - personal + settings.skipped} 件は追加しませんでした。`;
+      const games = await library.merge(staged.games);
+      const linked = await prepareMigrationLinks(staged, games);
+      const analysis = await studies.merge(linked.studies, mergeMigrationStudy);
+      const personal = await personalStore.merge(linked.personal, mergePersonalHistory);
+      const settings = addMigrationSettings(localStorage, linked.values);
+      status.textContent = `追加した棋譜 ${games.added} 件、更新した既存の棋譜 ${games.changed.size - games.added} 件、解析と検討の追加・統合 ${analysis} 件、個別問題の追加 ${personal} 件、学習・設定の追加・統合 ${settings.added} 件。`
+        + (games.conflicts ? ` 同じ局面にあった別のメモ ${games.conflicts} 件を「移行元のメモ」として残しました。` : '');
       staged = null;
       restore.hidden = true;
     } catch {

@@ -98,3 +98,14 @@ test('取り消すと送信を止め、再同意や他タブの変更でもタ�
   assert.equal(window[`ga-disable-${id}`], false);
   assert.equal(scripts.length, 1);
 });
+
+test('一括取り込み・個別練習・棋風は固定のパスだけを送る', () => {
+  const { analytics, events, window } = setup({ consent: 'granted' });
+  for (const screen of ['pgn-import', 'personal', 'personal-play', 'your-style']) {
+    analytics.screen(screen, screen + '/private-local-id');
+    analytics.screen(screen, screen + '/private-local-id');
+  }
+  assert.deepEqual(Array.from(events(), event => event.page_location),
+    ['pgn-import', 'personal', 'personal-play', 'your-style'].map(screen => site + '#' + screen));
+  assert.doesNotMatch(JSON.stringify(window.dataLayer), /private-local-id/);
+});

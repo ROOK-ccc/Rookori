@@ -299,6 +299,58 @@ function validateLearningBackup(backup) {
         && learningUci(error.expected) && (error.played === null || learningUci(error.played))))));
 }
 
+function unionLearningValues(a, b) {
+  return [...new Set([...a, ...b])];
+}
+
+function mergeLearningProgress(current, incoming) {
+  const mergeRows = (local, imported, merge) => Object.fromEntries(unionLearningValues(Object.keys(local), Object.keys(imported))
+    .map(id => [id, !Object.hasOwn(local, id) ? imported[id]
+      : !Object.hasOwn(imported, id) ? local[id] : merge(local[id], imported[id])]));
+  const latest = (a, b) => !a || b && b > a ? b : a;
+  return {
+    ...current,
+    migrated: current.migrated || incoming.migrated,
+    home: current.home === 'auto' ? incoming.home : current.home,
+    last: current.last ?? incoming.last,
+    explained: unionLearningValues(current.explained, incoming.explained),
+    items: mergeRows(current.items, incoming.items, (a, b) => {
+      const newest = Date.parse(b.lastAt) > Date.parse(a.lastAt) ? b : a;
+      return { ...newest, hints: Math.max(a.hints, b.hints), mistakes: Math.max(a.mistakes, b.mistakes) };
+    }),
+    questions: mergeRows(current.questions, incoming.questions, (a, b) =>
+      ({ ...a, errors: Math.max(a.errors, b.errors), solved: latest(a.solved, b.solved) })),
+    days: mergeRows(current.days, incoming.days, (a, b) => {
+      const active = plan => plan.newDone || ['correct', 'checked', 'reviewed', 'questionAttempts', 'explanations']
+        .some(key => plan[key]?.length);
+      const plan = active(a) || !active(b) ? a : b;
+      const sameTarget = a.target?.id === b.target?.id && a.target?.type === b.target?.type;
+      return {
+        ...plan,
+        reviewIds: unionLearningValues(plan.reviewIds, unionLearningValues(a.reviewIds, b.reviewIds)),
+        correct: unionLearningValues(a.correct, b.correct),
+        checked: unionLearningValues(a.checked, b.checked).filter(id => plan.questions.includes(id)),
+        reviewed: unionLearningValues(a.reviewed, b.reviewed),
+        questionAttempts: unionLearningValues(a.questionAttempts ?? a.correct, b.questionAttempts ?? b.correct),
+        explanations: unionLearningValues(a.explanations ?? [], b.explanations ?? []),
+        newDone: plan.newDone || (sameTarget && (a.newDone || b.newDone)),
+      };
+    }),
+  };
+}
+
+function mergeIntroProgress(current, incoming) {
+  const quiz = { ...current.quiz };
+  for (const [id, result] of Object.entries(incoming.quiz)) {
+    const previous = quiz[id];
+    quiz[id] = previous ? { ...previous, attempts: Math.max(previous.attempts, result.attempts),
+      solved: previous.solved || result.solved } : result;
+  }
+  return { ...current, lesson: current.lesson ?? incoming.lesson,
+    chapter: current.lesson ? current.chapter : incoming.chapter,
+    completed: unionLearningValues(current.completed, incoming.completed), quiz };
+}
+
 function restoreLearningBackup(storage, backup) {
   if (!validateLearningBackup(backup)) throw new Error('学習データの形式を確認してください。');
   const keys = [learningKey, introStorageKey, openingHistoryKey];

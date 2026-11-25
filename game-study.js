@@ -181,14 +181,15 @@ function createStudyStore() {
         };
       }).then(() => rows);
     },
-    merge: rows => {
+    merge: (rows, combine) => {
       let added = 0;
       return access('readwrite', store => {
         for (const [key, record] of rows) {
-          const current = store.getKey(key);
+          const current = store.get(key);
           current.onsuccess = () => {
-            if (current.result !== undefined) return;
-            store.add(record, key);
+            const value = current.result ? combine(current.result, record) : record;
+            if (current.result && JSON.stringify(value) === JSON.stringify(current.result)) return;
+            store.put(value, key);
             added++;
           };
         }

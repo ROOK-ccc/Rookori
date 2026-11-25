@@ -224,8 +224,10 @@ function reviewNote(game, ply, text, savedAt = new Date().toISOString()) {
 function makeGameBackup(games) {
   return {
     type: 'chesspath.game-library', version: 1,
-    games: games.map(({ id, pgn, savedAt, notes, cpu, source }) => ({
+    games: games.map(({ id, pgn, savedAt, notes, cpu, source, migrationNotes, migrationIds }) => ({
       id, pgn, savedAt, notes, ...(cpu && { cpu }), ...(source && { source }),
+      ...(migrationNotes?.length && { migrationNotes }),
+      ...(migrationIds?.length && { migrationIds }),
     })),
   };
 }
@@ -257,16 +259,31 @@ function validateGameBackup(backup) {
     ids.add(entry.id);
     sources.add(game.pgn);
     const plies = new Set();
-    record.notes = entry.notes.map(note => {
-      if (!note || note.gameId !== entry.id || plies.has(note.ply) || !validDate(note.savedAt)
+    function restoreNote(note) {
+      if (!note || note.gameId !== entry.id || !validDate(note.savedAt)
         || typeof note.text !== 'string') throw new Error(invalid);
       const restored = reviewNote(record, note.ply, note.text, note.savedAt);
       if (restored.fen !== note.fen || (note.moveNumber !== undefined && restored.moveNumber !== note.moveNumber)) {
         throw new Error('バックアップの棋譜とメモの局面が一致しません。');
       }
-      plies.add(note.ply);
+      return restored;
+    }
+    record.notes = entry.notes.map(note => {
+      const restored = restoreNote(note);
+      if (plies.has(restored.ply)) throw new Error(invalid);
+      plies.add(restored.ply);
       return restored;
     });
+    if (entry.migrationNotes !== undefined) {
+      if (!Array.isArray(entry.migrationNotes)) throw new Error(invalid);
+      record.migrationNotes = entry.migrationNotes.map(restoreNote);
+    }
+    if (entry.migrationIds !== undefined) {
+      if (!Array.isArray(entry.migrationIds) || !entry.migrationIds.every(id => typeof id === 'string' && gameIdPattern.test(id))) {
+        throw new Error(invalid);
+      }
+      record.migrationIds = [...new Set(entry.migrationIds)].filter(id => id !== record.id);
+    }
     return record;
   });
 }

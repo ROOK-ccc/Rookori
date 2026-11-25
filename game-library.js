@@ -1,3 +1,60 @@
+function mergeLibraryRecords(existing, incoming, newId = newCpuGameId) {
+  const records = new Map(existing.map(game => [game.id, game]));
+  const keys = new Map();
+  const pgns = new Map();
+  const links = new Map();
+  const changed = new Set();
+  const inserted = new Set();
+  const importedCpu = new Set();
+  let conflicts = 0;
+  function index(game) {
+    records.set(game.id, game);
+    keys.set(batchGameKey(game), game);
+    pgns.set(game.pgn, game);
+  }
+  for (const game of existing) index(game);
+  for (const game of incoming) {
+    const candidate = pgns.get(game.pgn) ?? keys.get(batchGameKey(game));
+    const match = candidate && sameReviewMainline(candidate, game) ? candidate : null;
+    let id = match?.id ?? game.id;
+    while (!match && records.has(id)) id = newId();
+    links.set(game.id, id);
+    const base = match ?? { ...game, id, notes: [], migrationNotes: [] };
+    const aliases = [...new Set([...(base.migrationIds ?? []), ...(game.migrationIds ?? []),
+      ...(match && game.id !== id ? [game.id] : [])])].filter(alias => alias !== id);
+    const notes = base.notes.slice();
+    const migrationNotes = (base.migrationNotes ?? []).slice();
+    const cpu = base.cpu ?? (!base.source ? game.cpu : undefined);
+    const source = base.source ?? (!cpu && game.source?.id === lichessPgnId(base.pgn) ? game.source : undefined);
+    if (cpu && (!match || !base.cpu)) importedCpu.add(id);
+    let dirty = !match || aliases.length !== (base.migrationIds?.length ?? 0) || cpu !== base.cpu || source !== base.source;
+    for (const note of [...game.notes, ...(game.migrationNotes ?? [])]) {
+      if (base.positions[note.ply]?.fen !== note.fen) continue;
+      if ([...notes, ...migrationNotes].some(row => row.ply === note.ply && row.text === note.text)) continue;
+      const copy = reviewNote(base, note.ply, note.text, note.savedAt);
+      if (notes.some(row => row.ply === note.ply)) {
+        migrationNotes.push(copy);
+        conflicts++;
+      } else notes.push(copy);
+      dirty = true;
+    }
+    if (dirty) {
+      notes.sort((a, b) => a.ply - b.ply);
+      index({ ...base, notes, migrationNotes, migrationIds: aliases, ...(cpu && { cpu }), ...(source && { source }) });
+      changed.add(id);
+    }
+    if (!match) inserted.add(id);
+  }
+  for (const id of importedCpu) {
+    const game = records.get(id);
+    if (!game.cpu) continue;
+    const { origin, parentId } = game.cpu;
+    game.cpu = { ...game.cpu, ...(origin && { origin: { ...origin, gameId: links.get(origin.gameId) ?? origin.gameId } }),
+      parentId: links.get(parentId) ?? parentId };
+  }
+  return { added: inserted.size, conflicts, links, records, changed };
+}
+
 function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-library', 2)) {
   let connection;
 
@@ -72,7 +129,16 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
   }
 
   return {
-    get: id => access('readonly', (store, read) => read(store.get(id))),
+    get: id => access('readonly', (store, read, result) => {
+      read(store.get(id), game => {
+        if (game) result(game);
+        else read(store.openCursor(), function scan(cursor) {
+          if (!cursor) { result(undefined); return; }
+          if (cursor.value.migrationIds?.includes(id)) result(cursor.value);
+          else cursor.continue();
+        });
+      });
+    }),
     all: () => access('readonly', (store, read) => read(store.getAll())),
     lichessIds: () => access('readonly', (store, read, result) => {
       const ids = new Set();
@@ -176,6 +242,17 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
         });
       });
     },
+    removeMigrationNote({ id, pgn }, note) {
+      return access('readwrite', (store, read, result) => {
+        read(store.get(id), game => {
+          if (!game || game.pgn !== pgn) throw new Error('対局が見つかりません。');
+          game.migrationNotes = (game.migrationNotes ?? []).filter(row =>
+            row.ply !== note.ply || row.text !== note.text || row.savedAt !== note.savedAt);
+          store.put(game);
+          result(game);
+        });
+      });
+    },
     restore(games) {
       return access('readwrite', store => {
         store.clear();
@@ -185,20 +262,9 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
     merge(games) {
       return access('readwrite', (store, read, result) => {
         read(store.getAll(), existing => {
-          const ids = new Set(existing.map(game => game.id));
-          const pgns = new Set(existing.map(game => game.pgn));
-          const lichess = new Set(existing.map(game => lichessPgnId(game.pgn)).filter(Boolean));
-          let added = 0;
-          for (const game of games) {
-            const external = lichessPgnId(game.pgn);
-            if (ids.has(game.id) || pgns.has(game.pgn) || (external && lichess.has(external))) continue;
-            store.add(game);
-            ids.add(game.id);
-            pgns.add(game.pgn);
-            if (external) lichess.add(external);
-            added++;
-          }
-          result(added);
+          const plan = mergeLibraryRecords(existing, games);
+          for (const id of plan.changed) store.put(plan.records.get(id));
+          result(plan);
         });
       });
     },

@@ -137,7 +137,16 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(readFileSync(join(preview, '_redirects'), 'utf8'), /^\/Rookori\/ \/ 301/m);
   assert.equal(cloudflareBuild('cloudflare-live'), preview);
   assert.doesNotMatch(readFileSync(join(preview, '_headers'), 'utf8'), /noindex/);
-  assert.match(readFileSync(join(preview, 'sitemap.xml'), 'utf8'), /<loc>https:\/\/rookori\.com\/<\/loc>/);
-  assert.match(readFileSync(join(preview, 'index.html'), 'utf8'), /rel="canonical" href="https:\/\/rookori\.com\/"/);
+  assert.match(readFileSync(join(preview, 'sitemap.xml'), 'utf8'), /<loc>https:\/\/rookrori\.com\/<\/loc>/);
+  const liveHtml = readFileSync(join(preview, 'index.html'), 'utf8');
+  assert.match(liveHtml, /rel="canonical" href="https:\/\/rookrori\.com\/"/);
+  assert.match(liveHtml, /property="og:image" content="https:\/\/rookrori\.com\/brand\/rookori-share\.jpg"/);
+  assert.match(readFileSync(join(preview, 'robots.txt'), 'utf8'), /Sitemap: https:\/\/rookrori\.com\/sitemap\.xml/);
+  assert.doesNotMatch(html, /name="rookori-migration-url"/);
+  const liveUrl = 'https://rookrori.com/';
+  writeFileSync(configFile, JSON.stringify({ ...siteConfig, migrationUrl: liveUrl }));
+  const migrated = readFileSync(join(cloudflareBuild('pages'), 'index.html'), 'utf8');
+  assert.ok(migrated.includes(`name="rookori-migration-url" content="${liveUrl}"`));
+  assert.ok(migrated.includes(`property="og:url" content="${liveUrl}"`));
   assert.ok(!readdirSync(preview).includes('wrangler.jsonc'));
 });

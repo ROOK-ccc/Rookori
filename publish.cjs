@@ -4,6 +4,7 @@ const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 const { parseArgs } = require('node:util');
 const siteConfig = require('./site-config.json');
+const cloudflareSiteConfig = require('./site-config.cloudflare.json');
 
 function versionPublicAssets(html, folder) {
   return html.replace(/\b(src|href)="([\w./-]+\.(?:js|css))"/g, (_, attr, file) => {
@@ -22,7 +23,7 @@ function publicSiteFiles(config) {
   const verification = config.googleSearchVerification;
   const measurement = config.ga4MeasurementId;
   const migration = config.migrationUrl;
-  if (migration !== undefined && migration !== 'https://rookori.com/') throw new Error('移行案内のURLを確認してください。');
+  if (migration !== undefined && migration !== cloudflareSiteConfig.siteUrl) throw new Error('移行案内のURLを確認してください。');
   const canonical = migration ? new URL(migration) : site;
   if (typeof verification !== 'string' || !/^[A-Za-z0-9_-]*$/.test(verification)) {
     throw new Error('googleSearchVerification には確認タグの content の値だけを指定してください。');
@@ -67,7 +68,7 @@ try {
   const context = vm.createContext({});
   if (input) context.publishedProblemPack = JSON.parse(fs.readFileSync(path.resolve(input), 'utf8'));
   const courseScript = vm.runInContext(`${source}\nproblemCourseScript(validateProblemPack(publishedProblemPack, introLessons))`, context);
-  const generated = publicSiteFiles(target === 'cloudflare-live' ? require('./site-config.cloudflare.json')
+  const generated = publicSiteFiles(target === 'cloudflare-live' ? cloudflareSiteConfig
     : preview ? { ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' } : siteConfig);
   generated['index.html'] = generated['index.html'].replace('<!-- CLOUDFLARE_PRIVACY -->', cloudflare
     ? '<p>このサイトの配信にはCloudflareを利用しており、表示時の通信はCloudflareを経由します。通信に伴い、IPアドレスなどの情報は配信事業者に伝わります。詳しくは<a href="https://www.cloudflare.com/privacypolicy/" rel="noreferrer">Cloudflareのプライバシーポリシー</a>をご覧ください。</p>'

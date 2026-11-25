@@ -204,7 +204,8 @@ const gameReviewPages = (() => {
 
   function renderNotes(view) {
     const list = byId('game-notes');
-    list.replaceChildren(...(view.game.notes ?? []).map(note => {
+    const notes = [...(view.game.notes ?? []), ...(view.game.migrationNotes ?? [])];
+    list.replaceChildren(...notes.map(note => {
       const item = element('li');
       const button = element('button', moveLabel(view.game.positions[note.ply]), 'text-button');
       button.type = 'button';
@@ -212,7 +213,24 @@ const gameReviewPages = (() => {
         goToPly(note.ply);
         noteField.focus();
       });
+      const migrated = view.game.migrationNotes?.includes(note);
+      if (migrated) item.append(element('small', '移行元のメモ'));
       item.append(button, element('p', note.text || '局面のみ保存', 'game-note-text'));
+      if (migrated) {
+        const remove = element('button', 'この移行元メモを削除', 'text-button');
+        remove.type = 'button';
+        remove.addEventListener('click', async () => {
+          if (view.busy || !window.confirm('この移行元メモを削除しますか？')) return;
+          setBusy(view, true);
+          try {
+            const game = await library.removeMigrationNote(view.game, note);
+            if (activeView(view)) { view.game = game; renderNotes(view); }
+          } catch (error) {
+            if (activeView(view)) byId('game-player-status').textContent = storageMessage(error);
+          } finally { if (activeView(view)) setBusy(view, false); }
+        });
+        item.append(remove);
+      }
       return item;
     }));
     if (!list.children.length) list.append(element('li', 'まだ保存した局面はありません。'));
@@ -427,7 +445,8 @@ const gameReviewPages = (() => {
     const matching = page.games.filter(game =>
       (filter === 'all' || (game.cpu?.settings.mode ?? 'imported') === filter)
       && (sourceFilter === 'all' || origin(game) === sourceFilter)
-      && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black, ...game.notes.map(note => note.text)]
+      && (!query || [title(game), game.metadata.event, game.metadata.white, game.metadata.black,
+        ...game.notes.map(note => note.text), ...(game.migrationNotes ?? []).map(note => note.text)]
         .some(text => text?.toLocaleLowerCase().includes(query))));
     const types = { practice: '練習', match: '実戦', resumed: '中断から再開した実戦', continued: '時間切れ後の継続練習', positioned: '局面指定', opening: '定跡指定' };
     const counts = Object.fromEntries(Object.keys(types).map(key => [key, { 勝利: 0, 敗北: 0, 引き分け: 0 }]));
@@ -466,7 +485,8 @@ const gameReviewPages = (() => {
       } else item.append(element('p', `白：${white ?? '記録なし'} ／ 黒：${black ?? '記録なし'}`));
       const playedAt = cpu ? new Date(cpu.started).toLocaleString('ja-JP')
         : game.source?.date ? new Date(game.source.date).toLocaleString('ja-JP') : date ?? '記録なし';
-      item.append(element('p', `${playedAt} ／ ${result}${cpu ? '（' + cpuReasons[cpu.reason] + '）' : ''} ／ ${game.positions.length - 1}手 ／ メモ ${game.notes.length}件`));
+      const noteCount = game.notes.length + (game.migrationNotes?.length ?? 0);
+      item.append(element('p', `${playedAt} ／ ${result}${cpu ? '（' + cpuReasons[cpu.reason] + '）' : ''} ／ ${game.positions.length - 1}手 ／ メモ ${noteCount}件`));
       if (!hasEndMarker) item.append(element('p', '対局の終わりを示す記号のない棋譜'));
       const actions = element('div', null, 'study-mode-links');
       const review = element('a', '対局を復習する', 'text-button');
@@ -508,11 +528,11 @@ const gameReviewPages = (() => {
         }));
         actions.append(replay);
       }
-      if (game.notes.length) {
+      if (noteCount) {
         const notes = element('details');
         notes.append(element('summary', '棋譜メモを確認・編集'));
         const list = element('ul');
-        for (const note of game.notes) {
+        for (const note of [...game.notes, ...(game.migrationNotes ?? [])]) {
           const point = element('li');
           const edit = element('button', moveLabel(game.positions[note.ply]) + 'のメモを開く', 'text-button');
           edit.type = 'button';

@@ -185,13 +185,21 @@ function createPersonalStore() {
         complete(all.result.map(question => ({ question, history: map.get(question.id) ?? null })));
       };
     }),
-    merge: rows => access('readwrite', (questions, history, complete) => {
+    merge: (rows, combineHistory) => access('readwrite', (questions, history, complete) => {
       let added = 0;
       complete(0);
       for (const row of rows) {
         const get = questions.getKey(row.question.id);
         get.onsuccess = () => {
-          if (get.result !== undefined) return;
+          if (get.result !== undefined) {
+            if (!combineHistory || !row.history) return;
+            const current = history.get(row.question.id);
+            current.onsuccess = () => {
+              const merged = combineHistory(current.result, row.history);
+              if (JSON.stringify(merged) !== JSON.stringify(current.result)) history.put(merged, row.question.id);
+            };
+            return;
+          }
           questions.add(row.question);
           if (row.history) history.add(row.history, row.question.id);
           complete(++added);
