@@ -118,7 +118,8 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     close();
     view = next;
     byId('personal-generate-panel').open = false;
-    const known = personalSide(next.game);
+    const selected = personalPreference(styleOwnershipKey, {})[next.game.id];
+    const known = ['w', 'b'].includes(selected) ? selected : personalSide(next.game);
     byId('personal-source-side').value = known ?? '';
     byId('personal-source-side').disabled = Boolean(known);
     byId('personal-ended-label').hidden = personalEligibility(next.game) !== 'confirm';

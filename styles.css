@@ -642,3 +642,56 @@ body:has(#site-menu[open]) { overflow: hidden; }
   .dashboard-menu-cards { grid-template-columns: minmax(0, 1fr); }
   .report-periods { gap: 5px; }
 }
+.welcome-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-block: 0.9rem;
+}
+
+#welcome-guide .button, #welcome-skip, .install-help summary {
+  min-height: 44px;
+}
+
+.rookori-fields {
+  min-inline-size: 0;
+}
+
+.rookori-fields label:not(.batch-check) {
+  display: block;
+  margin-block: 0.65rem;
+}
+
+.rookori-fields input:not([type="checkbox"]), .rookori-fields textarea, .rookori-fields select {
+  max-inline-size: 100%;
+}
+
+.rookori-fields textarea {
+  display: block;
+  width: 100%;
+}
+
+.batch-list, .batch-errors {
+  margin-block: 1rem;
+  padding-inline-start: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+
+.batch-list li + li { margin-top: 0.5rem; }
+
+.batch-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  min-height: 44px;
+}
+
+.daily-next .text-button { display: block; margin-top: 0.5rem; }
+.install-help { margin-block: 0.5rem; }
+.install-help summary { cursor: pointer; }
+
+@media (max-width: 480px) {
+  .welcome-choices { grid-template-columns: 1fr; }
+  .rookori-fields .button { white-space: normal; min-height: 44px; }
+}

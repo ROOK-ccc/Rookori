@@ -255,6 +255,7 @@ function renderSite() {
   } else if (path === 'dashboard' || (path === 'home' && learningTracker.home() === 'dashboard')) {
     learningPages.dashboard();
     stylePage.dashboard();
+    dailyLife.dashboard();
     showScreen('dashboard', 'dashboard-title');
   } else if (path === 'daily') {
     learningPages.daily();
@@ -279,12 +280,17 @@ function renderSite() {
     if (location.hash === '#opening-result') history.replaceState({ path }, '', '#opening-quiz');
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
   } else if (path === 'learn') {
+    dailyLife.showGuide(false);
     showScreen('home', siteHeadings.learn);
     byId(siteHeadings.learn).scrollIntoView({ block: 'start' });
+  } else if (path === 'welcome') {
+    dailyLife.showGuide(true);
+    showScreen('home', siteHeadings.welcome);
   } else if (path === 'openings' || path === 'memorize') {
     learningPages.catalog(path === 'memorize');
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
   } else {
+    if (path === 'home') dailyLife.showGuide(false);
     byId('latest-opening-result').hidden = !lastOpeningAnswers;
     showScreen(path, siteHeadings[path]);
   }

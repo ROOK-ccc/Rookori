@@ -5,6 +5,7 @@ const lichessGameId = /^[A-Za-z0-9]{8}$/;
 const gameResults = Object.freeze({
   '1-0': '白の勝ち', '0-1': '黒の勝ち', '1/2-1/2': '引き分け', '*': '結果未確定',
 });
+const reviewPgnToken = /\s+|^%[^\n]*|;[^\n]*|\{[^}]*\}|\[\s*([A-Za-z0-9_]+)\s+"((?:\\["\\]|[^"\\\n])*)"\s*\]|[()*]|[^\s{}()[\];*]+/;
 
 const sampleGamePgn = `[Event "サンプル対局：中央に駒を出そう"]
 [Result "*"]
@@ -17,7 +18,7 @@ function parseReviewGames(input) {
   }
   const pgn = input.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').trim();
   // Read past comments, tags and alternative lines before looking for a game result.
-  const token = /\s+|^%[^\n]*|;[^\n]*|\{[^}]*\}|\[\s*([A-Za-z0-9_]+)\s+"((?:\\["\\]|[^"\\\n])*)"\s*\]|[()*]|[^\s{}()[\];*]+/gmy;
+  const token = new RegExp(reviewPgnToken.source, 'gmy');
   const games = [];
   let start = 0;
   let end = 0;

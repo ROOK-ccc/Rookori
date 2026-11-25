@@ -8,6 +8,8 @@
   <!-- PUBLIC_SITE_METADATA -->
   <link rel="icon" type="image/png" sizes="192x192" href="brand/rookori.png">
   <link rel="apple-touch-icon" href="brand/rookori.png">
+  <link rel="manifest" href="app.webmanifest">
+  <meta name="theme-color" content="#10251c">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
   <meta property="og:site_name" content="Rookori">
@@ -59,6 +61,8 @@
   <script src="lichess-api.js" defer></script>
   <script src="personal-practice.js" defer></script>
   <script src="play-style.js" defer></script>
+  <script src="daily-life.js" defer></script>
+  <script src="pgn-batch.js" defer></script>
   <script src="chess-terms.js" defer></script>
   <script src="chess-glossary.js" defer></script>
   <script src="game-study-ui.js" defer></script>
@@ -68,6 +72,9 @@
   <script src="migration.js" defer></script>
   <script src="play-style-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
+  <script src="daily-life-ui.js" defer></script>
+  <script src="pgn-batch-ui.js" defer></script>
+  <script src="pwa.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -102,7 +109,7 @@
           <a href="#personal"><span aria-hidden="true">♘</span>自分だけの練習問題</a>
           <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
           <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
-          <a href="#external"><span aria-hidden="true">↗</span>外部サイトとの連携（Lichess）</a>
+          <a href="#pgn-import"><span aria-hidden="true">⇧</span>棋譜をまとめて取り込む</a>
           <a href="#daily"><span aria-hidden="true">⊞</span>毎日の練習問題</a>
           <a href="#progress"><span aria-hidden="true">▥</span>上達記録</a>
         </section>
@@ -114,6 +121,7 @@
         </section>
         <section class="menu-group">
           <h3>その他</h3>
+          <a href="#welcome"><span aria-hidden="true">→</span>はじめての利用ガイド</a>
           <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
           <a href="#about"><span aria-hidden="true">ⓘ</span>Rookoriについて</a>
           <a href="#backup"><span aria-hidden="true">⇅</span>設定・学習データのバックアップ</a>
@@ -140,9 +148,9 @@
         <div class="hero-copy">
           <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
           <p class="hero-description">はじめての一手から、もっと強くなるその先まで。</p>
-          <p class="hero-description">Rookori（ルーコリ）は、初心者の目線でつくる日本語のチェス学習サイトです。駒の動かし方から、自分のペースで始められます。</p>
+          <p class="hero-description">Rookori（ルーコリ）は、初心者から中級者まで無料で使える日本語のチェス学習サイトです。駒の動かし方から、自分のペースで始められます。</p>
           <div class="hero-actions">
-            <a class="button hero-button" href="#intro">チェスの基本を学ぶ</a>
+            <a class="button hero-button" id="home-start" href="#intro">チェスの基本を学ぶ</a>
             <a class="button hero-secondary" href="#about">Rookoriについて</a>
           </div>
           <div id="home-personal-progress" hidden></div>
@@ -164,9 +172,19 @@
           </div>
         </div>
       </div>
+      <section id="welcome-guide" class="opening-card" aria-labelledby="welcome-title" hidden>
+        <h2 id="welcome-title" tabindex="-1">今日は何をしてみたいですか？</h2>
+        <div class="welcome-choices">
+          <a class="button secondary" href="#intro" data-welcome-choice>チェスを始めたい</a>
+          <a class="button secondary" href="#mode" data-welcome-choice>自分の棋風を知りたい</a>
+          <a class="button secondary" href="#cpu" data-welcome-choice>チェスで対戦したい</a>
+          <a class="button secondary" href="#dashboard" data-welcome-choice>もっと強くなりたい</a>
+        </div>
+        <button class="text-button" id="welcome-skip" type="button">ガイドをスキップする</button>
+      </section>
       <section class="home-section home-diagnostics" aria-labelledby="learn-title">
         <h2 id="learn-title" tabindex="-1">自分に合うところから始める</h2>
-        <div class="first-step-grid">
+        <div class="first-step-grid" id="home-learning-choices">
           <section class="first-step-card">
             <h3>チェスをまだ知らない人へ</h3>
             <p>まずは一手から。盤の見方や駒の動かし方を試してみましょう。</p>
@@ -741,9 +759,9 @@
           <a class="button primary" href="#game-library">対局履歴を開く</a>
         </section>
         <section class="game-card">
-          <h2>Lichessから取り込む</h2>
-          <p>Lichessで指した公開対局を選んで、Rookoriで振り返ります。</p>
-          <a class="button secondary" href="#external">Lichessの棋譜を取り込む</a>
+          <h2>棋譜をまとめて取り込む</h2>
+          <p>保存した棋譜ファイルを選び、振り返りたい対局を履歴に追加します。</p>
+          <a class="button secondary" href="#pgn-import">一括取り込みを開く</a>
         </section>
       </div>
       <details class="game-card review-import">
@@ -997,6 +1015,36 @@
       </div>
     </section>
 
+    <section id="pgn-import" class="screen inner-screen guide-screen game-page" hidden>
+      <h1 id="batch-title" tabindex="-1">棋譜をまとめて取り込む</h1>
+      <p class="guide-intro">対局で指した手の記録（PGN）を、このブラウザーの対局履歴に保存できます。</p>
+      <div class="study-mode-links"><a class="text-button" href="#game-review">対局の振り返りへ戻る</a><a class="text-button" href="#external">Lichess・Chess.comで棋譜を入手する</a></div>
+      <form id="batch-import" class="game-card">
+        <fieldset id="batch-form" class="rookori-fields">
+          <legend>取り込む棋譜を選ぶ</legend>
+          <label>棋譜ファイル（.pgn）<input id="batch-files" type="file" accept=".pgn,application/x-chess-pgn,text/plain" multiple></label>
+          <label>または棋譜の文章を貼り付ける<textarea id="batch-text" rows="5" spellcheck="false"></textarea></label>
+          <p>1件2 MB、合計8 MB、ファイル20個・対局200局まで。通常ルールの棋譜を読み込めます。</p>
+          <button class="button primary" type="submit">候補を確認する</button>
+        </fieldset>
+      </form>
+      <p id="batch-status" role="status"></p>
+      <button class="button secondary" id="batch-cancel" type="button" hidden>処理を中止する</button>
+      <ul id="batch-errors" class="batch-errors"></ul>
+      <fieldset id="batch-review" class="rookori-fields game-card" hidden>
+        <legend>保存する対局を選ぶ</legend>
+        <p>自分で指した終了済みの対局は、使用色を選ぶと「あなたの棋風」の集計に使えます。研究用の対局は集計から外せます。</p>
+        <label>対局時の名前（任意）<input id="batch-name" maxlength="128" type="text" autocomplete="off" spellcheck="false"></label>
+        <p>棋譜にある名前との照合です。名前が一致した対局の色を確認してください。</p>
+        <div class="study-mode-links"><button id="batch-match" class="button secondary" type="button">名前から色をまとめて設定</button><button id="batch-all" class="button secondary" type="button">全候補を選択・解除</button></div>
+        <ol id="batch-list" class="batch-list"></ol>
+        <button id="batch-save" class="button primary" type="button">選んだ対局を保存する</button>
+      </fieldset>
+      <div id="batch-result" class="study-mode-links" hidden>
+        <a id="batch-open" class="button primary" href="#game-library">保存した対局を振り返る</a>
+        <a class="text-button" href="#game-library">対局履歴を開く</a><a class="text-button" href="#your-style">あなたの棋風を開く</a>
+      </div>
+    </section>
     <section id="external" class="screen inner-screen guide-screen game-page" hidden>
       <nav class="study-navigation" aria-label="対局のメニュー">
         <a class="text-button" href="#game-review">対局を振り返る</a>
@@ -1004,14 +1052,20 @@
       </nav>
       <h1 id="external-title" tabindex="-1">外部サイトとの連携</h1>
       <p class="guide-intro">いつもの対局を、Rookoriで振り返る。</p>
-      <p>Rookoriは、Lichessとは独立した非公式サービスです。Lichessへのログインや、アカウントの本人確認は行いません。<a href="#privacy">プライバシーポリシー</a></p>
+      <p>RookoriはLichess・Chess.comとは独立したサービスです。各サイトからご自身で書き出した、利用できる棋譜を選んでください。<a href="#privacy">プライバシーポリシー</a></p>
       <section class="game-card" id="lichess-api-paused" aria-labelledby="lichess-manual-title">
         <h2 id="lichess-manual-title">Lichessの棋譜を手動で取り込む</h2>
-        <p>利用条件の確認のため、公開対局の直接取得は休止中です。Lichessで終了した対局を開き、保存した棋譜ファイルを「対局を振り返る」の「棋譜を直接入力する」から読み込めます。</p>
+        <p>直接取得は休止中です。Lichessで終了済みの対局を開き、「解析盤」から「共有とエクスポート」を開いて棋譜をダウンロードします。複数局は、ご自身のプロフィールにある対局のエクスポートを使います。</p>
         <div class="study-mode-links">
-          <a class="button primary" href="#game-review">棋譜を取り込む</a>
+          <a class="button primary" href="#pgn-import">ダウンロードした棋譜を選ぶ</a>
           <a class="text-button" href="https://lichess.org/" rel="noreferrer">Lichessを開く</a>
+          <a class="text-button" href="https://lichess.org/terms-of-service" rel="noreferrer">Lichessの利用規約</a>
         </div>
+      </section>
+      <section class="game-card">
+        <h2>Chess.comの棋譜を手動で取り込む</h2>
+        <p>Web版の対局履歴で保存したい対局にチェックを入れ、ダウンロードを選びます。1局だけなら、終了した対局の解析画面から「共有」を開き、PGNをコピーできます。</p>
+        <div class="study-mode-links"><a class="button secondary" href="#pgn-import">取り込み画面を開く</a><a class="text-button" href="https://support.chess.com/en/articles/8705305-how-do-i-get-a-pgn-of-my-game" rel="noreferrer">Chess.comの公式ヘルプ</a><a class="text-button" href="https://www.chess.com/legal/user-agreement" rel="noreferrer">Chess.comの利用規約</a></div>
       </section>
       <form class="game-card lichess-form" id="lichess-form" data-browser-api-approved="false" novalidate hidden>
         <h2>Lichessの公開棋譜</h2>
@@ -1053,7 +1107,7 @@
     <section id="game-library" class="screen inner-screen guide-screen game-page" hidden>
       <nav class="study-navigation" aria-label="対局のメニュー"><a class="text-button" href="#game-review">対局を振り返る</a></nav>
       <h1 id="game-library-title" tabindex="-1">対局履歴</h1>
-      <a class="text-button" href="#external">Lichessの公開棋譜を取り込む</a>
+      <a class="text-button" href="#pgn-import">棋譜をまとめて取り込む</a>
       <p>保存した対局とメモは、同じブラウザーで開き直せます。</p>
       <label for="game-search">対局名・対局者・メモで検索</label>
       <input type="search" id="game-search">
@@ -1084,12 +1138,28 @@
 
     <section id="dashboard" class="screen inner-screen guide-screen" hidden>
       <h1 id="dashboard-title" tabindex="-1">今日の学習</h1>
-      <div class="study-mode-links"><a class="button secondary" href="#game-review">対局を振り返る</a><a class="text-button" href="#game-library">対局履歴を見る</a><a class="text-button" href="#cpu">コンピューター対戦</a></div>
-      <section class="dashboard-priority" id="dashboard-review"></section>
-      <div id="dashboard-plan"></div>
-      <div id="dashboard-progress"></div>
-      <div id="dashboard-personal-progress" class="dashboard-task" hidden></div>
-      <section id="dashboard-style" class="dashboard-task"></section>
+      <section class="opening-card"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
+      <details class="opening-card">
+        <summary id="learning-goal-summary">目標を設定する（任意）</summary>
+        <form id="learning-goal-form" class="rookori-fields">
+          <label>学習目標 <select name="goal" required><option value="">目標を選ぶ</option></select></label>
+          <label>1回の時間 <select name="minutes"><option value="">指定しない</option><option value="5">5分</option><option value="10">10分</option><option value="20">20分</option><option value="30">30分</option></select></label>
+          <label>学習の頻度 <select name="days"><option value="">指定しない</option><option value="1">週1日</option><option value="2">週2日</option><option value="3">週3日</option><option value="7">毎日</option></select></label>
+          <div class="study-mode-links"><button class="button secondary" type="submit">目標を保存する</button><button class="text-button" id="learning-goal-delete" type="button" hidden>目標を削除する</button></div>
+        </form>
+        <p id="learning-goal-status" role="status"></p>
+      </details>
+      <div class="study-mode-links"><a class="text-button" href="#review">今日の復習</a><a class="text-button" href="#daily">今日の10問</a><a class="text-button" href="#progress">上達記録</a></div>
+      <details class="opening-card"><summary>学習メニューと進み具合</summary>
+        <section class="dashboard-priority" id="dashboard-review"></section>
+        <div id="dashboard-plan"></div><div id="dashboard-progress"></div>
+        <div id="dashboard-personal-progress" class="dashboard-task" hidden></div>
+      </details>
+      <details class="opening-card"><summary>最近の対局と棋風</summary>
+        <ul id="dashboard-recent"></ul>
+        <div class="study-mode-links"><a class="text-button" href="#game-library">対局履歴を見る</a><a class="text-button" href="#game-review">対局を振り返る</a><a class="text-button" href="#cpu">コンピューター対戦</a></div>
+        <section id="dashboard-style" class="dashboard-task"></section>
+      </details>
       <button class="text-button" id="home-intro-mode" type="button">紹介型ホームを使う</button>
       <button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button>
     </section>
@@ -1307,18 +1377,21 @@
     <section id="privacy" class="screen inner-screen guide-screen" hidden>
       <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>
       <p class="guide-intro">Rookori プライバシーポリシー</p>
-      <p>改訂日 <time datetime="2026-11-24">2026年11月24日</time></p>
+      <p>改訂日 <time datetime="2026-11-25">2026年11月25日</time></p>
       <!-- CLOUDFLARE_PRIVACY -->
       <h2>Lichessの公開棋譜と外部通信</h2>
       <p>公開対局を復習するための直接取得機能は、利用条件の確認のため休止中です。直接取得を利用できる場合、取得ボタンを押すと、入力したユーザー名と取得件数・対局形式がブラウザーからLichessの公式APIに送られます。送信先には通信に伴いIPアドレスやブラウザー情報も伝わります。</p>
       <p>対象は終了した通常ルールの公開対局です。棋譜、対局ID、日時、結果、両プレイヤーの公開ユーザー名・レーティング、持ち時間、オープニングなどを復習に使います。RookoriではLichessへのログインや本人確認を行わず、パスワードやメールアドレスは求めません。手動で取り込んだ棋譜は、このブラウザー内で読み取ります。</p>
       <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
+      <p>一括取り込みで入力した対局時の名前は、選んだ棋譜との照合に使います。設定した使用色は棋譜に紐づけてこのブラウザーに保存します。名前や棋譜の内容を照合のために外部サイトに送ることはありません。</p>
       <h2>このブラウザーに保存される情報と削除方法</h2>
       <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。オープニング診断は、結果の再表示に必要な選択肢番号を端末に保存します。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
       <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。棋譜、メモ、診断記録、個別練習問題とその履歴、保存した棋風分析はアクセス解析に送りません。</p>
+      <p>利用ガイドの表示設定と任意の学習目標も、このブラウザーに保存します。オフライン表示用のキャッシュには、ページやアイコンなどの公開ファイルを保存します。</p>
       <ul>
         <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
         <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
+        <li>学習目標は<a href="#dashboard">今日の学習</a>から削除できます。</li>
         <li>解析結果を含むサイトデータをすべて消すには、ブラウザーの設定からこのサイトのデータを削除してください。この操作では学習記録や同意設定も消えます。同じホスト名の別サイトのデータに影響する場合があります。書き出したバックアップや棋譜ファイルは、保存先で別途削除してください。</li>
       </ul>
       <h2>Google Analytics 4 と同意の設定</h2>
@@ -1334,7 +1407,16 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.3.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a></div></footer>
+  <footer class="site-footer"><div class="shell">Rookori v4.4.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
+    <details id="rookori-install" class="install-help" hidden>
+      <summary>ホーム画面に追加する</summary>
+      <p id="install-ios">iPhone・iPadのSafariでは、共有メニューから「ホーム画面に追加」を選び、「Webアプリとして開く」が表示されたらオンにして「追加」を押します。</p>
+      <p id="install-android">AndroidのChromeでは、メニューから「追加またはインストール」の項目を開き、「インストール」を選びます。表示名はブラウザーの版によって変わります。</p>
+      <p>オンラインで読み込みを終えたあと、基本レッスン・診断・保存した棋譜の再生をオフラインで使えます。コンピューター対戦とエンジン解析には通信が必要です。</p>
+      <button class="button secondary" id="install-button" type="button" hidden>Rookoriをインストール</button>
+    </details>
+    <p id="rookori-update" role="status" hidden>新しい版の準備ができました。対局や解析を終えてから、Rookoriを開いているタブとアプリをすべて閉じ、開き直してください。</p>
+  </div></footer>
   <div id="chess-term-definitions" hidden></div>
   <div id="chess-term-popup" class="chess-term-popup" hidden></div>
   <noscript><p class="shell">診断を利用するには、ブラウザーのJavaScriptを有効にしてください。</p></noscript>

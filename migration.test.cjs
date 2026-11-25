@@ -6,7 +6,7 @@ const { runInNewContext } = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
-  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'migration.js'];
+  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'daily-life.js', 'migration.js'];
 const api = runInNewContext(scripts.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
   + '\n({ validateMigration, addMigrationSettings, learningBackup, makeGameBackup, parseReviewGames, reviewGameRecord, studyContentKey, studyEngineResult })',
 { window: { addEventListener() {} }, TextEncoder, crypto: webcrypto });
@@ -23,7 +23,11 @@ test('移行バックアップは棋譜の局面と解析・検討を検証し�
     library: api.makeGameBackup([game]), studies: [[key, row]] };
   backup.settings['rookori.style-games.v1'] = { [game.id]: 'b' };
   backup.settings['rookori.style-snapshots.v1'] = [];
+  backup.settings['rookori.welcome.v1'] = true;
+  backup.settings['rookori.learning-goal.v1'] = { goal: 'review', minutes: '10', days: '2' };
   const imported = await api.validateMigration(backup);
+  assert.equal(imported.values['rookori.welcome.v1'], true);
+  assert.equal(imported.values['rookori.learning-goal.v1'].minutes, '10');
   assert.equal(imported.values['rookori.style-games.v1'][game.id], 'b');
   assert.equal(imported.games[0].id, game.id);
   assert.equal(imported.studies[0][1].variations[0].moves[0], 'd2d4');
@@ -32,6 +36,17 @@ test('移行バックアップは棋譜の局面と解析・検討を検証し�
   row.variations[0].moves = ['d2d4'];
   backup.settings['rookori.analytics-consent.v1'] = 'granted';
   await assert.rejects(api.validateMigration(backup));
+});
+
+test('復元先の目標と使用色を保持し、取り込んだ棋譜の使用色を補う', () => {
+  const own = 'rookori.style-games.v1';
+  const goals = 'rookori.learning-goal.v1';
+  const a = 'a'.repeat(32), b = 'b'.repeat(32);
+  const data = new Map([[own, JSON.stringify({ [a]: 'exclude' })], [goals, '{"goal":"enjoy"}']]);
+  const storage = { getItem: key => data.get(key) ?? null, setItem: data.set.bind(data) };
+  api.addMigrationSettings(storage, { [own]: { [a]: 'w', [b]: 'b' }, [goals]: { goal: 'review' } });
+  assert.deepEqual(JSON.parse(data.get(own)), { [a]: 'exclude', [b]: 'b' });
+  assert.equal(JSON.parse(data.get(goals)).goal, 'enjoy');
 });
 
 test('移行を繰り返しても保存済みの項目を上書きせず、Lichessユーザー名の既存形式を維持する', () => {

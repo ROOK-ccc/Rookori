@@ -140,6 +140,23 @@ function createGameLibrary(openDatabase = () => indexedDB.open('chesspath.game-l
         });
       });
     },
+    saveBatchGame(game, id) {
+      return access('readwrite', (store, read, result) => {
+        function add(existing) {
+          if (existing) { result(false); return; }
+          store.add(reviewGameRecord(game, id));
+          result(true);
+        }
+        read(store.get(id), existing => {
+          if (existing) { result(false); return; }
+          read(store.index('pgn').get(game.pgn), exact => {
+            const external = lichessPgnId(game.pgn);
+            if (!exact && external) read(store.index('lichessId').get(external), add);
+            else add(exact);
+          });
+        });
+      });
+    },
     remove(id) {
       return access('readwrite', store => store.delete(id));
     },

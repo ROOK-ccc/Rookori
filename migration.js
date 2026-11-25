@@ -24,6 +24,8 @@ const migrationSettings = new Map([
   [personalDailyKey, value => ['recommended', 'general', 'personal'].includes(value)],
   [styleOwnershipKey, validStyleOwnership],
   [styleSnapshotsKey, validStyleSnapshots],
+  [welcomeKey, value => typeof value === 'boolean'],
+  [learningGoalKey, validLearningGoal],
 ]);
 
 function migrationRead(key) {
@@ -156,6 +158,14 @@ function addMigrationSettings(storage, values) {
     if (value === null) continue;
     if (storage.getItem(key) === null) {
       storage.setItem(key, key === lichessUsernameKey ? value : JSON.stringify(value));
+      added++;
+    } else if (key === styleOwnershipKey) {
+      let current;
+      try { current = JSON.parse(storage.getItem(key)); } catch { /* Preserve unreadable settings. */ }
+      if (!validStyleOwnership(current)) { skipped++; continue; }
+      const incoming = Object.entries(value).filter(([id]) => !Object.hasOwn(current, id));
+      if (!incoming.length) { skipped++; continue; }
+      storage.setItem(key, JSON.stringify({ ...current, ...Object.fromEntries(incoming) }));
       added++;
     } else skipped++;
   }

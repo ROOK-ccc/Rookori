@@ -77,16 +77,18 @@ try {
     generated._headers = '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n'
       + "  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'\n"
       + (preview ? '  X-Robots-Tag: noindex\n' : '')
-      + '/\n  Cache-Control: no-cache\n/vendor/stockfish/*\n  Cache-Control: public, max-age=3600\n'
+      + '/\n  Cache-Control: no-cache\n/sw.js\n  Cache-Control: no-cache\n/vendor/stockfish/*\n  Cache-Control: public, max-age=3600\n'
       + '/vendor/stockfish/*.nnue\n  Content-Type: application/octet-stream\n';
     generated._redirects = '/Rookori / 301\n/Rookori/ / 301\n';
   }
+  const pieces = ['w', 'b'].flatMap(color => [...'KQRBNP'].map(piece => `pieces/cburnett/${color}${piece}.svg`));
   const files = [
     'styles.css', 'app.js', 'navigation.js', 'analytics.js',
     'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js',
     ...['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm', 'stockfish.js-19.0.0-source.tar.gz',
       'nn-61e7af4bb97d.nnue', 'Copying.txt', 'AUTHORS', 'NOTICE.txt'].map(file => 'vendor/stockfish/' + file),
-    'brand/rookori.png', 'brand/rookori-share.jpg',
+    'brand/rookori.png', 'brand/rookori-share.jpg', 'brand/rookori-512.png', 'app.webmanifest', 'pwa.js',
+    'daily-life.js', 'daily-life-ui.js', 'pgn-batch.js', 'pgn-batch-ui.js',
     'data.js', 'scoring.js', 'card-data.js', 'cards.js', 'result-links.js',
     'opening-data.js', 'opening-scoring.js', 'opening-study.js', 'opening-study-ui.js',
     'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
@@ -98,7 +100,7 @@ try {
     'intro-data.js', 'intro-course.js', 'intro-ui.js', 'chess-board.js',
     'problem-data.js', 'problem-curriculum.js',
     'vendor/chess.js', 'vendor/chess.LICENSE.txt',
-    ...['w', 'b'].flatMap(color => [...'KQRBNP'].map(piece => `pieces/cburnett/${color}${piece}.svg`)),
+    ...pieces,
     'pieces/cburnett/LICENSE.txt',
   ];
   const output = fs.mkdtempSync(path.join(__dirname, 'chesspath-public-'));
@@ -109,6 +111,15 @@ try {
   }
   fs.writeFileSync(path.join(output, 'course-problems.js'), courseScript);
   generated['index.html'] = versionPublicAssets(generated['index.html'], output);
+  const assets = ['index.html', 'app.webmanifest', 'brand/rookori.png', 'brand/rookori-512.png', ...pieces,
+    ...[...generated['index.html'].matchAll(/\b(?:src|href)="([\w./-]+\.(?:js|css)\?v=[a-f0-9]+)"/g)].map(match => match[1])];
+  const worker = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
+  const hash = createHash('sha256').update(worker).update(JSON.stringify(assets)).update(generated['index.html']);
+  for (const asset of assets.filter(asset => asset !== 'index.html' && !asset.includes('?'))) {
+    hash.update(fs.readFileSync(path.join(output, asset)));
+  }
+  generated['sw.js'] = worker.replace('/* ROOKORI_SW_BUILD */',
+    `const build = ${JSON.stringify({ version: hash.digest('hex').slice(0, 16), assets })};`);
   for (const [file, content] of Object.entries(generated)) fs.writeFileSync(path.join(output, file), content);
   let published = output;
   if (cloudflare) {

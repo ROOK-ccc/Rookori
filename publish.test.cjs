@@ -11,7 +11,7 @@ const siteConfig = require('./site-config.json');
 test('公開用ビルドに学習レポート・自作問題・対局復習が入り、エディターを含まない', t => {
   const scratch = mkdtempSync(join(tmpdir(), 'chesspath-publish-test-'));
   t.after(() => rmSync(scratch, { recursive: true, force: true }));
-  for (const file of readdirSync(__dirname).filter(name => /\.(cjs|css|html|js)$/.test(name))) {
+  for (const file of readdirSync(__dirname).filter(name => /\.(cjs|css|html|js|webmanifest)$/.test(name))) {
     copyFileSync(join(__dirname, file), join(scratch, file));
   }
   for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
@@ -29,8 +29,21 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.3\.0/);
+  assert.match(html, /Rookori v4\.4\.0/);
   assert.match(html, /src="play-style-ui\.js\?v=/);
+  assert.match(html, /rel="manifest" href="app\.webmanifest"/);
+  const manifest = JSON.parse(readFileSync(join(published, 'app.webmanifest'), 'utf8'));
+  assert.deepEqual([manifest.start_url, manifest.scope, manifest.display], ['./', './', 'standalone']);
+  for (const icon of manifest.icons) {
+    const image = readFileSync(join(published, icon.src));
+    assert.equal(`${image.readUInt32BE(16)}x${image.readUInt32BE(20)}`, icon.sizes);
+  }
+  const serviceWorker = folder => readFileSync(join(folder, 'sw.js'), 'utf8');
+  const workerBuild = folder => JSON.parse(/^const build = (.*);/m.exec(serviceWorker(folder))[1]);
+  const initialWorker = workerBuild(published);
+  assert.ok(initialWorker.assets.includes('index.html'));
+  assert.ok(initialWorker.assets.some(file => /^pgn-batch-ui\.js\?v=/.test(file)));
+  assert.ok(initialWorker.assets.every(file => !file.startsWith('/') && !file.includes('stockfish')));
   assert.match(html, /id="external-title"/);
   assert.match(html, /id="lichess-form"[^>]*data-browser-api-approved="false"[^>]*\bhidden\b/);
   assert.match(html, /id="lichess-api-paused"/);
@@ -102,6 +115,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
     cwd: scratch, encoding: 'utf8',
   }).trim();
   const head = readFileSync(join(configured, 'index.html'), 'utf8').split('</head>')[0];
+  assert.notEqual(workerBuild(configured).version, initialWorker.version);
   assert.ok(head.includes('name="google-site-verification" content="verification-for-test"'));
   assert.ok(head.includes('name="rookori-ga4-measurement-id" content="G-TEST000000"'));
   assert.ok(head.includes('rel="canonical" href="https://example.test/preview/"'));
@@ -117,6 +131,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(previewHtml, /rel="canonical" href="https:\/\/example\.test\/preview\/"/);
   assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
+  assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\/sw\.js\n  Cache-Control: no-cache/);
+  assert.ok(workerBuild(preview).assets.includes('app.webmanifest'));
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\*\.nnue\n  Content-Type: application\/octet-stream/);
   assert.match(readFileSync(join(preview, '_redirects'), 'utf8'), /^\/Rookori\/ \/ 301/m);
   assert.equal(cloudflareBuild('cloudflare-live'), preview);
