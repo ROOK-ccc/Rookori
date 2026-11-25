@@ -13,7 +13,8 @@
       "workers_dev": false,
       "preview_urls": false,
       "assets": { "directory": "./.rookori-cloudflare-assets", "not_found_handling": "none" },
-      "routes": [{ "pattern": "rookrori.com", "custom_domain": true }],
+      // rookrori.com is managed in Settings > Domains & Routes. Omit route(s)
+      // so Wrangler leaves the existing Custom Domain under dashboard control.
       "observability": { "enabled": false }
     }
   }

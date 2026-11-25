@@ -68,7 +68,7 @@ try {
   const context = vm.createContext({});
   if (input) context.publishedProblemPack = JSON.parse(fs.readFileSync(path.resolve(input), 'utf8'));
   const courseScript = vm.runInContext(`${source}\nproblemCourseScript(validateProblemPack(publishedProblemPack, introLessons))`, context);
-  const generated = publicSiteFiles(target === 'cloudflare-live' ? cloudflareSiteConfig
+  const generated = publicSiteFiles(target === 'cloudflare-live' ? { ...cloudflareSiteConfig, migrationUrl: undefined }
     : preview ? { ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' } : siteConfig);
   generated['index.html'] = generated['index.html'].replace('<!-- CLOUDFLARE_PRIVACY -->', cloudflare
     ? '<p>このサイトの配信にはCloudflareを利用しており、表示時の通信はCloudflareを経由します。通信に伴い、IPアドレスなどの情報は配信事業者に伝わります。詳しくは<a href="https://www.cloudflare.com/privacypolicy/" rel="noreferrer">Cloudflareのプライバシーポリシー</a>をご覧ください。</p>'

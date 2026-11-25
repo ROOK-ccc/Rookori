@@ -7,6 +7,7 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 const siteConfig = require('./site-config.json');
+const cloudflareSiteConfig = require('./site-config.cloudflare.json');
 
 test('公開用ビルドに学習レポート・自作問題・対局復習が入り、エディターを含まない', t => {
   const scratch = mkdtempSync(join(tmpdir(), 'chesspath-publish-test-'));
@@ -129,7 +130,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(previewHtml, /name="robots" content="noindex"/);
   assert.match(previewHtml, /www\.cloudflare\.com\/privacypolicy/);
   assert.match(previewHtml, /rel="canonical" href="https:\/\/example\.test\/preview\/"/);
-  assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id/);
+  assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id|name="rookori-migration-url"/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\/sw\.js\n  Cache-Control: no-cache/);
   assert.ok(workerBuild(preview).assets.includes('app.webmanifest'));
@@ -139,6 +140,10 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.doesNotMatch(readFileSync(join(preview, '_headers'), 'utf8'), /noindex/);
   assert.match(readFileSync(join(preview, 'sitemap.xml'), 'utf8'), /<loc>https:\/\/rookrori\.com\/<\/loc>/);
   const liveHtml = readFileSync(join(preview, 'index.html'), 'utf8');
+  assert.equal(cloudflareSiteConfig.ga4MeasurementId, siteConfig.ga4MeasurementId);
+  assert.ok(liveHtml.includes(`name="rookori-ga4-measurement-id" content="${siteConfig.ga4MeasurementId}"`));
+  assert.doesNotMatch(liveHtml, /name="robots"[^>]*noindex|name="rookori-migration-url"/);
+  assert.match(liveHtml, /property="og:url" content="https:\/\/rookrori\.com\/"/);
   assert.match(liveHtml, /rel="canonical" href="https:\/\/rookrori\.com\/"/);
   assert.match(liveHtml, /property="og:image" content="https:\/\/rookrori\.com\/brand\/rookori-share\.jpg"/);
   assert.match(readFileSync(join(preview, 'robots.txt'), 'utf8'), /Sitemap: https:\/\/rookrori\.com\/sitemap\.xml/);
