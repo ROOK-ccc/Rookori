@@ -42,7 +42,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const serviceWorker = folder => readFileSync(join(folder, 'sw.js'), 'utf8');
   const workerBuild = folder => JSON.parse(/^const build = (.*);/m.exec(serviceWorker(folder))[1]);
   const initialWorker = workerBuild(published);
-  assert.ok(initialWorker.assets.includes('index.html'));
+  assert.ok(initialWorker.assets.includes('./'));
+  assert.ok(!initialWorker.assets.includes('index.html'));
   assert.ok(initialWorker.assets.some(file => /^pgn-batch-ui\.js\?v=/.test(file)));
   assert.ok(initialWorker.assets.every(file => !file.startsWith('/') && !file.includes('stockfish')));
   assert.match(html, /id="external-title"/);

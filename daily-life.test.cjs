@@ -60,25 +60,51 @@ test('Service Workerは公開先ごとにキャッシュを分け、対応する
     const discarded = [];
     const own = `rookori-shell:${pathname}:old`;
     const unrelated = 'rookori-shell:/different-app/:old';
-    const cache = { addAll: items => { requests.push(...items); }, match: async address => address };
+    let offline = false;
+    let storageError = false;
+    let redirected = false;
+    const cache = { addAll: items => { requests.push(...items); },
+      match: async address => ({ ok: true, url: address, redirected }) };
     const self = { registration: { scope }, clients: { claim() {} }, addEventListener: (type, fn) => { listeners[type] = fn; } };
-    const caches = { open: async () => cache, keys: async () => [own, unrelated, `rookori-shell:${pathname}:new`], delete: key => discarded.push(key) };
-    runInNewContext('const build = { version: "new", assets: ["index.html", "app.js?v=abc"] };\n' + sw,
-      { self, caches, URL, Request });
+    const caches = { open: async () => {
+      if (storageError) throw new Error('storage unavailable');
+      return cache;
+    }, keys: async () => [own, unrelated, `rookori-shell:${pathname}:new`], delete: key => discarded.push(key) };
+    runInNewContext('const build = { version: "new", assets: ["./", "app.js?v=abc"] };\n' + sw,
+      { self, caches, URL, Request, Response, fetch: async ({ url }) => {
+        if (offline) throw new TypeError('offline');
+        return { url, network: true };
+      } });
     for (const type of ['install', 'activate']) {
       let task;
       listeners[type]({ waitUntil: promise => { task = promise; } });
       await task;
     }
     assert.deepEqual(discarded, [own]);
-    assert.deepEqual(requests.map(request => request.url), [scope + 'index.html', scope + 'app.js?v=abc']);
+    assert.deepEqual(requests.map(request => request.url), [scope, scope + 'app.js?v=abc']);
+    assert.ok(requests.every(request => request.redirect === 'error'));
     const fetch = (url, mode = 'navigate') => {
       let response;
       listeners.fetch({ request: { url, mode, method: 'GET' }, respondWith: promise => { response = promise; } });
       return response;
     };
-    assert.equal(await fetch(scope + '?type=ATCI#result'), scope + 'index.html');
-    assert.equal(await fetch(scope + 'app.js?v=abc', 'same-origin'), scope + 'app.js?v=abc');
+    const shared = scope + '?type=ATCI#result';
+    assert.equal((await fetch(shared)).url, shared);
+    assert.equal(fetch(scope + 'index.html'), undefined);
+    assert.equal((await fetch(scope + 'app.js?v=abc', 'same-origin')).url, scope + 'app.js?v=abc');
+    storageError = true;
+    assert.equal((await fetch(shared)).network, true);
+    assert.equal((await fetch(scope + 'app.js?v=abc', 'same-origin')).network, true);
+    let installWithoutCache;
+    listeners.install({ waitUntil: task => { installWithoutCache = task; } });
+    await assert.doesNotReject(installWithoutCache);
+    storageError = false;
+    offline = true;
+    assert.equal((await fetch(shared)).url, scope);
+    redirected = true;
+    assert.equal((await fetch(shared)).status, 503);
+    storageError = true;
+    assert.equal((await fetch(shared)).status, 503);
     assert.equal(fetch(scope + 'vendor/stockfish/test.wasm', 'same-origin'), undefined);
     assert.equal(fetch('https://lichess.org/'), undefined);
     assert.equal(fetch(scope + 'sitemap.xml'), undefined);

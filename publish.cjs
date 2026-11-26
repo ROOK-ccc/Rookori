@@ -112,11 +112,12 @@ try {
   }
   fs.writeFileSync(path.join(output, 'course-problems.js'), courseScript);
   generated['index.html'] = versionPublicAssets(generated['index.html'], output);
-  const assets = ['index.html', 'app.webmanifest', 'brand/rookori.png', 'brand/rookori-512.png', ...pieces,
+  // Both hosts serve the entry at the scope root. Cloudflare redirects index.html.
+  const assets = ['./', 'app.webmanifest', 'brand/rookori.png', 'brand/rookori-512.png', ...pieces,
     ...[...generated['index.html'].matchAll(/\b(?:src|href)="([\w./-]+\.(?:js|css)\?v=[a-f0-9]+)"/g)].map(match => match[1])];
   const worker = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
   const hash = createHash('sha256').update(worker).update(JSON.stringify(assets)).update(generated['index.html']);
-  for (const asset of assets.filter(asset => asset !== 'index.html' && !asset.includes('?'))) {
+  for (const asset of assets.filter(asset => asset !== './' && !asset.includes('?'))) {
     hash.update(fs.readFileSync(path.join(output, asset)));
   }
   generated['sw.js'] = worker.replace('/* ROOKORI_SW_BUILD */',
