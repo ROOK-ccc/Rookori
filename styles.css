@@ -172,6 +172,35 @@ h1, h2, h3 { line-height: 1.35; }
 .analytics-notice { margin-block: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
 .analytics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .analytics-actions .button { min-height: 44px; padding: 6px 12px; }
+.journey-home { margin-block: 18px 0; }
+.journey-hero { background: var(--green); color: var(--white); padding: clamp(20px, 5vw, 48px); border-radius: 12px; }
+.journey-hero h1 { margin-block: 4px 12px; font: 700 clamp(1.8rem, 6vw, 3.4rem)/1.25 var(--serif); }
+.journey-hero p { max-width: 38em; }
+.journey-hero .journey-eyebrow, .journey-hero .text-button { color: var(--gold); }
+.journey-eyebrow { letter-spacing: .14em; font-weight: 700; }
+.journey-section { margin-block: clamp(24px, 5vw, 48px); }
+.journey-section h2 { margin-bottom: 12px; }
+.journey-principles { color: var(--green); font: 700 clamp(1.1rem, 3vw, 1.45rem)/1.55 var(--serif); }
+.journey-pillars { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+.journey-pillars li, .journey-status { background: var(--green-light); color: var(--green); border-radius: 6px; padding: 3px 10px; font-weight: 700; }
+.journey-card { padding: clamp(12px, 3vw, 22px); background: var(--white); border: 1px solid var(--line); border-radius: 8px; }
+.journey-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; }
+.journey-facts dt { font-weight: 700; }
+.journey-facts dd { margin: 0; }
+.journey-timeline { list-style: none; padding-inline-start: 16px; margin-inline-start: 4px; border-inline-start: 2px solid var(--gold); }
+.journey-timeline > li { position: relative; margin-block: 12px; }
+.journey-timeline > li::before { content: ""; position: absolute; inset-inline-start: -22px; top: 22px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold-dark); }
+.journey-entry-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); }
+.journey-card h3 { margin-block: 8px; }
+.journey-card ul { margin-block: 8px; padding-inline-start: 1.35em; }
+.journey-release { margin-block: 8px; padding-block: 0; }
+.journey-release summary { min-height: 44px; align-content: center; font-weight: 700; cursor: pointer; }
+.journey-release[open] { padding-bottom: 12px; }
+.journey-page h2 { scroll-margin-top: 16px; }
+@media (max-width: 480px) {
+  .journey-facts { grid-template-columns: 1fr; }
+  .journey-facts dd { margin-bottom: 6px; }
+}
 .migration-notice { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: clamp(12px, 3vw, 24px); border-top: 3px solid var(--gold); }
 .migration-logo { border-radius: 8px; }
 .migration-notice h2 { font-family: var(--serif); font-size: clamp(1.25rem, 3vw, 1.75rem); }

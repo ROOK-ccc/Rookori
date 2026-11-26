@@ -56,6 +56,16 @@ test('移転元の計測は新canonicalと分け、同意した場合だけ旧�
   assert.equal(events()[0].page_location, site + '#backup');
 });
 
+test('ロードマップと更新履歴を同意後に固定URLで各1回計測する', () => {
+  const { analytics, events, choose } = setup();
+  analytics.screen('roadmap', 'roadmap');
+  assert.equal(events().length, 0);
+  choose('granted');
+  analytics.screen('roadmap', 'updates');
+  analytics.screen('roadmap', 'updates');
+  assert.deepEqual(Array.from(events(), event => event.page_location), [site + '#roadmap', site + '#updates']);
+});
+
 test('設定・同意がない場合、プレビュー、既存タグがある場合は Google タグを追加しない', () => {
   for (const options of [
     { idValue: '' }, { url: 'http://localhost:8000/Rookori/' }, { hasTag: true },

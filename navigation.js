@@ -1,5 +1,6 @@
 const siteHeadings = {
   home: 'home-title',
+  roadmap: 'roadmap-title', updates: 'updates-title',
   welcome: 'welcome-title',
   'pgn-import': 'batch-title',
   learn: 'learn-title',

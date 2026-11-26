@@ -90,7 +90,7 @@ try {
   }
   const pieces = ['w', 'b'].flatMap(color => [...'KQRBNP'].map(piece => `pieces/cburnett/${color}${piece}.svg`));
   const files = [
-    'styles.css', 'app.js', 'navigation.js', 'analytics.js',
+    'styles.css', 'app.js', 'navigation.js', 'analytics.js', 'journey.js',
     'cpu-game.js', 'cpu-game-ui.js', 'cpu-game.css', 'uci-engine.js',
     ...['stockfish-19-lite-single.js', 'stockfish-19-lite-single.wasm', 'stockfish.js-19.0.0-source.tar.gz',
       'nn-61e7af4bb97d.nnue', 'Copying.txt', 'AUTHORS', 'NOTICE.txt'].map(file => 'vendor/stockfish/' + file),

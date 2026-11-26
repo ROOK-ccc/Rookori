@@ -280,6 +280,9 @@ function renderSite() {
   } else if (route.mode) {
     if (location.hash === '#opening-result') history.replaceState({ path }, '', '#opening-quiz');
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
+  } else if (path === 'updates') {
+    showScreen('roadmap', siteHeadings.updates);
+    byId(siteHeadings.updates).scrollIntoView({ block: 'start' });
   } else if (path === 'learn') {
     dailyLife.showGuide(false);
     showScreen('home', siteHeadings.learn);

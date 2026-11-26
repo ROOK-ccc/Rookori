@@ -30,7 +30,10 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.4\.1/);
+  assert.match(html, /src="journey\.js\?v=/);
+  assert.match(html, /id="roadmap-title"/);
+  assert.match(html, /id="updates-title"/);
+  assert.match(readFileSync(join(published, 'journey.js'), 'utf8'), /version: '4\.4\.2'/);
   assert.match(html, /src="play-style-ui\.js\?v=/);
   assert.match(html, /rel="manifest" href="app\.webmanifest"/);
   const manifest = JSON.parse(readFileSync(join(published, 'app.webmanifest'), 'utf8'));
@@ -43,6 +46,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const workerBuild = folder => JSON.parse(/^const build = (.*);/m.exec(serviceWorker(folder))[1]);
   const initialWorker = workerBuild(published);
   assert.ok(initialWorker.assets.includes('./'));
+  assert.ok(initialWorker.assets.some(file => /^journey\.js\?v=/.test(file)));
   assert.ok(!initialWorker.assets.includes('index.html'));
   assert.ok(initialWorker.assets.some(file => /^pgn-batch-ui\.js\?v=/.test(file)));
   assert.ok(initialWorker.assets.every(file => !file.startsWith('/') && !file.includes('stockfish')));

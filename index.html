@@ -72,6 +72,7 @@
   <script src="migration.js" defer></script>
   <script src="play-style-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
+  <script src="journey.js" defer></script>
   <script src="daily-life-ui.js" defer></script>
   <script src="pgn-batch-ui.js" defer></script>
   <script src="pwa.js" defer></script>
@@ -121,6 +122,7 @@
         </section>
         <section class="menu-group">
           <h3>その他</h3>
+          <a href="#roadmap"><span aria-hidden="true">↗</span>Rookoriのこれまでと、これから</a>
           <a href="#welcome"><span aria-hidden="true">→</span>はじめての利用ガイド</a>
           <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
           <a href="#about"><span aria-hidden="true">ⓘ</span>Rookoriについて</a>
@@ -235,6 +237,7 @@
           <summary>ホームの表示設定</summary>
           <div class="study-mode-links"><button class="text-button" id="home-dashboard-mode" type="button">学習ダッシュボードをホームにする</button><button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button></div>
         </details>
+        <p class="journey-home"><a class="text-button" href="#updates">最新アップデート <span data-site-version></span> · 開発の歩みと今後のロードマップ</a></p>
       </section>
     </section>
 
@@ -1381,9 +1384,60 @@
             <a class="button primary" href="#intro">チェスの基本を学ぶ</a>
             <a class="text-button" href="#mode">チェス16タイプ診断を試す</a>
             <a class="text-button" href="#openings">オープニングを学ぶ</a>
+            <a class="text-button" href="#roadmap">Rookoriのこれまでと、これから</a>
           </div>
         </section>
       </div>
+    </section>
+    <section id="roadmap" class="screen inner-screen guide-screen journey-page" hidden>
+      <header class="journey-hero">
+        <img src="brand/rookori.png" width="56" height="56" alt="Rookori">
+        <p class="journey-eyebrow" lang="en">OUR JOURNEY</p>
+        <h1 id="roadmap-title" tabindex="-1">これまでと、これから。</h1>
+        <p>Rookoriは、まだ旅の途中です。より多くの人がチェスを楽しめる場所を目指して、少しずつ進化を続けています。</p>
+        <a class="text-button" href="#updates">アップデート履歴を読む</a>
+      </header>
+      <section class="journey-section" aria-labelledby="journey-values-title">
+        <h2 id="journey-values-title">開発理念</h2>
+        <p class="journey-principles">初心者による、初心者のための場所。</p>
+        <p class="journey-principles">一見とっつきにくいチェスを、気後れせず始められること。</p>
+        <p>駒の動かし方を覚えるところから、自分の対局を振り返って次の一手を考えるところまで、経験に合わせて学べる場所を目指しています。</p>
+        <ul class="journey-pillars"><li>学ぶ</li><li>対戦する</li><li>成長する</li><li>教え合う</li></ul>
+      </section>
+      <section class="journey-section journey-card" aria-labelledby="journey-now-title">
+        <h2 id="journey-now-title">現在のRookori</h2>
+        <dl class="journey-facts">
+          <dt>現在のバージョン</dt><dd><a href="#updates" data-site-version></a></dd>
+          <dt>最終更新日</dt><dd><time id="journey-updated"></time></dd>
+          <dt>最新のアップデート</dt><dd id="journey-latest-title"></dd>
+        </dl>
+        <p>個人学習環境と公開基盤の整備が一区切りつき、現在は品質改善とチェスの普及活動を重視しています。</p>
+      </section>
+      <section class="journey-section" aria-labelledby="journey-past-title">
+        <h2 id="journey-past-title">これまでの旅</h2>
+        <ol id="journey-past" class="journey-timeline"></ol>
+      </section>
+      <section class="journey-section" aria-labelledby="journey-plans-title">
+        <h2 id="journey-plans-title">これからの旅</h2>
+        <p>今後の機能は構想段階のものを含み、提供を確約するものではありません。実装時期やバージョン番号は変更される場合があります。</p>
+        <ol id="journey-plans" class="journey-timeline"></ol>
+        <div class="journey-card">
+          <span class="journey-status">一時停止中</span>
+          <h3>外部サービス連携</h3>
+          <p>Lichessの直接棋譜取得は、API利用条件への適合性を確認するため一時停止しています。ご自身で書き出した棋譜（PGN）は、引き続き手動で取り込めます。</p>
+          <a class="text-button" href="#pgn-import">棋譜の取り込みを開く</a>
+        </div>
+      </section>
+      <section class="journey-section" aria-labelledby="updates-title">
+        <h2 id="updates-title" tabindex="-1">アップデート履歴</h2>
+        <p>公開日を確認できた更新には日付を表示しています。</p>
+        <div id="journey-releases"></div>
+      </section>
+      <section class="journey-section" aria-labelledby="journey-policy-title">
+        <h2 id="journey-policy-title">開発方針</h2>
+        <p>初めての人が迷わず使えること、学習を自分のペースで続けられること、安心して使えることを重視します。利用者の声をもとに、今ある機能も少しずつ改善していきます。</p>
+        <p>ロードマップは現時点での開発構想です。利用者のご意見、技術的な制約、運営状況などに応じて変更される場合があります。</p>
+      </section>
     </section>
     <section id="glossary" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
@@ -1429,7 +1483,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.4.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
+  <footer class="site-footer"><div class="shell">Rookori <a href="#updates" data-site-version aria-label="現在のバージョンと更新履歴"></a> · <a href="#roadmap">これまでと、これから</a> · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
     <details id="rookori-install" class="install-help" hidden>
       <summary>ホーム画面に追加する</summary>
       <p id="install-ios">iPhone・iPadのSafariでは、共有メニューから「ホーム画面に追加」を選び、「Webアプリとして開く」が表示されたらオンにして「追加」を押します。</p>

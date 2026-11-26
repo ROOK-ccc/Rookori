@@ -12,6 +12,7 @@ function createRookoriAnalytics(win, doc) {
     || doc.querySelector('script[src*="googletagmanager.com/gtag/js"], script[src*="googletagmanager.com/gtm.js"]')) return noop;
 
   const titles = {
+    roadmap: 'Rookoriのこれまでと、これから', updates: 'アップデート履歴',
     home: 'ホーム', beginner: '初心者ガイド', improve: '学習ガイド', journal: 'チェス日記帳',
     openings: 'オープニング一覧', memorize: 'オープニング暗記一覧', 'opening-study': 'オープニング学習',
     'opening-practice': '暗記練習', mode: '診断の種類', quiz: '16タイプ診断',
@@ -121,7 +122,8 @@ function createRookoriAnalytics(win, doc) {
 
   return {
     screen(id, route) {
-      const name = id === 'quiz' && route === 'opening-quiz' ? 'opening-quiz'
+      const name = id === 'roadmap' && route === 'updates' ? 'updates'
+        : id === 'quiz' && route === 'opening-quiz' ? 'opening-quiz'
         : id === 'openings' && route === 'memorize' ? 'memorize' : id;
       if (!Object.hasOwn(titles, name)) return;
       current = {
