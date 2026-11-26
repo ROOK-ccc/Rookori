@@ -27,29 +27,36 @@ const openingStudyScreen = (() => {
     board.reset();
     chessGlossary.annotate(byId('study-title'), candidate.name);
     byId('study-english').textContent = candidate.english;
-    byId('study-slot').textContent = openingSlots[candidate.slot];
+    byId('study-slot').textContent = candidate.slotLabel ?? openingSlots[candidate.slot];
     byId('study-practice').href = `#practice/${candidate.id}/${openingDefaultColor(candidate)}`;
     byId('study-parent').hidden = !candidate.parentId;
     byId('study-parent').href = candidate.parentId ? `#study/${candidate.parentId}` : '#openings';
-    byId('variation-details').hidden = !candidate.parentId;
+    byId('variation-details').hidden = !candidate.parentId && !candidate.source;
     byId('sicilian-comparison').hidden = !openingVariations.some(variation => variation.parentId === candidate.id);
     byId('study-compare').hidden = byId('sicilian-comparison').hidden;
-    if (candidate.parentId) {
+    if (candidate.parentId || candidate.source) {
       chessGlossary.annotate(byId('variation-overview'), candidate.description);
       const facts = [
-        ['代表手順', openingNotation(candidate).join(' ')], ['白番の狙い', candidate.white],
+        ['代表手順', openingNotation(candidate).join(' ')], ['ECOコード', candidate.eco],
+        ['手順の目印', candidate.branchPly && openingNotation(candidate)[candidate.branchPly - 1]],
+        ['別名', (candidate.aliases ?? openingAliases[candidate.id])?.join('、')], ['白番の狙い', candidate.white],
         ['黒番の狙い', candidate.black], ['ポーンの形', candidate.pawns],
+        ['代表手順の駒の配置', candidate.placement], ['その後の方針', candidate.tip],
         ['注意したい弱点', candidate.weakness], ['よくある間違い', candidate.mistake],
       ];
-      byId('variation-facts').replaceChildren(...facts.flatMap(([label, value]) =>
+      byId('variation-facts').replaceChildren(...facts.filter(([, value]) => value).flatMap(([label, value]) =>
         [element('dt', label), chessTermText('dd', value)]));
+      const source = byId('study-opening-source');
+      source.hidden = !candidate.source;
+      if (candidate.source) source.href = candidate.source;
     }
     if (!byId('sicilian-comparison').hidden) {
       const variants = openingVariations.filter(variation => variation.parentId === candidate.id);
+      byId('sicilian-comparison-title').textContent = `バリエーションを比べる（${variants.length}件）`;
       byId('sicilian-groups').replaceChildren(...[
-        ['黒番の主な駒組み', variants.filter(variation => variation.slot !== 'white')],
-        ['白番が選ぶ対抗策', variants.filter(variation => variation.slot === 'white')],
-      ].map(([title, group]) => {
+        ['黒番で練習する手順', variants.filter(variation => variation.slot !== 'white')],
+        ['白番で練習する手順', variants.filter(variation => variation.slot === 'white')],
+      ].filter(([, group]) => group.length).map(([title, group]) => {
         const section = element('section');
         section.append(element('h3', title));
         const list = element('ul', null, 'goal-links');
@@ -69,7 +76,7 @@ const openingStudyScreen = (() => {
     const back = byId('study-back');
     back.href = fromGame ? `#${route.from}` : destination;
     back.textContent = fromGame ? '対局の振り返りに戻る' : route.recommended ? '診断結果に戻る'
-      : candidate.parentId ? 'シシリアンの比較へ戻る' : '戦法一覧に戻る';
+      : candidate.parentId ? '親オープニングに戻る' : '戦法一覧に戻る';
     const more = byId('study-more');
     more.href = destination;
     more.textContent = route.recommended ? 'ほかのおすすめ戦法を見る' : 'ほかの戦法を見る';

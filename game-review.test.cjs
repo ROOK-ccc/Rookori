@@ -4,7 +4,7 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 
-const source = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'game-review.js', 'opening-classification.js', 'navigation.js']
+const source = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'game-review.js', 'opening-classification.js', 'navigation.js']
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
 const {
   chessRules, sampleGamePgn, parseReviewGames, reviewPosition, classifyReviewOpening, openingReferenceLines,

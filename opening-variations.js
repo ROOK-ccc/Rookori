@@ -31,11 +31,17 @@ const sicilianThinking = {
   c2c3: '次の手で中央にポーンを並べられるよう、横から支えましょう。',
 };
 
+const sicilianEco = {
+  najdorf: 'B90', dragon: 'B70', classical: 'B56', alapin: 'B22',
+  'accelerated-dragon': 'B32', sveshnikov: 'B33', scheveningen: 'B80', closed: 'B23',
+};
+
 function sicilianVariation(id, name, english, slot, line, lastNote, description, white, black, pawns, weakness, mistake) {
   const moves = line.split(' ');
   return {
     id: `sicilian-${id}`, parentId: 'sicilian-defense', name, english, slot, moves,
-    tip: description, description, white, black, pawns, weakness, mistake,
+    tip: description, description, white, black, pawns, weakness, mistake, eco: sicilianEco[id],
+    branchPly: moves.length, source: expandedOpeningSource,
     explanations: moves.map((move, index) => index === moves.length - 1 ? lastNote : sicilianMoves[move]),
     thinkingHints: moves.map(move => id === 'closed' && move === 'b1c3'
       ? '中央のポーンはそのままにして、別の駒を出す準備をしましょう。'
@@ -116,8 +122,11 @@ const openingVariations = [
     '白のe4と黒のc5が残り、すぐに中央の交換が起きにくい形です。',
     '白がキング周りのポーンを進めすぎると、自分のキングも攻められます。',
     '駒を出す前にfポーンやgポーンだけで攻めを始めること。'),
+  ...expandedVariations,
 ];
 
+const studyOpenings = [...openings, ...expandedOpenings];
+
 function findStudyOpening(id) {
-  return openings.find(opening => opening.id === id) ?? openingVariations.find(variation => variation.id === id);
+  return studyOpenings.find(opening => opening.id === id) ?? openingVariations.find(variation => variation.id === id);
 }

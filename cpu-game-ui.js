@@ -118,7 +118,7 @@ const cpuPage = (() => {
     return value;
   }
 
-  for (const opening of [...openings, ...openingVariations]) {
+  for (const opening of [...studyOpenings, ...openingVariations]) {
     const option = element('option', opening.parentId ? `${findStudyOpening(opening.parentId).name}：${opening.name}` : opening.name);
     option.value = opening.id;
     node('opening').append(option);

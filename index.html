@@ -30,9 +30,10 @@
   <script src="cards.js" defer></script>
   <script src="result-links.js" defer></script>
   <script src="opening-data.js" defer></script>
+  <script src="vendor/chess.js" defer></script>
+  <script src="opening-expansion.js" defer></script>
   <script src="opening-variations.js" defer></script>
   <script src="opening-scoring.js" defer></script>
-  <script src="vendor/chess.js" defer></script>
   <script src="opening-study.js" defer></script>
   <script src="opening-memory.js" defer></script>
   <script src="intro-data.js" defer></script>
@@ -320,8 +321,10 @@
         <label>戦法名で検索 <input id="catalog-search" type="search" placeholder="イタリアン、Italian など"></label>
         <label>色 <select id="catalog-color"><option value="">すべて</option><option value="w">白番</option><option value="b">黒番</option></select></label>
         <label>難易度 <select id="catalog-level"><option value="">すべて</option><option value="beginner">初心者向け</option><option value="experienced">経験者向け</option></select></label>
+        <label>系統 <select id="catalog-family"><option value="">すべて</option></select></label>
       </div>
       <p id="catalog-count" class="guide-intro" role="status"></p>
+      <p id="catalog-recent" hidden></p>
       <div id="opening-catalog" class="opening-catalog"></div>
     </section>
 
@@ -414,7 +417,7 @@
         <a class="button primary" id="study-practice" href="#openings">暗記モードで練習</a>
         <a class="text-button" id="study-cpu" href="#cpu">この定跡からCPUと対戦する</a>
         <button class="text-button" id="study-compare" type="button" hidden>8バリエーションを比べる</button>
-        <a class="text-button" id="study-parent" href="#study/sicilian-defense" hidden>シシリアンの比較へ</a>
+        <a class="text-button" id="study-parent" href="#openings" hidden>親オープニングへ</a>
       </div>
       <p class="eyebrow" id="study-slot"></p>
       <h1 id="study-title" tabindex="-1"></h1>
@@ -455,9 +458,10 @@
         <h2 id="variation-details-title">戦法の狙い</h2>
         <p id="variation-overview"></p>
         <dl id="variation-facts"></dl>
+        <a id="study-opening-source" class="text-button" rel="noreferrer" hidden>名称と手順の出典（Lichess）</a>
       </section>
       <section class="study-resource" id="sicilian-comparison" hidden aria-labelledby="sicilian-comparison-title">
-        <h2 id="sicilian-comparison-title" tabindex="-1">シシリアンの8バリエーションを比べる</h2>
+        <h2 id="sicilian-comparison-title" tabindex="-1">バリエーションを比べる</h2>
         <p>黒の駒組みと、白が早い段階で選ぶ対抗策を比べられます。特徴は代表的な局面での目安です。</p>
         <div id="sicilian-groups"></div>
       </section>

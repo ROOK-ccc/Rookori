@@ -1,6 +1,6 @@
 let learningStorage;
 try { learningStorage = window.localStorage; } catch { /* 保存を使えない場合はタブ内で続けます。 */ }
-const learningTracker = new LearningTracker(learningStorage, introLessons, openings, findStudyOpening);
+const learningTracker = new LearningTracker(learningStorage, introLessons, studyOpenings, findStudyOpening);
 const reviewLink = id => '#review-item/' + encodeURIComponent(id);
 
 const learningPages = (() => {
@@ -119,16 +119,32 @@ const learningPages = (() => {
     personalPages.daily();
   }
 
-  const normalize = value => value.normalize('NFKC').toLowerCase().trim();
-  function catalog(memorize = false) {
+  const normalize = value => value.normalize('NFKC').toLowerCase()
+    .replace(/[\p{Script=Latin}]+/gu, term => term.normalize('NFD').replace(/\p{Mark}/gu, ''))
+    .replace(/[\s・'’\-–]+/g, '');
+  for (const [value, label] of Object.entries(openingFamilies)) {
+    const option = element('option', label);
+    option.value = value;
+    byId('catalog-family').append(option);
+  }
+  function catalog(memorize = false, returnOpening) {
     byId('openings-title').textContent = memorize ? 'オープニング暗記' : 'オープニング一覧';
     const query = normalize(byId('catalog-search').value);
     const color = byId('catalog-color').value;
     const level = byId('catalog-level').value;
+    const family = byId('catalog-family').value;
+    const filtered = Boolean(query || color || level || family);
     const learned = learningTracker.learned();
-    const matches = opening => (!query || normalize(opening.name + ' ' + opening.english).includes(query))
+    const matches = opening => {
+      const parent = opening.parentId ? findStudyOpening(opening.parentId) : null;
+      const names = [opening.name, opening.english, opening.eco ?? '',
+        ...(opening.aliases ?? openingAliases[opening.id] ?? [])];
+      if (parent) names.push(parent.name + opening.name, parent.english + opening.english);
+      return (!query || names.some(name => normalize(name).includes(query)))
       && (!color || openingDefaultColor(opening) === color)
+      && (!family || openingFamily(opening) === family)
       && (!level || ((opening.traits?.complexity ?? 4) <= 3 ? 'beginner' : 'experienced') === level);
+    };
     const links = opening => {
       const actions = element('div', null, 'study-mode-links');
       const explain = link('解説を開く', '#study/' + opening.id, 'text-button');
@@ -142,24 +158,24 @@ const learningPages = (() => {
       const english = element('p', opening.english, 'opening-english');
       english.lang = 'en';
       article.append(chessTermText('h3', opening.name), english,
-        element('p', openingSlots[opening.slot] + '・' + ((opening.traits?.complexity ?? 4) <= 3 ? '初心者向け' : '経験者向け')
+        element('p', (opening.slotLabel ?? openingSlots[opening.slot]) + '・' + ((opening.traits?.complexity ?? 4) <= 3 ? '初心者向け' : '経験者向け')
           + '・' + (learned.has(opening.id) ? '学習済み' : '未学習'), 'catalog-meta'),
         chessTermText('p', opening.description), links(opening));
       return article;
     };
     let count = 0;
-    const cards = openings.flatMap(opening => {
+    const cards = studyOpenings.flatMap(opening => {
       const children = openingVariations.filter(item => item.parentId === opening.id);
-      const visible = children.filter(child => matches(child) || (!query && !color && !level));
+      const visible = children.filter(child => !filtered || matches(child));
       const parentMatches = matches(opening);
       if (!parentMatches && !visible.length) return [];
       const card = element('article', null, 'opening-card');
       if (parentMatches) card.append(detail(opening));
       else card.append(element('h2', opening.name + 'のバリエーション'));
-      count += (parentMatches ? 1 : 0) + (color || query || level ? visible.length : 0);
+      count += (parentMatches ? 1 : 0) + (filtered ? visible.length : 0);
       if (children.length) {
         const details = element('details');
-        details.open = Boolean(query || color || level || location.hash.endsWith('/' + opening.id));
+        details.open = filtered || returnOpening?.parentId === opening.id;
         details.append(element('summary', 'バリエーション ' + children.length + '件'));
         for (const variant of visible) details.append(detail(variant));
         if (!visible.length) details.append(element('p', '条件に合うバリエーションはありません。'));
@@ -167,7 +183,13 @@ const learningPages = (() => {
       }
       return [card];
     });
-    byId('catalog-count').textContent = count + '件' + (color || query || level ? 'が見つかりました' : 'を掲載');
+    byId('catalog-count').textContent = filtered ? count + '件が見つかりました'
+      : `オープニング ${studyOpenings.length}件・バリエーション ${openingVariations.length}件`;
+    const last = learningTracker.data.last;
+    const recent = last && last.type !== 'lesson' ? findStudyOpening(last.id) : null;
+    const recentRow = byId('catalog-recent');
+    recentRow.hidden = !recent;
+    recentRow.replaceChildren(...(recent ? [link('前回のオープニング：' + recent.name, '#study/' + recent.id, 'text-button')] : []));
     byId('opening-catalog').replaceChildren(...cards);
   }
 
@@ -175,7 +197,7 @@ const learningPages = (() => {
     progressReport(learningTracker);
   }
 
-  for (const id of ['catalog-search', 'catalog-color', 'catalog-level']) {
+  for (const id of ['catalog-search', 'catalog-color', 'catalog-level', 'catalog-family']) {
     byId(id).addEventListener(id === 'catalog-search' ? 'input' : 'change', () => catalog(displayedRoute?.path === 'memorize'));
   }
   const setHome = mode => {

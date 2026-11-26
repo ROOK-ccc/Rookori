@@ -33,7 +33,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="journey\.js\?v=/);
   assert.match(html, /id="roadmap-title"/);
   assert.match(html, /id="updates-title"/);
-  assert.match(readFileSync(join(published, 'journey.js'), 'utf8'), /version: '4\.4\.2'/);
+  assert.match(readFileSync(join(published, 'journey.js'), 'utf8'), /version: '4\.4\.3'/);
+  assert.match(html, /src="opening-expansion\.js\?v=/);
   assert.match(html, /src="play-style-ui\.js\?v=/);
   assert.match(html, /rel="manifest" href="app\.webmanifest"/);
   const manifest = JSON.parse(readFileSync(join(published, 'app.webmanifest'), 'utf8'));

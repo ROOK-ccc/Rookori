@@ -4,7 +4,7 @@ const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const { test } = require('node:test');
 
-const source = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'opening-study.js',
+const source = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'opening-study.js',
   'opening-memory.js', 'intro-data.js', 'intro-course.js', 'learning.js', 'learning-insights.js']
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
 const api = runInNewContext(source + '\n({ chessRules, openings, introLessons, findStudyOpening, localDay, offsetDay, reviewItemsFor, freshLearning, scheduleReview, planQuestions, summarizeLearningDays, firstAnswerRate, activityVolume, activeLearningDay, weekStart, learningPeriod, openingMastery, LearningTracker, OpeningPractice, learningKey, introStorageKey, openingHistoryKey, learningBackup, validateLearningBackup, restoreLearningBackup })');

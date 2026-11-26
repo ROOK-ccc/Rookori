@@ -234,7 +234,7 @@ const progressReport = (() => {
       if (!previous.has(id)) previous.set(id, []);
       if (tracker.item(item.id)) previous.get(id).push(item);
     }
-    for (const opening of [...openings, ...openingVariations]) {
+    for (const opening of [...studyOpenings, ...openingVariations]) {
       const items = previous.get(opening.id) ?? [];
       const last = [newest.get(opening.id), ...items.map(item => localDay(new Date(item.lastAt))),
         ...Object.keys(tracker.data.days).filter(day => tracker.data.days[day].explanations?.includes(opening.id))]

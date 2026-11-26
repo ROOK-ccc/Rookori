@@ -291,7 +291,7 @@ function renderSite() {
     dailyLife.showGuide(true);
     showScreen('home', siteHeadings.welcome);
   } else if (path === 'openings' || path === 'memorize') {
-    learningPages.catalog(path === 'memorize');
+    learningPages.catalog(path === 'memorize', previous?.opening);
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
   } else {
     if (path === 'home') dailyLife.showGuide(false);

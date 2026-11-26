@@ -4,19 +4,18 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 
-const source = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'opening-study.js', 'opening-memory.js']
+const source = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'opening-study.js', 'opening-memory.js']
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
-const { openings, openingVariations, findStudyOpening, openingNotation, OpeningPractice, OpeningPracticeHistory, openingHistoryKey } = runInNewContext(
-  `${source}\n({ openings, openingVariations, findStudyOpening, openingNotation, OpeningPractice, OpeningPracticeHistory, openingHistoryKey })`,
+const { studyOpenings, openingVariations, findStudyOpening, openingNotation, OpeningPractice, OpeningPracticeHistory, openingHistoryKey, chessRules, expandedOpenings, expandedVariations } = runInNewContext(
+  `${source}\n({ studyOpenings, openingVariations, findStudyOpening, openingNotation, OpeningPractice, OpeningPracticeHistory, openingHistoryKey, chessRules, expandedOpenings, expandedVariations })`,
 );
 const play = (practice, uci) => practice.play(uci.slice(0, 2), uci.slice(2, 4), uci[4]);
 
-test('従来の20戦法と追加の8分岐を、白番・黒番とも最後まで練習できる', () => {
-  assert.equal(openings.length, 20);
-  assert.equal(openingVariations.length, 8);
-  assert.equal(new Set([...openings, ...openingVariations].map(opening => opening.id)).size, 28);
-  assert.equal(openingVariations.filter(opening => opening.slot === 'white').length, 2);
-  for (const opening of [...openings, ...openingVariations]) {
+test('全オープニングと分岐を初期局面から白番・黒番とも最後まで練習できる', () => {
+  assert.equal(studyOpenings.length, 46);
+  assert.equal(openingVariations.length, 52);
+  assert.equal(new Set([...studyOpenings, ...openingVariations].map(opening => opening.id)).size, 98);
+  for (const opening of [...studyOpenings, ...openingVariations]) {
     assert.equal(findStudyOpening(opening.id), opening);
     assert.ok(opening.explanations.every(explanation => Boolean(explanation?.trim())), opening.id);
     const notation = openingNotation(opening);
@@ -31,6 +30,45 @@ test('従来の20戦法と追加の8分岐を、白番・黒番とも最後ま�
       assert.equal(practice.complete, true);
       assert.equal(practice.trained, practice.total);
       assert.equal(practice.record().unassistedFirstCorrect, practice.total);
+    }
+  }
+});
+
+test('追加定跡の親・出典・分岐・SAN・FENを検証し、同じ主手順の重複を防ぐ', () => {
+  const expanded = new Set([...expandedOpenings, ...expandedVariations].map(opening => opening.id));
+  const existing = [...studyOpenings, ...openingVariations].filter(opening => !expanded.has(opening.id));
+  const seen = new Set(existing.map(opening => opening.moves.join(' ')));
+  for (const entry of [...expandedOpenings, ...expandedVariations]) {
+    const { id, name, english, moves, eco, branchPly, parentId, source, white, black, placement } = entry;
+    assert.ok(name && english && white && black && placement && source, id);
+    assert.match(eco, /^[A-E][0-9]{2}$/);
+    assert.ok(branchPly >= 1 && branchPly <= moves.length, id);
+    const key = moves.join(' ');
+    assert.ok(!seen.has(key), id);
+    seen.add(key);
+    const board = new chessRules.Chess();
+    const positions = moves.map(uci => board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] }).after);
+    assert.ok(positions.every(fen => chessRules.validateFen(fen).ok), id);
+    if (parentId) {
+      const parent = findStudyOpening(parentId);
+      assert.ok(parent && !parent.parentId, id);
+      assert.equal(entry.moves[0], parent.moves[0], id);
+    }
+  }
+  const petrov = openingNotation(findStudyOpening('petrov-center'));
+  assert.equal(petrov.at(-2), '6.exd6');
+  assert.equal(petrov.at(-1), '6...Nxd6');
+  assert.equal(openingNotation(findStudyOpening('petrov-classical')).at(-1), '9...Nf6');
+  assert.equal(openingNotation(findStudyOpening('pirc-quiet-czech')).at(-1), '7...Nbd7');
+  assert.equal(openingNotation(findStudyOpening('pirc-byrne')).at(-1), '6...O-O');
+  assert.equal(openingNotation(findStudyOpening('pirc-weiss')).at(-1), '6.Bd3');
+  const normalized = value => value.toLowerCase().replace(/[\s・'’\-–]+/g, '');
+  const rootNames = new Map();
+  for (const { id, name, english, aliases = [] } of studyOpenings) {
+    for (const label of [name, english, ...aliases]) {
+      const key = normalized(label);
+      assert.ok(!rootNames.has(key) || rootNames.get(key) === id, label);
+      rootNames.set(key, id);
     }
   }
 });

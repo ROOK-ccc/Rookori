@@ -5,10 +5,10 @@ const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
-const files = ['vendor/chess.js', 'opening-data.js', 'opening-variations.js', 'opening-memory.js', 'opening-classification.js',
+const files = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'opening-memory.js', 'opening-classification.js',
   'cpu-game.js', 'game-review.js', 'game-study.js', 'learning.js', 'play-style.js', 'uci-engine.js'];
 const api = runInNewContext(files.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
-  + '\n({ Chess: chessRules.Chess, openings, openingVariations, cpuOpeningPosition, cpuPgn, cpuReviewGame, validateGameBackup, makeGameBackup, reviewGameRecord, restoreCpuSnapshot, cpuSnapshot, CpuMatch, chooseStyledCpuMove, cpuStyles, cpuStyleFeatures, parseReviewGames, styleFilterGames, styleObserveGame, styleOutline, styleGameGrades, validStyleOwnership, validStyleSnapshots })',
+  + '\n({ Chess: chessRules.Chess, openings, studyOpenings, openingVariations, cpuOpeningPosition, cpuPgn, cpuReviewGame, validateGameBackup, makeGameBackup, reviewGameRecord, restoreCpuSnapshot, cpuSnapshot, CpuMatch, chooseStyledCpuMove, cpuStyles, cpuStyleFeatures, parseReviewGames, styleFilterGames, styleObserveGame, styleOutline, styleGameGrades, validStyleOwnership, validStyleSnapshots })',
 { URL, document: { currentScript: { src: 'https://example.test/Rookori/uci-engine.js' } }, crypto: webcrypto });
 
 test('本人が使用色を選んだ取り込み棋譜だけを含め、終了状態と重複を確認する', () => {
@@ -34,7 +34,7 @@ test('本人が使用色を選んだ取り込み棋譜だけを含め、終了�
 });
 
 test('既存の全定跡を着手履歴どおりに再生し、定跡・棋風・復習用局面を履歴と復元に保持する', () => {
-  for (const opening of [...api.openings, ...api.openingVariations]) {
+  for (const opening of [...api.studyOpenings, ...api.openingVariations]) {
     const origin = api.cpuOpeningPosition(opening);
     const board = new api.Chess();
     for (const code of origin.moves) board.move({ from: code.slice(0, 2), to: code.slice(2, 4), promotion: code[4] });

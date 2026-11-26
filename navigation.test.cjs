@@ -4,7 +4,7 @@ const { join } = require('node:path');
 const { test } = require('node:test');
 const { runInNewContext } = require('node:vm');
 
-const source = ['data.js', 'result-links.js', 'opening-data.js', 'opening-variations.js', 'intro-data.js', 'navigation.js']
+const source = ['vendor/chess.js', 'data.js', 'result-links.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'intro-data.js', 'navigation.js']
   .map((file) => readFileSync(join(__dirname, file), 'utf8')).join('\n');
 const { readSiteRoute, siteAddress } = runInNewContext(
   `${source}\n({ readSiteRoute, siteAddress })`, { URL },

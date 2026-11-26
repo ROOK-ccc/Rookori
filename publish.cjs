@@ -98,7 +98,7 @@ try {
     'daily-life.js', 'daily-life-ui.js', 'pgn-batch.js', 'pgn-batch-ui.js',
     'data.js', 'scoring.js', 'card-data.js', 'cards.js', 'result-links.js',
     'opening-data.js', 'opening-scoring.js', 'opening-study.js', 'opening-study-ui.js',
-    'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
+    'opening-expansion.js', 'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
     'learning.js', 'learning-insights.js', 'learning-progress-ui.js', 'learning-ui.js', 'site-menu.js',
     'game-review.js', 'opening-classification.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'game-study.js', 'game-study-ui.js', 'game-study.css',
