@@ -267,6 +267,10 @@ function mergePersonalHistory(current, incoming) {
 }
 
 function initializeMigration() {
+  byId('site-migration-dismiss')?.addEventListener('click', () => {
+    byId('site-migration-notice').hidden = true;
+    document.querySelector('main .screen:not([hidden]) h1')?.focus();
+  });
   const library = createGameLibrary();
   const studies = createStudyStore();
   const personalStore = createPersonalStore();
@@ -371,7 +375,6 @@ function updateMigrationLink() {
   const route = readSiteRoute(current, history.state);
   if (current.hash === '#' + route.path && !['game-review/preview', 'opening-result'].includes(route.path)) dest.hash = current.hash;
   byId('site-migration-link').href = dest.href;
-  byId('site-migration-notice').hidden = false;
 }
 
 window.addEventListener('DOMContentLoaded', initializeMigration, { once: true });

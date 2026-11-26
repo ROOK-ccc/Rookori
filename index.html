@@ -138,10 +138,32 @@
       <button class="button secondary" type="button" data-analytics-choice="denied">同意しない</button>
     </div>
   </aside>
-  <aside class="shell analytics-notice" id="site-migration-notice" aria-label="公開URLの変更" hidden>
-    <p>Rookoriは新しいURLに移転しました。このブラウザーの学習記録を使う方は、先に<a href="#backup">一括バックアップ</a>を保存してください。</p>
-    <a class="button secondary" id="site-migration-link" rel="noreferrer">新しいRookoriを開く</a>
+  <!-- SITE_MIGRATION_START -->
+  <aside class="shell analytics-notice migration-notice" id="site-migration-notice" aria-labelledby="site-migration-title" hidden>
+    <img class="migration-logo" src="brand/rookori.png" alt="" width="48" height="48">
+    <div>
+      <h2 id="site-migration-title">新しい場所で、旅の続きを。</h2>
+      <p>Rookoriは独自ドメインへ移転しました。これからも、チェスの旅を、共に。</p>
+      <div class="analytics-actions">
+        <a class="button primary" id="site-migration-link" href="__SITE_MIGRATION_URL__" rel="noreferrer">新しいRookoriへ</a>
+        <a class="button secondary" href="#backup">学習データをバックアップ</a>
+        <button class="text-button" id="site-migration-dismiss" type="button">旧サイトを引き続き利用する</button>
+      </div>
+      <details>
+        <summary>学習データの移行方法</summary>
+        <p>ドメインが変わると、ブラウザーに保存した学習データは自動で引き継がれません。</p>
+        <ol>
+          <li>旧サイトの<a href="#backup">学習データのバックアップ</a>で「一括バックアップをダウンロード」を押します。</li>
+          <li><a href="__SITE_MIGRATION_URL__" rel="noreferrer">新しいRookori</a>を開きます。</li>
+          <li>メニューの「設定・学習データのバックアップ」で、ダウンロードした一括バックアップを選びます。</li>
+          <li>「既存データを残して追加する」を選び、「再読み込みして反映する」を押します。</li>
+          <li>学習履歴と対局記録が引き継がれたことを確認します。</li>
+        </ol>
+        <p>旧サイトをホーム画面から使っている場合は、移行を確認したあとに新サイトをブラウザーで開き、Safariの共有メニューやChromeのメニューからホーム画面へ追加し直してください。</p>
+      </details>
+    </div>
   </aside>
+  <!-- SITE_MIGRATION_END -->
   <main class="shell" id="main">
     <section id="home" class="screen">
       <div class="hero">
@@ -1407,7 +1429,7 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori v4.4.0 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
+  <footer class="site-footer"><div class="shell">Rookori v4.4.1 · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
     <details id="rookori-install" class="install-help" hidden>
       <summary>ホーム画面に追加する</summary>
       <p id="install-ios">iPhone・iPadのSafariでは、共有メニューから「ホーム画面に追加」を選び、「Webアプリとして開く」が表示されたらオンにして「追加」を押します。</p>

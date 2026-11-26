@@ -106,7 +106,8 @@ function renderResult(code, mode, fromLink = false) {
     resultDetail('上達のヒント', type.tip),
   );
   renderShareCard(code);
-  const link = makeResultLink(location.href, code, mode);
+  const shareBase = document.querySelector('link[rel="canonical"]')?.href ?? location.href;
+  const link = makeResultLink(shareBase, code, mode);
   byId('result-link-url').value = link;
   byId('manual-result-link').hidden = true;
   byId('link-status').textContent = '';

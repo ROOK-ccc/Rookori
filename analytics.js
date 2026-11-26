@@ -1,9 +1,10 @@
 function createRookoriAnalytics(win, doc) {
   const noop = { screen() {} };
-  const canonical = doc.querySelector('link[rel="canonical"]')?.href;
+  const address = doc.querySelector('meta[name="rookori-ga4-site-url"]')?.content
+    || doc.querySelector('link[rel="canonical"]')?.href;
   const id = doc.querySelector('meta[name="rookori-ga4-measurement-id"]')?.content;
-  if (!canonical || !/^G-[A-Z0-9]+$/.test(id ?? '')) return noop;
-  const site = new URL(canonical);
+  if (!address || !/^G-[A-Z0-9]+$/.test(id ?? '')) return noop;
+  const site = new URL(address);
   // A locally opened file, staging copy or already-tagged page must not start this tag.
   if (win.location.origin !== site.origin
     || ![site.pathname, site.pathname + 'index.html'].includes(win.location.pathname)

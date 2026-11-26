@@ -1,13 +1,13 @@
 # RookoriをCloudflare Workersに移す手順
 
-現在の公開先は `https://rook-ccc.github.io/Rookori/` です。`https://rookrori.com/` は、取得と接続が完了した後の公開先です。GitHub DesktopとCodexの作業フォルダー、およびGitHub Pagesの既存Actionsはそのまま使えます。
+正式公開先は `https://rookrori.com/` です。旧サイト `https://rook-ccc.github.io/Rookori/` は、学習データのバックアップと引き続き利用できるサイトとして維持します。GitHub DesktopとCodexの作業フォルダー、およびGitHub Pagesの既存Actionsはそのまま使えます。
 
 ## 手元で確認する
 
 | 対象 | コマンド | 内容 |
 | --- | --- | --- |
 | GitHub Pages | `node publish.cjs --print-output` | 出力先の `chesspath-public-*` を `/Rookori/` 配下で配信する既存構成 |
-| Cloudflare検証用 | `node publish.cjs --target cloudflare-preview` | `.rookori-cloudflare-assets` に出力。URLルートで動作し、旧サイトをcanonicalに指定。`noindex` と計測タグなし |
+| Cloudflare検証用 | `node publish.cjs --target cloudflare-preview` | `.rookori-cloudflare-assets` に出力。URLルートで動作し、正式サイトをcanonicalに指定。`noindex` と計測タグなし |
 | Cloudflare正式公開用 | `node publish.cjs --target cloudflare-live` | 同じ専用出力先に生成。canonical、サイトマップ、robots.txt、OGPを `https://rookrori.com/` に統一 |
 
 Node.js 24環境で `node --test` を実行します。検証用ビルドを作成した後、`npx --yes wrangler@4.167.0 dev --ip 127.0.0.1` を実行し、ターミナルに表示されたローカルURLを開きます。Wranglerは `wrangler.jsonc` の `assets.directory` で公開用ファイルのみにアクセスします。Nodeのビルドは公開対象を列挙してコピーします。エディター、テスト、設定ファイル、認証情報は配信対象外です。 [Static Assetsのセットアップ](https://developers.cloudflare.com/workers/static-assets/get-started/)
@@ -26,7 +26,7 @@ Node.js 24環境で `node --test` を実行します。検証用ビルドを作�
 2. 一括復元では、学習履歴を既存データに統合します。同じ棋譜が別IDで保存済みなら、移行先の対局にメモ、使用色、関連する解析・個別練習問題を紐づけます。同じ局面に異なるメモがある場合は両方を残し、使用色や設定が競合する場合は移行先を優先します。失敗時は、すでに追加した分を保ったまま同じファイルで再試行できます。GA4の同意は新サイトで選択します。過去に端末に保存されていなかった診断は、元の表示や16タイプ共有リンクがあれば確認できます。保存前の棋譜に紐づく解析を後から開くには同じ棋譜が必要なので、移行前に対局履歴へ保存してください。書き出し上限は64 MiBです。
 3. 正式ドメインの接続後、Search Consoleの **プロパティを追加 → ドメイン** に `rookrori.com` を入力し、指定されたTXTレコードをCloudflareの **DNS → Records** に追加します。URLプレフィックス方式を選ぶ場合は、`https://rookrori.com/` を入力し、新しい確認タグの `content` だけを `site-config.cloudflare.json` の `googleSearchVerification` に設定して再ビルドします。確認後、**サイトマップ** で `sitemap.xml` を送信し、**URL検査** で正式トップページを確認します。 [Search Consoleのプロパティ追加](https://support.google.com/webmasters/answer/34592?hl=ja)
 4. 正式用ビルドではGitHub Pagesと同じGA4測定IDを使い、検証用ビルドでは計測を無効にします。デプロイ後、GA4の **管理 → データ ストリーム → ウェブ** で対象ストリームを開き、拡張計測とGoogleタグの自動イベント検出を確認します。Networkとリアルタイムレポートで同意前・同意後・撤回後の挙動を確認します。 [Googleタグの設定](https://support.google.com/analytics/answer/12131703?hl=ja)
-5. 正式サイトの検証後に限り、旧サイト用の `site-config.json` に `"migrationUrl": "https://rookrori.com/"` を追加します。旧サイトにバックアップ案内と新サイトへのリンクが表示され、旧ページのcanonicalとOGPが新サイトを指します。移行案内のリンクは有効な16タイプ結果のクエリや共有可能なハッシュを引き継ぎます。保存棋譜のURLは、移行先で復元した対局を開けます。同じ棋譜が別IDで保存済みの場合も元のIDを記録します。元のIDが移行先の別の対局に使われている場合は、移行先のIDを優先します。旧サイトの自動遷移は設定しないので、利用者は旧サイトでデータを取り出せます。GitHub Pagesで旧URLの任意のサーバー側301を設定できない間はSearch Consoleのアドレス変更ツールを前提にせず、新サイトのサイトマップと旧サイトの案内・canonicalで移行を示します。旧サイトを停止する時期はバックアップの利用状況を確認してから判断します。 [Google検索のサイト移行](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes) · [アドレス変更ツール](https://support.google.com/webmasters/answer/9370220?hl=ja)
+5. 旧サイト用の `site-config.json` に `"migrationUrl": "https://rookrori.com/"` を設定しています。旧サイトにバックアップ案内と新サイトへのリンクが表示され、旧ページのcanonicalとOGPが新サイトを指します。移行案内のリンクは有効な16タイプ結果のクエリや共有可能なハッシュを引き継ぎます。保存棋譜のURLは、移行先で復元した対局を開けます。同じ棋譜が別IDで保存済みの場合も元のIDを記録します。元のIDが移行先の別の対局に使われている場合は、移行先のIDを優先します。旧サイトの自動遷移は設定しないので、利用者は旧サイトでデータを取り出せます。GitHub Pagesで旧URLの任意のサーバー側301を設定できない間はSearch Consoleのアドレス変更ツールを前提にせず、新サイトのサイトマップと旧サイトの案内・canonicalで移行を示します。旧サイトを停止する時期はバックアップの利用状況を確認してから判断します。 [Google検索のサイト移行](https://developers.google.com/search/docs/crawling-indexing/site-move-with-url-changes) · [アドレス変更ツール](https://support.google.com/webmasters/answer/9370220?hl=ja)
 
 ## 無料枠、Stockfish、プライバシー
 

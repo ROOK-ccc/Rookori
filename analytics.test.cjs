@@ -9,7 +9,7 @@ const site = 'https://rook-ccc.github.io/Rookori/';
 const id = 'G-TEST000000';
 const consentKey = 'rookori.analytics-consent.v1';
 
-function setup({ idValue = id, url = site, hasTag = false, consent = null } = {}) {
+function setup({ idValue = id, url = site, hasTag = false, consent = null, canonical = site, analyticsAddress } = {}) {
   const scripts = [];
   const nodes = new Map();
   const handlers = {};
@@ -28,7 +28,8 @@ function setup({ idValue = id, url = site, hasTag = false, consent = null } = {}
     return [choice, button];
   }));
   const document = {
-    querySelector: selector => selector.includes('canonical') ? { href: site }
+    querySelector: selector => selector.includes('canonical') ? { href: canonical }
+      : selector.includes('rookori-ga4-site-url') ? { content: analyticsAddress }
       : selector.startsWith('meta') ? { content: idValue } : hasTag ? {} : null,
     querySelectorAll: () => choices.values(),
     getElementById(id) {
@@ -45,6 +46,15 @@ function setup({ idValue = id, url = site, hasTag = false, consent = null } = {}
     sync: value => handlers.storage({ key: consentKey, newValue: value }),
   };
 }
+
+test('移転元の計測は新canonicalと分け、同意した場合だけ旧サイトの固定URLを送る', () => {
+  const { analytics, scripts, events, choose } = setup({ canonical: 'https://rookrori.com/', analyticsAddress: site });
+  analytics.screen('backup', 'backup');
+  assert.equal(scripts.length, 0);
+  choose('granted');
+  assert.equal(scripts.length, 1);
+  assert.equal(events()[0].page_location, site + '#backup');
+});
 
 test('設定・同意がない場合、プレビュー、既存タグがある場合は Google タグを追加しない', () => {
   for (const options of [

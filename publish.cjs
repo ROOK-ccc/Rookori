@@ -40,12 +40,18 @@ function publicSiteFiles(config) {
   ];
   if (migration) metadata.push(`<meta name="rookori-migration-url" content="${migration}">`);
   if (verification) metadata.push(`<meta name="google-site-verification" content="${verification}">`);
-  if (measurement && !migration) metadata.push(`<meta name="rookori-ga4-measurement-id" content="${measurement}">`);
+  if (measurement) {
+    metadata.push(`<meta name="rookori-ga4-measurement-id" content="${measurement}">`);
+    if (migration) metadata.push(`<meta name="rookori-ga4-site-url" content="${escape(site.href)}">`);
+  }
   const template = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
   const marker = '<!-- PUBLIC_SITE_METADATA -->';
   if (template.split(marker).length !== 2) throw new Error('公開メタ情報の差し込み箇所を確認してください。');
   return {
-    'index.html': template.replace(marker, () => metadata.join('\n  ')),
+    'index.html': template.replace(marker, () => metadata.join('\n  '))
+      .replace(/<!-- SITE_MIGRATION_START -->([\s\S]*?)<!-- SITE_MIGRATION_END -->/, (_, notice) =>
+        migration ? notice.replace('aria-labelledby="site-migration-title" hidden', 'aria-labelledby="site-migration-title"')
+          .replaceAll('__SITE_MIGRATION_URL__', escape(canonical.href)) : ''),
     'robots.txt': `User-agent: *\nDisallow:\n\nSitemap: ${new URL('sitemap.xml', site)}\n`,
     'sitemap.xml': '<?xml version="1.0" encoding="UTF-8"?>\n'
       + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -69,7 +75,7 @@ try {
   if (input) context.publishedProblemPack = JSON.parse(fs.readFileSync(path.resolve(input), 'utf8'));
   const courseScript = vm.runInContext(`${source}\nproblemCourseScript(validateProblemPack(publishedProblemPack, introLessons))`, context);
   const generated = publicSiteFiles(target === 'cloudflare-live' ? { ...cloudflareSiteConfig, migrationUrl: undefined }
-    : preview ? { ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' } : siteConfig);
+    : preview ? { ...cloudflareSiteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' } : siteConfig);
   generated['index.html'] = generated['index.html'].replace('<!-- CLOUDFLARE_PRIVACY -->', cloudflare
     ? '<p>このサイトの配信にはCloudflareを利用しており、表示時の通信はCloudflareを経由します。通信に伴い、IPアドレスなどの情報は配信事業者に伝わります。詳しくは<a href="https://www.cloudflare.com/privacypolicy/" rel="noreferrer">Cloudflareのプライバシーポリシー</a>をご覧ください。</p>'
     : '');

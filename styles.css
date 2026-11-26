@@ -172,6 +172,18 @@ h1, h2, h3 { line-height: 1.35; }
 .analytics-notice { margin-block: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); }
 .analytics-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .analytics-actions .button { min-height: 44px; padding: 6px 12px; }
+.migration-notice { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: clamp(12px, 3vw, 24px); border-top: 3px solid var(--gold); }
+.migration-logo { border-radius: 8px; }
+.migration-notice h2 { font-family: var(--serif); font-size: clamp(1.25rem, 3vw, 1.75rem); }
+.migration-notice details { margin-top: 10px; }
+.migration-notice summary, .migration-notice button { min-height: 44px; }
+.migration-notice summary { align-content: center; cursor: pointer; }
+.migration-notice ol { padding-inline-start: 1.5em; }
+.migration-notice li + li { margin-top: 0.35em; }
+@media (max-width: 480px) {
+  .migration-notice { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .migration-notice .analytics-actions { align-items: flex-start; flex-direction: column; }
+}
 
 .inner-screen { max-width: 790px; margin: 0 auto; padding: clamp(34px, 7vw, 72px) 0 55px; }
 .inner-screen h1 { font-family: var(--serif); font-size: clamp(1.65rem, 4.6vw, 2.7rem); overflow-wrap: anywhere; }

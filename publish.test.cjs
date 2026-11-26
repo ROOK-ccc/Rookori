@@ -18,7 +18,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
   const configFile = join(scratch, 'site-config.json');
   copyFileSync(join(__dirname, 'site-config.cloudflare.json'), join(scratch, 'site-config.cloudflare.json'));
-  writeFileSync(configFile, JSON.stringify({ ...siteConfig, googleSearchVerification: '', ga4MeasurementId: '' }));
+  writeFileSync(configFile, JSON.stringify({ ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' }));
   // Keep an earlier build in place to verify that CI receives the new directory.
   const manualResult = execFileSync(process.execPath, ['publish.cjs'], { cwd: scratch, encoding: 'utf8' });
   const published = execFileSync(process.execPath, ['publish.cjs', '--print-output'], {
@@ -30,7 +30,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const artifacts = readdirSync(published);
   const html = readFileSync(join(published, 'index.html'), 'utf8');
   assert.match(html, /<title>Rookori（ルーコリ）/);
-  assert.match(html, /Rookori v4\.4\.0/);
+  assert.match(html, /Rookori v4\.4\.1/);
   assert.match(html, /src="play-style-ui\.js\?v=/);
   assert.match(html, /rel="manifest" href="app\.webmanifest"/);
   const manifest = JSON.parse(readFileSync(join(published, 'app.webmanifest'), 'utf8'));
@@ -130,7 +130,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   const previewHtml = readFileSync(join(preview, 'index.html'), 'utf8');
   assert.match(previewHtml, /name="robots" content="noindex"/);
   assert.match(previewHtml, /www\.cloudflare\.com\/privacypolicy/);
-  assert.match(previewHtml, /rel="canonical" href="https:\/\/example\.test\/preview\/"/);
+  assert.match(previewHtml, /rel="canonical" href="https:\/\/rookrori\.com\/"/);
+  assert.doesNotMatch(previewHtml, /id="site-migration-notice"/);
   assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id|name="rookori-migration-url"/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\/sw\.js\n  Cache-Control: no-cache/);
@@ -144,15 +145,23 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.equal(cloudflareSiteConfig.ga4MeasurementId, siteConfig.ga4MeasurementId);
   assert.ok(liveHtml.includes(`name="rookori-ga4-measurement-id" content="${siteConfig.ga4MeasurementId}"`));
   assert.doesNotMatch(liveHtml, /name="robots"[^>]*noindex|name="rookori-migration-url"/);
+  assert.doesNotMatch(liveHtml, /id="site-migration-notice"/);
   assert.match(liveHtml, /property="og:url" content="https:\/\/rookrori\.com\/"/);
   assert.match(liveHtml, /rel="canonical" href="https:\/\/rookrori\.com\/"/);
   assert.match(liveHtml, /property="og:image" content="https:\/\/rookrori\.com\/brand\/rookori-share\.jpg"/);
   assert.match(readFileSync(join(preview, 'robots.txt'), 'utf8'), /Sitemap: https:\/\/rookrori\.com\/sitemap\.xml/);
   assert.doesNotMatch(html, /name="rookori-migration-url"/);
   const liveUrl = 'https://rookrori.com/';
-  writeFileSync(configFile, JSON.stringify({ ...siteConfig, migrationUrl: liveUrl }));
+  assert.equal(siteConfig.migrationUrl, liveUrl);
+  writeFileSync(configFile, JSON.stringify(siteConfig));
   const migrated = readFileSync(join(cloudflareBuild('pages'), 'index.html'), 'utf8');
   assert.ok(migrated.includes(`name="rookori-migration-url" content="${liveUrl}"`));
   assert.ok(migrated.includes(`property="og:url" content="${liveUrl}"`));
+  assert.ok(migrated.includes(`rel="canonical" href="${liveUrl}"`));
+  assert.ok(migrated.includes(`name="google-site-verification" content="${siteConfig.googleSearchVerification}"`));
+  assert.ok(migrated.includes(`name="rookori-ga4-site-url" content="${siteConfig.siteUrl}"`));
+  assert.match(migrated, /id="site-migration-notice" aria-labelledby="site-migration-title">/);
+  assert.match(migrated, /id="site-migration-link" href="https:\/\/rookrori\.com\/"/);
+  assert.match(migrated, /id="migration-export"/);
   assert.ok(!readdirSync(preview).includes('wrangler.jsonc'));
 });
