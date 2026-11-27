@@ -89,6 +89,9 @@
     <symbol id="ui-find" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/></symbol>
     <symbol id="ui-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
     <symbol id="ui-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="ui-review" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.2 7M3 5v6h6m3-4v5l3 2"/></symbol>
+    <symbol id="ui-daily" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M3 5h1M3 12h1M3 19h1"/></symbol>
+    <symbol id="ui-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
   </svg>
   <header class="site-header">
     <div class="shell header-inner">
@@ -253,10 +256,7 @@
           <a class="button secondary" href="#game-review">対局を振り返る</a>
           <a class="text-button" href="#glossary">チェス用語集</a>
         </div>
-        <details class="home-settings">
-          <summary>ホームの表示設定</summary>
-          <div class="study-mode-links"><button class="text-button" id="home-dashboard-mode" type="button">学習ダッシュボードをホームにする</button><button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button></div>
-        </details>
+        <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
         <p class="journey-home"><a class="text-button" href="#updates">最新アップデート <span data-site-version></span> · 開発の歩みと今後のロードマップ</a></p>
       </section>
     </section>
@@ -265,14 +265,14 @@
       <h1 id="discover-title" tabindex="-1">探す</h1>
       <div class="app-directory">
         <section><h2>読み物と用語</h2><ul class="reading-links">
-          <li><a href="https://rookrori.com/openings/" data-reading-link>オープニング教材を読む</a></li>
-          <li><a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a></li><li><a href="#glossary">チェス用語集</a></li>
+          <li><a class="row-action" href="https://rookrori.com/openings/" data-reading-link><span>オープニング教材を読む</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
+          <li><a class="row-action" href="https://rookrori.com/guides/" data-reading-link><span>チェスの学習ガイド</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
         <section><h2>自分に合う学び方</h2><ul class="reading-links">
-          <li><a href="#mode">チェス16タイプ診断</a></li><li><a href="#opening-quiz">オープニング診断</a></li><li><a href="#your-style">実際の対局から棋風を知る</a></li>
+          <li><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#your-style"><span>実際の対局から棋風を知る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
         <section><h2>Rookoriと設定</h2><ul class="reading-links">
-          <li><a href="#roadmap">これまでと、これから</a></li><li><a href="#backup">学習データのバックアップ・復元</a></li><li><a href="#privacy">アクセス解析とプライバシー</a></li>
+          <li><a class="row-action" href="#roadmap"><span>これまでと、これから</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#backup"><span>学習データのバックアップ・復元</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#privacy"><span>アクセス解析とプライバシー</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
       </div>
     </section>
@@ -1200,9 +1200,28 @@
       </details>
     </section>
 
-    <section id="dashboard" class="screen inner-screen guide-screen" hidden>
+    <section id="dashboard" class="screen inner-screen guide-screen dashboard-page" hidden>
       <h1 id="dashboard-title" tabindex="-1">今日の学習</h1>
-      <section class="opening-card"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
+      <section id="dashboard-resume" class="dashboard-feature" aria-labelledby="dashboard-resume-title" hidden>
+        <h2 id="dashboard-resume-title">前回の学習を再開</h2>
+        <a id="dashboard-resume-link" class="row-action" href="#learn"><span></span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      </section>
+      <section aria-labelledby="dashboard-snapshot-title">
+        <h2 id="dashboard-snapshot-title">学習の進み具合</h2>
+        <dl class="dashboard-metrics">
+          <div><dt>今日の復習予定</dt><dd><strong id="dashboard-due"></strong> <span>手</span></dd></div>
+          <div><dt>今日の10問・正解済み</dt><dd><strong id="dashboard-solved"></strong> <span>問</span></dd></div>
+          <div><dt>今週の学習日数</dt><dd><strong id="dashboard-days"></strong> <span>日</span></dd></div>
+        </dl>
+      </section>
+      <nav class="dashboard-quick" aria-label="学習のクイックアクション">
+        <a href="#review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-review"></use></svg>今日の復習</a>
+        <a href="#daily"><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>今日の10問</a>
+        <a href="#progress"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>上達記録</a>
+      </nav>
+      <section class="dashboard-feature" id="dashboard-recommendation"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
+      <section id="dashboard-plan"></section>
+      <div id="dashboard-personal-progress" hidden></div>
       <details class="opening-card">
         <summary id="learning-goal-summary">目標を設定する（任意）</summary>
         <form id="learning-goal-form" class="rookori-fields">
@@ -1213,19 +1232,14 @@
         </form>
         <p id="learning-goal-status" role="status"></p>
       </details>
-      <div class="study-mode-links"><a class="text-button" href="#review">今日の復習</a><a class="text-button" href="#daily">今日の10問</a><a class="text-button" href="#progress">上達記録</a></div>
-      <details class="opening-card"><summary>学習メニューと進み具合</summary>
-        <section class="dashboard-priority" id="dashboard-review"></section>
-        <div id="dashboard-plan"></div><div id="dashboard-progress"></div>
-        <div id="dashboard-personal-progress" class="dashboard-task" hidden></div>
-      </details>
-      <details class="opening-card"><summary>最近の対局と棋風</summary>
+      <section class="dashboard-records" aria-labelledby="dashboard-records-title"><h2 id="dashboard-records-title">最近の対局</h2>
+        <p id="dashboard-recent-empty" class="dashboard-note" hidden>保存した対局がここに表示されます。</p>
         <ul id="dashboard-recent"></ul>
-        <div class="study-mode-links"><a class="text-button" href="#game-library">対局履歴を見る</a><a class="text-button" href="#game-review">対局を振り返る</a><a class="text-button" href="#cpu">コンピューター対戦</a></div>
-        <section id="dashboard-style" class="dashboard-task"></section>
-      </details>
-      <button class="text-button" id="home-intro-mode" type="button">紹介型ホームを使う</button>
-      <button class="text-button home-auto-mode" type="button">ホームを自動で選ぶ</button>
+        <a class="row-action" href="#game-library">対局履歴を見る<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+        <a class="row-action" href="#game-review">対局を振り返る<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      </section>
+      <section id="dashboard-style"></section>
+      <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
     </section>
     <section id="daily" class="screen inner-screen guide-screen" hidden>
       <h1 id="daily-title" tabindex="-1">今日の練習問題</h1>
@@ -1356,7 +1370,16 @@
       </details>
     </section>
     <section id="backup" class="screen inner-screen guide-screen" hidden>
-      <h1 id="backup-title" tabindex="-1">学習データのバックアップ</h1>
+      <h1 id="backup-title" tabindex="-1">設定・学習データのバックアップ</h1>
+      <form id="home-preferences">
+        <fieldset><legend>ホーム画面の表示</legend>
+          <label><input type="radio" name="home" value="auto"> 自動で選ぶ</label>
+          <label><input type="radio" name="home" value="intro"> 紹介型ホーム</label>
+          <label><input type="radio" name="home" value="dashboard"> 学習ダッシュボード</label>
+        </fieldset>
+        <p id="home-preference-status" role="status"></p>
+        <a class="row-action" href="#home">ホームを開く<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      </form>
       <p class="guide-intro">学習データは現在のブラウザーに保存され、別の端末には自動で同期されません。端末を変えるときはJSONを保存して、移動先で復元できます。</p>
       <section class="opening-card" aria-labelledby="migration-title">
         <h2 id="migration-title">新しいサイト・端末へデータを移す</h2>
@@ -1522,8 +1545,16 @@
     </section>
   </main>
 
-  <footer class="site-footer"><div class="shell">Rookori <a href="#updates" data-site-version aria-label="現在のバージョンと更新履歴"></a> · <a href="#roadmap">これまでと、これから</a> · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
-  <div><a href="https://rookrori.com/openings/" data-reading-link>オープニング教材</a> · <a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a></div>
+  <footer class="site-footer"><div class="shell">
+    <div class="footer-brand"><strong>Rookori</strong> <a href="#updates" data-site-version aria-label="現在のバージョンと更新履歴"></a></div>
+    <nav class="footer-links" aria-label="フッター">
+      <a href="https://rookrori.com/openings/" data-reading-link>オープニング教材</a>
+      <a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a>
+      <a href="#welcome">はじめての利用ガイド</a>
+      <a href="#roadmap">これまでと、これから</a>
+      <a href="#privacy">アクセス解析とプライバシー</a>
+    </nav>
+    <p class="footer-credit">駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a></p>
     <details id="rookori-install" class="install-help" hidden>
       <summary>ホーム画面に追加する</summary>
       <p id="install-ios">iPhone・iPadのSafariでは、共有メニューから「ホーム画面に追加」を選び、「Webアプリとして開く」が表示されたらオンにして「追加」を押します。</p>

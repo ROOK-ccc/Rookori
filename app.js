@@ -23,8 +23,22 @@ function element(tag, text, className) {
   return node;
 }
 
+function setRowAction(link) {
+  link.className = 'row-action';
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('class', 'ui-icon');
+  icon.setAttribute('aria-hidden', 'true');
+  const shape = document.createElementNS(icon.namespaceURI, 'use');
+  shape.setAttribute('href', '#ui-chevron');
+  icon.append(shape);
+  link.append(icon);
+  return link;
+}
+
 function showScreen(id, focusTarget) {
+  if (id === 'backup') learningPages.homePreferences();
   document.body.dataset.screen = id;
+  document.body.classList.toggle('learn-view', displayedRoute?.path === 'learn');
   if (id === 'home' || id === 'dashboard') personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
@@ -287,17 +301,16 @@ function renderSite() {
     showScreen('roadmap', siteHeadings.updates);
     byId(siteHeadings.updates).scrollIntoView({ block: 'start' });
   } else if (path === 'learn') {
-    dailyLife.showGuide(false);
+    dailyLife.showGuide('learn');
     showScreen('home', siteHeadings.learn);
-    byId(siteHeadings.learn).scrollIntoView({ block: 'start' });
   } else if (path === 'welcome') {
-    dailyLife.showGuide(true);
+    dailyLife.showGuide('welcome');
     showScreen('home', siteHeadings.welcome);
   } else if (path === 'openings' || path === 'memorize') {
     learningPages.catalog(path === 'memorize', previous?.opening);
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
   } else {
-    if (path === 'home') dailyLife.showGuide(false);
+    if (path === 'home') dailyLife.showGuide();
     byId('latest-opening-result').hidden = !lastOpeningAnswers;
     showScreen(path, siteHeadings[path]);
   }

@@ -15,14 +15,6 @@ const learningPages = (() => {
     node.href = href;
     return node;
   };
-  const values = entries => {
-    const list = element('dl', null, 'learning-values');
-    for (const [title, value] of entries) {
-      list.append(element('dt', title), element('dd', String(value)));
-    }
-    return list;
-  };
-
   function todayReview(id, showList = false) {
     const due = learningTracker.due();
     const block = section('今日の復習', byId(id));
@@ -63,46 +55,35 @@ const learningPages = (() => {
   }
 
   function dashboard() {
-    todayReview('dashboard-review');
     const plan = learningTracker.day();
-    const reviewDone = learningTracker.due().length === 0;
-    const questionsDone = plan.checked.length === plan.questions.length;
-    const planBlock = section('今日の学習メニュー', byId('dashboard-plan'));
-    const cards = element('div', null, 'dashboard-menu-cards');
-    const study = element('article', null, 'dashboard-task');
-    const target = targetLink(plan.target);
-    const intro = learningTracker.intro();
-    const isLesson = plan.target?.type === 'lesson';
-    study.append(element('h3', isLesson ? '入門レッスン' : '新しいオープニング'),
-      element('p', plan.newDone ? '今日の学習は完了しました。' : isLesson
-        ? '完了済み ' + intro.completed.length + ' / ' + introLessons.length + 'レッスン'
-        : '解説を読みながら盤上で基本手順を覚えましょう。'),
-      target ?? link('オープニング一覧', '#openings'));
-    const lastRound = learningTracker.history().sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0];
-    const last = learningTracker.data.last ?? (lastRound
-      ? { type: 'practice', id: lastRound.variationId ?? lastRound.openingId, color: lastRound.color }
-      : { type: 'lesson', id: intro.lesson });
-    const resume = targetLink(last);
-    if (resume && resume.hash !== target?.hash) {
-      resume.textContent = '前回の続き：' + resume.textContent;
-      resume.className = 'text-button dashboard-resume';
-      study.append(resume);
-    } else if (resume) {
-      target.textContent = '前回の続き：' + target.textContent;
-    }
-    const questions = element('article', null, 'dashboard-task');
-    questions.append(element('h3', '今日の10問'),
-      element('p', plan.checked.length + ' / ' + plan.questions.length + '問 正解済み'),
-      link(questionsDone ? '今日の問題を振り返る' : '今日の10問を解く', '#daily'));
-    cards.append(study, questions);
-    planBlock.append(cards);
-    const progress = section('今週の学習状況', byId('dashboard-progress'));
+    const questionIds = new Set(plan.questions);
+    const solved = new Set(plan.checked.filter(id => questionIds.has(id))).size;
     const today = localDay();
     const week = weekStart(today);
     const days = learningTracker.activity().filter(row => row.day >= week && row.day <= today && activeLearningDay(row)).length;
-    const completed = Number(reviewDone) + Number(plan.newDone) + Number(questionsDone);
-    progress.append(values([['今週の学習日数', days + '日'], ['今日の学習計画', completed + ' / 3項目']]),
-      link('上達記録を見る', '#progress', 'text-button'));
+    byId('dashboard-due').textContent = learningTracker.due().length;
+    byId('dashboard-solved').textContent = solved + '/' + questionIds.size;
+    byId('dashboard-days').textContent = days;
+
+    const target = targetLink(plan.target);
+    const lastRound = learningTracker.history().sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0];
+    const resume = targetLink(learningTracker.data.last)
+      ?? (lastRound && targetLink({ type: 'practice', id: lastRound.variationId ?? lastRound.openingId, color: lastRound.color }))
+      ?? targetLink({ type: 'lesson', id: learningTracker.intro().lesson });
+    const resumeLink = byId('dashboard-resume-link');
+    byId('dashboard-resume').hidden = !resume;
+    if (resume) {
+      resumeLink.href = resume.getAttribute('href');
+      resumeLink.querySelector('span').textContent = resume.textContent;
+    }
+    const next = byId('dashboard-plan');
+    next.hidden = !plan.newDone && (!target || target.hash === resume?.hash);
+    next.replaceChildren(element('h2', '今日の学習メニュー'));
+    if (plan.newDone) next.append(element('p', '今日の新しい教材は学習済みです。', 'dashboard-note'));
+    else if (target) {
+      setRowAction(target);
+      next.append(target);
+    }
   }
 
   function daily() {
@@ -200,14 +181,24 @@ const learningPages = (() => {
   for (const id of ['catalog-search', 'catalog-color', 'catalog-level', 'catalog-family']) {
     byId(id).addEventListener(id === 'catalog-search' ? 'input' : 'change', () => catalog(displayedRoute?.path === 'memorize'));
   }
-  const setHome = mode => {
+  const homeForm = byId('home-preferences');
+  function homePreferences() {
+    homeForm.elements.home.value = learningTracker.data.home;
+    byId('home-preference-status').textContent = learningTracker.data.home === 'auto'
+      ? (learningTracker.home() === 'dashboard' ? '現在、自動で学習ダッシュボードを表示します。' : '現在、自動で紹介型ホームを表示します。')
+      : '';
+  }
+
+  homeForm.addEventListener('change', event => {
+    const mode = event.target.value;
+    if (!['intro', 'auto', 'dashboard'].includes(mode)) return;
     learningTracker.data.home = mode;
     learningTracker.save();
-    goTo('home');
-  };
-  byId('home-dashboard-mode').addEventListener('click', () => setHome('dashboard'));
-  byId('home-intro-mode').addEventListener('click', () => setHome('intro'));
-  for (const button of document.querySelectorAll('.home-auto-mode')) button.addEventListener('click', () => setHome('auto'));
+    homePreferences();
+    const status = byId('home-preference-status');
+    status.textContent = learningTracker.available ? '設定を保存しました。 ' + status.textContent
+      : 'このブラウザーでは設定を保存できません。このタブを開いている間だけ反映します。';
+  });
 
   let stagedBackup;
   const status = message => { byId('backup-status').textContent = message; };
@@ -268,5 +259,5 @@ const learningPages = (() => {
   }
   setInterval(checkDay, 30000);
   window.addEventListener('focus', checkDay);
-  return { dashboard, todayReview, daily, progress, catalog };
+  return { dashboard, todayReview, daily, progress, catalog, homePreferences };
 })();

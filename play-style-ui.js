@@ -211,7 +211,7 @@ const stylePage = (() => {
     const saved = snapshots()[0];
     const diagnosisResult = personalPreference(savedTypeResultKey, null);
     const text = saved ? `保存した棋風分析 ${saved.outline.games}局 · 解析記録あり ${saved.outline.analyzed}局` : '対局を振り返ると、自分が選んだ手の傾向を確かめられます。';
-    byId('dashboard-style').replaceChildren(element('h2', 'あなたの棋風'), element('p', text + (validSavedTypeResult(diagnosisResult) ? ` ／ 16タイプ診断 ${diagnosisResult.code}` : '')), link('棋風を見る', 'your-style'));
+    byId('dashboard-style').replaceChildren(element('h2', 'あなたの棋風'), element('p', text + (validSavedTypeResult(diagnosisResult) ? ` ／ 16タイプ診断 ${diagnosisResult.code}` : '')), setRowAction(link('棋風を見る', 'your-style')));
   }
 
   return { open, cancel, dashboard };

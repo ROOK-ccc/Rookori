@@ -16,15 +16,15 @@ const dailyLife = (() => {
     goalForm.elements.goal.append(option);
   }
 
-  function showGuide(force) {
-    guide.hidden = !force && guideDismissed;
+  function showGuide(view = 'home') {
+    guide.hidden = view === 'learn' || (view === 'home' && guideDismissed);
     byId('home-learning-choices').hidden = !guide.hidden;
   }
 
   function dismissGuide() {
     guideDismissed = true;
     savePersonalPreference(welcomeKey, true);
-    showGuide(false);
+    showGuide();
   }
 
   guide.addEventListener('click', event => {
@@ -39,17 +39,6 @@ const dailyLife = (() => {
     byId('home-start').focus();
   });
 
-  function resumeLink(last) {
-    if (!last) return null;
-    if (last.type === 'lesson') {
-      const lesson = introLessons.find(({ id }) => id === last.id);
-      return lesson ? [lesson.title, '#lesson/' + lesson.id] : null;
-    }
-    const opening = findStudyOpening(last.id);
-    if (!opening) return null;
-    return [opening.name, last.type === 'practice' ? `#practice/${opening.id}/${last.color}` : '#study/' + opening.id];
-  }
-
   async function dashboard() {
     const request = ++dashboardRequest;
     const value = personalPreference(learningGoalKey, null);
@@ -58,20 +47,23 @@ const dailyLife = (() => {
     byId('learning-goal-delete').hidden = !settings;
     byId('learning-goal-summary').textContent = settings ? [learningGoals[settings.goal],
       settings.minutes && `1回 ${settings.minutes}分`, settings.days && `週 ${settings.days}日`].filter(Boolean).join(' · ') : '目標を設定する（任意）';
-    const resume = resumeLink(learningTracker.data.last);
     const plan = learningTracker.day();
-    const state = { resume: resume?.[1], openingDue: learningTracker.due().length,
+    const resumeSection = byId('dashboard-resume');
+    const resume = resumeSection.hidden ? undefined : byId('dashboard-resume-link').hash;
+    const state = { resume, openingDue: learningTracker.due().length,
       learnedOpening: Boolean(learningTracker.history().length || learningTracker.data.last?.type === 'study'),
       problemsDone: plan.questions.length > 0 && plan.questions.length === plan.checked.length };
     const recommendation = byId('dashboard-next');
     function recommend() {
       const [label, href, detail] = dailyRecommendation(settings?.goal, state);
+      byId('dashboard-recommendation').hidden = resume === href;
       recommendation.replaceChildren(element('p', detail), link(label, href, 'button primary'));
-      if (resume && resume[1] !== href) recommendation.append(link('前回の続き：' + resume[0], resume[1]));
     }
     recommend();
     const list = byId('dashboard-recent');
     list.replaceChildren();
+    const empty = byId('dashboard-recent-empty');
+    empty.hidden = true;
     await Promise.allSettled([
       practice.all().then(rows => {
         if (request !== dashboardRequest) return;
@@ -81,12 +73,13 @@ const dailyLife = (() => {
       games.all().then(rows => {
         if (request !== dashboardRequest) return;
         const recent = rows.sort((a, b) => String(reviewRecentDate(b).value).localeCompare(String(reviewRecentDate(a).value))).slice(0, 2);
+        empty.hidden = Boolean(recent.length);
         state.game = recent[0]?.id;
         recommend();
         for (const game of recent) {
           const { white, black, event } = game.metadata;
           const row = element('li');
-          row.append(link(white && black ? `${white} 対 ${black}` : event || '保存した対局', '#game-review/' + game.id));
+          row.append(setRowAction(link(white && black ? `${white} 対 ${black}` : event || '保存した対局', '#game-review/' + game.id)));
           list.append(row);
         }
       }),
