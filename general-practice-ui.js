@@ -2,6 +2,7 @@ const generalPractice = (() => {
   const node = id => byId('general-' + id);
   const store = createPersonalStore();
   let active, serial = 0, browseSerial = 0, batchIndex = 0, dailySerial = 0;
+  let browseSelection = null;
   const routeLink = (label, route) => Object.assign(element('a', label, 'button secondary'), { href: '#' + route });
   const rowOf = puzzle => ({ id: puzzle[0], type: 'general', tags: puzzle[4], rating: puzzle[3] });
   const groups = { tactics: 0, checkmate: 1, endgame: 2 };
@@ -12,11 +13,11 @@ const generalPractice = (() => {
   };
   const uiBoard = createChessBoard(node('board'), node('promotion'), {
     position: () => ({ game: active.board, lastMove: active.last, legalMoves: square => active.board.moves({ square, verbose: true }) }),
-    isFlipped: () => active.side === 'b', canPlay: () => Boolean(active && !active.done),
+    isFlipped: () => active.side === 'b', canPlay: () => Boolean(active && !active.done && !active.replyTimer),
     explanation: () => active?.diagram,
-    hints: () => active?.hintSquare ? [active.hintSquare] : [], feedback: status,
+    hints: () => active?.hintSquare ? [active.hintSquare] : [], feedback: text => { if (!active?.done) status(text); },
     play(from, to, promotion) {
-      if (!active || active.done) return false;
+      if (!active || active.done || active.replyTimer) return false;
       const { board, tags } = active;
       const code = from + to + (promotion ?? '');
       const moves = active.ply === 0 ? active.lines.find(line => line[0] === code) ?? active.moves : active.moves;
@@ -30,11 +31,12 @@ const generalPractice = (() => {
         if (active.ply === 0) active.wrongLine = [code, ...(reply ? [studyMoveCode(reply)] : [])];
         board.undo();
         active.hintSquare = '';
+        practiceFeedback('general-result-feedback', 'wrong', '同じ局面からもう一度試せます。');
         if (!active.attemptRecorded) {
           active.attemptRecorded = generalRecord(active.id, false, active.hints);
+          if (active.attemptRecorded) active.recordedHints = active.hints;
           if (!active.attemptRecorded) { status('記録を保存できませんでした。もう一度、相手の応手を考えましょう。'); return false; }
         }
-        status('別の手を考えてみましょう。相手がどう応じるかが手がかりです。');
         return false;
       }
       active.last = move;
@@ -42,12 +44,23 @@ const generalPractice = (() => {
       active.ply++;
       active.hintSquare = '';
       if (active.ply < moves.length) {
-        active.last = studyPlay(board, moves[active.ply++]);
-        status(`${move.san}。相手は ${active.last.san} と応じました。`);
+        const owner = active;
+        practiceFeedback('general-result-feedback', 'opponent');
+        node('hint').disabled = true;
+        owner.replyTimer = setTimeout(() => {
+          if (active !== owner) return;
+          owner.replyTimer = null;
+          owner.last = studyPlay(board, moves[owner.ply++]);
+          practiceFeedback('general-result-feedback', 'progress');
+          node('feedback').replaceChildren('相手の応手は ', chessGlossary.notationTrigger(owner.last.san), ' です。');
+          node('hint').disabled = false;
+          uiBoard.render();
+        }, 460);
       } else {
         active.done = true;
-        if (!generalRecord(active.id, true, active.hints)) status('正解です。学習記録を保存できませんでした。');
-        else status('手順を解き終えました。次の復習予定を記録しました。');
+        practiceFeedback('general-result-feedback', 'correct');
+        if (!generalRecord(active.id, true, active.hints - active.recordedHints)) status('学習記録を保存できませんでした。');
+        else status('次の復習予定を記録しました。');
         rookoriAnalytics.event('general_practice_complete');
         updateDailyCompletion();
         const theme = tags.find(tag => practiceThemes[tag]?.[1]);
@@ -60,21 +73,22 @@ const generalPractice = (() => {
           active.diagram = step ? { move: step.move, marks } : null;
           uiBoard.render();
         });
-        if (active.wrongNote) node('explanation').append(element('p', active.wrongNote));
-        if (theme) node('explanation').append(element('p', 'テーマの補足 · ' + practiceThemes[theme][1]));
+        if (active.wrongNote) node('explanation').append(chessTermText('p', active.wrongNote));
+        if (theme) node('explanation').append(chessTermText('p', 'テーマの補足 · ' + practiceThemes[theme][1]));
         if (active.edit?.source) node('explanation').append(element('p', '出典 ' + active.edit.source));
         if (mateAlternative && code !== moves[0]) {
           node('explanation').append(element('p', 'この手もチェックメイトなので正解です。'));
         }
         node('hint').disabled = true;
-        node('next-daily').hidden = !active.daily;
+        node('next-daily').hidden = false;
+        node('hint').hidden = true;
       }
       return true;
     },
     onMove() { uiBoard.render(); },
   });
 
-  function close() { serial++; active = null; uiBoard.close(); }
+  function close() { serial++; clearTimeout(active?.replyTimer); active = null; uiBoard.close(); }
 
   async function open(route) {
     close();
@@ -88,18 +102,20 @@ const generalPractice = (() => {
       if (!row) { node('load-status').textContent = 'この問題は現在の教材にありません。'; return; }
       const [id, fen, moves, rating, tags, edit] = row;
       const board = new chessRules.Chess(fen);
-      active = { id, fen, moves, tags, board, side: board.turn(), ply: 0, hints: 0,
+      active = { id, fen, moves, tags, board, side: board.turn(), ply: 0, hints: 0, recordedHints: 0,
         lines: [moves, ...(edit?.alternatives ?? [])], daily: route.generalDaily, edit };
       node('prompt').textContent = edit?.prompt || chessColorNames[active.side] + '番です。次の一手を考えましょう。';
       node('rating').textContent = '問題レート ' + rating;
       node('load-status').textContent = '';
       node('play-layout').hidden = false;
       node('hint').disabled = false;
+      node('hint').hidden = false;
       node('save').setAttribute('aria-pressed', String(savedIds().has(id)));
       node('next-daily').hidden = true;
       node('explanation').replaceChildren();
       node('replay').hidden = true;
       status('');
+      practiceFeedback('general-result-feedback');
       uiBoard.reset();
       uiBoard.render();
       rookoriAnalytics.event('general_practice_start');
@@ -108,7 +124,7 @@ const generalPractice = (() => {
   }
 
   node('hint').addEventListener('click', () => {
-    if (!active || active.done) return;
+    if (!active || active.done || active.replyTimer) return;
     active.hints++;
     const expected = active.moves[active.ply];
     active.hintSquare = active.hints % 2 ? expected.slice(0, 2) : expected.slice(2, 4);
@@ -117,10 +133,33 @@ const generalPractice = (() => {
   });
   node('next-daily').addEventListener('click', async () => {
     const owner = active;
-    if (!owner) return;
-    const next = await nextDaily(owner.id);
-    if (active === owner) goTo(next);
+    if (!owner?.done) return;
+    node('next-daily').disabled = true;
+    try {
+      const next = owner.daily ? await nextDaily(owner.id) : await nextGeneral(owner);
+      if (active === owner) goTo(next);
+    } catch { if (active === owner) status('次の問題を読み込めませんでした。接続を確認してもう一度お試しください。'); }
+    finally { node('next-daily').disabled = false; }
   });
+
+  async function nextGeneral(owner) {
+    const catalog = await generalCatalog();
+    const batchName = Object.keys(catalog.batches).find(name => catalog.batches[name].ids.includes(owner.id));
+    if (!batchName) return 'general';
+    const selected = browseSelection?.ids.includes(owner.id) ? browseSelection : null;
+    const names = selected?.batches ?? Object.keys(catalog.batches).filter(name => name[0] === batchName[0]);
+    let index = names.indexOf(batchName);
+    while (index < names.length && index >= 0) {
+      const rows = await generalBatch(names[index++], catalog);
+      const after = rows.findIndex(row => row[0] === owner.id);
+      const next = rows.slice(after + 1).find(row => !selected || selected.filter(row));
+      if (next) {
+        if (selected) selected.ids = rows.filter(selected.filter).map(row => row[0]);
+        return 'general/' + next[0];
+      }
+    }
+    return selected?.route ?? 'general';
+  }
   node('save').addEventListener('click', () => {
     if (!active) return;
     const saved = savedIds(), remove = saved.has(active.id);
@@ -149,9 +188,10 @@ const generalPractice = (() => {
         (theme === 'all' || (['due', 'saved'].includes(theme) ? catalog.batches[id].ids.some(matches)
           : group.some(tag => catalog.batches[id].themes.includes(tag)))));
       const batch = batches[batchIndex];
-      const rows = (await generalBatch(batch ?? '', catalog)).filter(row =>
-        theme === 'all' || (['due', 'saved'].includes(theme) ? matches(row[0]) : group.some(tag => row[4].includes(tag))));
+      const filter = row => theme === 'all' || (['due', 'saved'].includes(theme) ? matches(row[0]) : group.some(tag => row[4].includes(tag)));
+      const rows = (await generalBatch(batch ?? '', catalog)).filter(filter);
       if (request !== browseSerial) return;
+      browseSelection = { ids: rows.map(row => row[0]), filter, batches, route: theme === 'all' ? 'general' : 'general/theme/' + theme };
       list.replaceChildren(...rows.map(row => {
         const item = element('li');
         item.append(setRowAction(routeLink(`${row[5]?.title || '問題 ' + row[0]} · 問題レート ${row[3]}`, 'general/' + row[0])));

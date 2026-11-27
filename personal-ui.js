@@ -61,8 +61,13 @@ const personalPages = (() => {
     owner.phase = 'answer';
     const best = question.candidates.find(line => line.move === question.best);
     const alternatives = question.candidates.filter(line => line.move !== question.best && question.accepted.includes(line.move));
+    practiceFeedback('personal-result-feedback', verdict ? { good: 'correct', close: 'wrong', retry: 'wrong', hold: 'hold' }[verdict] : null,
+      verdict === 'close' ? '有力な手です。推奨手と比べてから再挑戦できます。'
+        : verdict === 'retry' ? '同じ局面からもう一度試せます。' : '');
     el('answer').hidden = false;
-    el('verdict').textContent = verdict ? personalVerdicts[verdict] : '推奨手を確認する';
+    el('verdict').textContent = '手順と解説';
+    el('retry').hidden = verdict === 'good';
+    el('next').hidden = false;
     el('answer-move').textContent = code ? `今回の手 ${san}` : '今回はスキップしました。';
     el('answer-best').textContent = `登録時の推奨手 ${best.san[0]}${alternatives.length ? ' · 別の正解候補 ' + alternatives.map(line => line.san[0]).join('、') : ''}`;
     const compared = evaluated?.baseline ?? best;
@@ -81,7 +86,7 @@ const personalPages = (() => {
     if (question.actual) {
       const reply = lines[1].facts.steps[1];
       if (reply?.move.captured && !lines[0].facts.steps[1]?.move.captured) {
-        el('answer-explanation').append(element('p', `実戦手の変化では相手の ${reply.move.san} で${practicePieceNames[reply.move.captured]}を失います。次の実戦では、指す前に相手の取り返しを一手確認しましょう。`));
+        el('answer-explanation').append(chessTermText('p', `実戦手の変化では相手の ${reply.move.san} で${practicePieceNames[reply.move.captured]}を失います。次の実戦では、指す前に相手の取り返しを一手確認しましょう。`));
       } else if (!question.actualLine) {
         el('answer-explanation').append(element('p', 'この記録には実戦手に対する解析の続きが保存されていません。'));
       }
@@ -93,7 +98,9 @@ const personalPages = (() => {
       const position = new chessRules.Chess(question.fen);
       const san = studyPlay(position, move).san;
       const figure = element('figure');
-      figure.append(studyMiniature(position.fen()), element('figcaption', label + ' ' + san));
+      const caption = element('figcaption', label + ' ');
+      caption.append(chessGlossary.notationTrigger(san));
+      figure.append(studyMiniature(position.fen()), caption);
       return [figure];
     }));
     const theme = question.tags.find(tag => practiceThemes[tag]?.[1]);
@@ -117,7 +124,7 @@ const personalPages = (() => {
     let verdict = mate || question.accepted.includes(code) ? 'good' : personalCompare(best, existing, question.side).kind;
     if (!mate && !existing && !evaluated) {
       const work = owner.job = createStockfishSession();
-      el('play-status').textContent = '選んだ手をStockfishで確認しています…';
+      practiceFeedback('personal-result-feedback', 'checking');
       try {
         const original = new chessRules.Chess(question.fen);
         const position = { fen: question.initialFen, moves: question.moves };
@@ -136,16 +143,22 @@ const personalPages = (() => {
     if (view !== owner) return;
     if (!mate && !existing && evaluated) verdict = personalCompare(evaluated.baseline, evaluated.line, question.side).kind;
     showAnswer(owner, code, san, verdict, evaluated);
-    if (verdict !== 'hold') {
+    const correct = verdict === 'good';
+    if (verdict !== 'hold' && !owner.completed && (correct || !owner.failed) && !owner.recording) {
+      owner.recording = true;
+      el('retry').disabled = true;
       try {
-        await store.answer(question.id, verdict, owner.hints);
-        if (view === owner && verdict === 'good' && !owner.completed) {
+        const hints = owner.hints;
+        await store.answer(question.id, verdict, hints);
+        if (!correct) owner.failed = true;
+        if (view === owner && correct) {
           rookoriAnalytics.event(owner.reviewing ? 'personal_review_complete' : 'personal_practice_complete');
           owner.completed = true;
         }
         generalPractice.updateDailyCompletion();
       }
       catch { if (view === owner) el('play-status').textContent = '学習記録を保存できませんでした。'; }
+      finally { owner.recording = false; if (view === owner) el('retry').disabled = false; }
     }
   }
 
@@ -159,6 +172,8 @@ const personalPages = (() => {
     view.hints = 0;
     el('play-status').textContent = '以前の対局に出てきた局面です。次にどの手を指しますか？';
     el('answer').hidden = true;
+    el('next').hidden = true;
+    practiceFeedback('personal-result-feedback');
     el('replay').hidden = true;
     const question = view.question;
     el('play-source').textContent = [personalSources[question.source], question.sourceDate, `対局の${question.ply}手のあと`].filter(Boolean).join(' · ');
@@ -213,7 +228,7 @@ const personalPages = (() => {
   });
   el('skip').addEventListener('click', () => { if (view?.phase === 'ask') showAnswer(view); });
   el('stop-answer').addEventListener('click', restart);
-  el('retry').addEventListener('click', restart);
+  el('retry').addEventListener('click', () => { if (!view?.recording) restart(); });
   el('explore').addEventListener('click', () => {
     view.phase = 'explore';
     view.board = new chessRules.Chess(view.question.fen);

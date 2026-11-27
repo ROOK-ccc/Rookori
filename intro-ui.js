@@ -9,14 +9,23 @@ const introScreen = (() => {
   const review = introLessons.filter(({ chapter }) => chapter === 'review');
   let lesson;
   let exercise;
+  let replyTimer;
+  let recordedWrong = false;
+  let recordedCorrect = false;
   const board = createChessBoard(byId('lesson-board'), byId('lesson-promotion'), {
     position: () => exercise.position,
-    canPlay: () => Boolean(lesson.moves && !exercise.solved),
+    canPlay: () => Boolean(lesson.moves && !exercise.solved && !replyTimer),
     play: (from, to, promotion) => {
-      const correct = exercise.play(from, to, promotion);
+      const correct = exercise.play(from, to, promotion, true);
       if (!correct || exercise.solved) return grade(correct, lesson.problem?.incorrect ?? 'その手はルール上指せます。課題に合う手を探しましょう。');
-      byId('lesson-feedback').textContent = `その手で進めます。相手は ${exercise.position.lastMove.san} と応じました。次の手を指しましょう。`;
-      delete byId('lesson-feedback').dataset.correct;
+      practiceFeedback('lesson-result-feedback', 'opponent');
+      byId('lesson-feedback').textContent = '';
+      replyTimer = setTimeout(() => {
+        replyTimer = undefined;
+        exercise.reply();
+        practiceFeedback('lesson-result-feedback', 'progress', `相手の応手は ${exercise.position.lastMove.san} です。`);
+        renderExercise();
+      }, 460);
       setHint(false);
       return true;
     },
@@ -35,11 +44,15 @@ const introScreen = (() => {
   }
 
   function grade(correct, wrongMessage = 'もう一度試してみましょう。') {
-    learningTracker.lessonAnswer(lesson.id, correct);
-    progress.answer(lesson, correct);
+    if (correct ? !recordedCorrect : !recordedWrong && !recordedCorrect) {
+      learningTracker.lessonAnswer(lesson.id, correct);
+      progress.answer(lesson, correct);
+      if (correct) recordedCorrect = true;
+      else recordedWrong = true;
+    }
     const feedback = byId('lesson-feedback');
-    feedback.textContent = correct ? `${lesson.completionMessage ?? '正解！'} ${lesson.success}` : `不正解。 ${wrongMessage}`;
-    feedback.dataset.correct = String(correct);
+    practiceFeedback('lesson-result-feedback', correct ? 'correct' : 'wrong');
+    chessGlossary.annotate(feedback, correct ? [lesson.completionMessage, lesson.success].filter(text => text && text !== '正解！').join(' ') : wrongMessage);
     setHint(!correct);
     return correct;
   }
@@ -58,22 +71,26 @@ const introScreen = (() => {
     byId('lesson-next').hidden = !exercise.solved;
     const back = byId('lesson-back-move');
     back.hidden = lesson.problem?.kind !== 'sequence';
-    back.disabled = !exercise.steps?.length;
+    back.disabled = Boolean(replyTimer) || !exercise.steps?.length;
+    byId('lesson-show-hint').disabled = Boolean(replyTimer);
     board.render();
   }
 
   function resetExercise() {
+    clearTimeout(replyTimer);
+    replyTimer = undefined;
     exercise = lesson.problem ? new ProblemPractice(lesson.problem) : new IntroExercise(lesson);
     setHint(false);
     const feedback = byId('lesson-feedback');
     feedback.textContent = '';
-    delete feedback.dataset.correct;
+    practiceFeedback('lesson-result-feedback');
     board.reset();
     renderExercise();
   }
 
   function open(current) {
     lesson = current;
+    recordedWrong = recordedCorrect = false;
     progress.enter(lesson);
     const chapter = introChapters[lesson.chapterNumber - 1];
     byId('lesson-chapter').textContent = `第${lesson.chapterNumber}章　${chapter.title}`;
@@ -165,7 +182,7 @@ const introScreen = (() => {
   byId('lesson-back-move').addEventListener('click', () => {
     exercise.back();
     byId('lesson-feedback').textContent = '';
-    delete byId('lesson-feedback').dataset.correct;
+    practiceFeedback('lesson-result-feedback', exercise.solved ? 'correct' : null);
     setHint(false);
     board.clearSelection();
     renderExercise();
@@ -187,5 +204,5 @@ const introScreen = (() => {
     byId(cleared ? 'intro-resume' : 'intro-clear').focus();
   });
 
-  return { open, showOverview, showSummary, close: board.close };
+  return { open, showOverview, showSummary, close() { clearTimeout(replyTimer); replyTimer = undefined; board.close(); } };
 })();

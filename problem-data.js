@@ -211,16 +211,19 @@ class ProblemPractice {
     return this.routes.some(line => line.length === this.position.step);
   }
 
-  play(from, to, promotion) {
+  play(from, to, promotion, deferReply = false) {
     const uci = from + to + (promotion ?? '');
     if (!this.nextMoves.includes(uci) || !this.position.play(from, to, promotion)) return false;
-    let plies = 1;
-    if (!this.solved) {
-      this.position.play(...splitProblemMove(this.nextMoves[0]));
-      plies += 1;
-    }
-    this.steps.push(plies);
+    this.steps.push(1);
+    if (!deferReply) this.reply();
     return true;
+  }
+
+  reply() {
+    if (!this.solved && this.steps.at(-1) === 1) {
+      this.position.play(...splitProblemMove(this.nextMoves[0]));
+      this.steps[this.steps.length - 1]++;
+    }
   }
 
   back() {

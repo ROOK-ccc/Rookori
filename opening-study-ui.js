@@ -124,9 +124,9 @@ const openingStudyScreen = (() => {
       ? `${study.step} / ${candidate.moves.length} 手`
       : `${study.step}手目（自由に指す）`;
     const moveNumber = Math.ceil(study.step / 2);
-    byId('study-move').textContent = last
-      ? `${moveNumber}${last.color === 'w' ? '.' : '...'}${last.san}　${colorNames[last.color]}の手`
-      : '初期配置';
+    byId('study-move').replaceChildren(...(last
+      ? [chessGlossary.notationTrigger(`${moveNumber}${last.color === 'w' ? '.' : '...'}${last.san}`, last.before), `　${colorNames[last.color]}の手`]
+      : ['初期配置']));
     byId('study-board-fact').textContent = last?.before ? practiceLineFacts(last.before, [last.lan]).summary : '';
     chessGlossary.annotate(byId('study-comment'), !last ? candidate.tip
       : study.guided ? candidate.explanations[study.step - 1]

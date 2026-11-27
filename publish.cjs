@@ -119,7 +119,7 @@ try {
     'game-review.js', 'opening-classification.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'game-study.js', 'game-study-ui.js', 'game-study.css',
     'lichess-api.js', 'lichess-ui.js', 'migration.js', 'personal-practice.js', 'personal-ui.js', 'general-practice.js', 'general-practice-ui.js', 'practice-explanation.js', 'play-style.js', 'play-style-ui.js',
-    'chess-terms.js', 'chess-glossary.js',
+    'chess-terms.js', 'chess-notation.js', 'chess-glossary.js', 'practice-feedback.js',
     'intro-data.js', 'intro-course.js', 'intro-ui.js', 'chess-board.js',
     'problem-data.js', 'problem-curriculum.js',
     'vendor/chess.js', 'vendor/chess.LICENSE.txt',

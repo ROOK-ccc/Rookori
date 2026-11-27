@@ -1,4 +1,11 @@
 const chessGlossary = (() => {
+  const byId = id => document.getElementById(id);
+  const element = (tag, text, className) => {
+    const node = document.createElement(tag);
+    if (text) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  };
   const popup = byId('chess-term-popup');
   const definitions = byId('chess-term-definitions');
   const glossary = byId('chess-glossary-list');
@@ -7,11 +14,13 @@ const chessGlossary = (() => {
   const termsById = new Map(chessTerms.map(entry => [entry.id, entry]));
   const termsByName = new Map(chessTerms.flatMap(entry => [
     [entry.term, entry],
-    ...(entry.aliases ?? []).filter(name => /^[ァ-ヿ・]+$/.test(name)).map(name => [name, entry]),
+    ...(entry.aliases ?? []).filter(name => /^[ァ-ヿ・]+$/.test(name) || name === '発見攻撃').map(name => [name, entry]),
   ]));
   const escapePattern = term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp([...termsByName.keys()].sort((a, b) => b.length - a.length)
-    .map(term => /^[A-Z]+$/.test(term) ? `\\b${escapePattern(term)}\\b` : escapePattern(term)).join('|'), 'g');
+  const termPatterns = [...termsByName.keys()].sort((a, b) => b.length - a.length)
+    .map(term => /^[A-Z]+$/.test(term) ? `\\b${escapePattern(term)}\\b` : escapePattern(term));
+  const moveToken = '(?<![A-Za-z0-9_.-])(?:(?:[1-9][0-9]*\\.(?:\\.\\.)?\\s*)(?:O-O(?:-O)?|[KQRBN][a-h]?[1-8]?x?[a-h][1-8]|(?:[a-h]x)?[a-h][1-8](?:=[QRBN])?)[+#]?|O-O(?:-O)?[+#]?|[KQRBN][a-h]?[1-8]?x?[a-h][1-8][+#]?|[a-h]x[a-h][1-8](?:=[QRBN])?[+#]?|[a-h][1-8](?:=[QRBN][+#]?|[+#]))(?![A-Za-z0-9_=+#-])';
+  const pattern = new RegExp([...termPatterns, moveToken].join('|'), 'g');
   const headingId = id => `chess-glossary-${id}`;
   let active;
   let pinned = false;
@@ -20,14 +29,14 @@ const chessGlossary = (() => {
 
   function termLink(entry, label = entry.term) {
     const link = element('a', label, 'text-button');
-    link.href = `#glossary/${entry.id}`;
+    link.href = `${glossary ? '' : '/'}#glossary/${entry.id}`;
     return link;
   }
 
   for (const [id, label] of chessTermCategories) {
     const option = element('option', label);
     option.value = id;
-    category.append(option);
+    category?.append(option);
   }
 
   for (const { id, definition } of chessTerms) {
@@ -74,8 +83,8 @@ const chessGlossary = (() => {
     glossary.replaceChildren(...sections);
   }
 
-  search.addEventListener('input', renderGlossary);
-  category.addEventListener('change', renderGlossary);
+  search?.addEventListener('input', renderGlossary);
+  category?.addEventListener('change', renderGlossary);
 
   function open(id) {
     const entry = termsById.get(id);
@@ -130,16 +139,17 @@ const chessGlossary = (() => {
     const candidates = [...tops.map(top => [left, top]),
       [bounds.right + gap, sideTop], [bounds.left - popupWidth - gap, sideTop]];
     const screen = active.closest('.screen');
-    const protectedRects = [...screen.querySelectorAll(
+    const protectedNodes = [...(screen ?? document).querySelectorAll(
       '.study-board, .study-actions, .game-move-controls, .lesson-actions, .button, .text-button'
-    )].filter(node => !popup.contains(node)).map(node => node.getBoundingClientRect())
+    ), ...document.querySelectorAll('.app-tabs')];
+    const protectedRects = protectedNodes.filter(node => !popup.contains(node)).map(node => node.getBoundingClientRect())
       .filter(rect => rect.width && rect.height);
     const safe = candidates.find(([x, y]) => x >= margin && y >= margin
       && x + popupWidth <= width - margin && y + popupHeight <= height - margin
       && !protectedRects.some(rect => x < rect.right && x + popupWidth > rect.left
         && y < rect.bottom && y + popupHeight > rect.top));
     if (!safe && pinned && !popup.contains(document.activeElement)) {
-      const block = active.closest('p, h1, h2, h3, dl');
+      const block = active.closest('p, h1, h2, h3, dl, li, figcaption');
       if (block) {
         popup.classList.remove('is-overlay');
         popup.classList.add('is-inline');
@@ -158,16 +168,18 @@ const chessGlossary = (() => {
     clearTimeout(timer);
     if (active !== button) {
       active = button;
-      const link = termLink(entry, '用語集で詳しく見る');
-      link.setAttribute('aria-label', `${entry.term}を用語集で詳しく見る`);
+      const link = entry.notation ? Object.assign(element('a', '棋譜の読み方を見る', 'text-button'), { href: (glossary ? '' : '/') + '#notation' })
+        : termLink(entry, '用語集で詳しく見る');
       // The glossary link is in the flow after the text so it can be reached without scripting Tab order.
-      const block = button.closest('p, h1, h2, h3, dl');
+      const block = button.closest('p, h1, h2, h3, dl, li, figcaption');
       if (block) block.after(popup);
       const label = element('strong', entry.term);
       label.setAttribute('aria-hidden', 'true');
       const definition = element('p', entry.definition);
-      definition.setAttribute('aria-hidden', 'true');
-      popup.replaceChildren(label, definition, link);
+      if (!entry.notation) definition.setAttribute('aria-hidden', 'true');
+      const parts = entry.notation ? element('ul') : null;
+      if (parts) parts.append(...entry.notation.parts.map(part => element('li', part)));
+      popup.replaceChildren(label, ...(parts ? [parts] : []), definition, link);
     }
     pinned = keepOpen || pinned;
     active.setAttribute('aria-expanded', 'true');
@@ -185,7 +197,7 @@ const chessGlossary = (() => {
   function trigger(entry, text) {
     const button = element('button', text, 'chess-term');
     button.type = 'button';
-    button.setAttribute('aria-describedby', `chess-term-definition-${entry.id}`);
+    button.setAttribute('aria-describedby', entry.notation ? popup.id : `chess-term-definition-${entry.id}`);
     button.setAttribute('aria-controls', popup.id);
     button.setAttribute('aria-expanded', 'false');
     button.addEventListener('pointerenter', event => {
@@ -211,25 +223,63 @@ const chessGlossary = (() => {
     return button;
   }
 
-  function annotate(target, value) {
+  function notationTrigger(text, fen) {
+    const notation = explainSan(text, fen ? new chessRules.Chess(fen) : undefined);
+    return notation ? trigger({ term: text, definition: notation.meaning, notation }, text) : text;
+  }
+
+  function annotatedFragment(value) {
     const fragment = document.createDocumentFragment();
-    const seen = new Set();
     let end = 0;
     for (const match of value.matchAll(pattern)) {
       const [term] = match;
       const entry = termsByName.get(term);
-      if (seen.has(entry.id) || term === 'チェック' && value.slice(0, match.index).endsWith('理解度')) continue;
-      fragment.append(value.slice(end, match.index), trigger(entry, term));
-      seen.add(entry.id);
+      if (term === 'チェック' && value.slice(0, match.index).endsWith('理解度')) continue;
+      if (!entry && !explainSan(term)) continue;
+      fragment.append(value.slice(end, match.index), entry ? trigger(entry, entry.id === 'discovered-attack' ? entry.term : term) : notationTrigger(term));
       end = match.index + term.length;
     }
+    if (!end) return null;
     fragment.append(value.slice(end));
+    return fragment;
+  }
+
+  function annotate(target, value) {
     if (active && target.contains(active)) close();
-    target.replaceChildren(fragment);
+    target.replaceChildren(annotatedFragment(value ?? '') ?? (value ?? ''));
     return target;
   }
 
-  for (const target of document.querySelectorAll('[data-chess-terms]')) annotate(target, target.textContent);
+  function annotateContent(target) {
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (walker.nextNode()) {
+      const text = walker.currentNode;
+      if (!text.parentElement.closest('button, a, input, select, textarea, code, script, style, #chess-term-popup, [data-san]')) texts.push(text);
+    }
+    for (const text of texts) {
+      const fragment = annotatedFragment(text.data);
+      if (fragment) text.replaceWith(fragment);
+    }
+  }
+  const selector = '[data-chess-terms]';
+  document.querySelectorAll(selector).forEach(annotateContent);
+  document.querySelectorAll('[data-san]').forEach(node => node.replaceChildren(notationTrigger(node.textContent)));
+  new MutationObserver(records => {
+    const sections = new Set();
+    for (const record of records) {
+      const owner = record.target.nodeType === Node.ELEMENT_NODE ? record.target : record.target.parentElement;
+      const section = owner?.closest(selector);
+      if (section) sections.add(section);
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (node.matches(selector)) sections.add(node);
+        node.querySelectorAll(selector).forEach(child => sections.add(child));
+      }
+    }
+    sections.forEach(annotateContent);
+    if (active && !active.isConnected) close();
+  }).observe(document.getElementById('main') ?? document.body, { subtree: true, childList: true, characterData: true });
   popup.addEventListener('pointerenter', () => clearTimeout(timer));
   popup.addEventListener('pointerleave', scheduleClose);
   document.addEventListener('pointerdown', event => {
@@ -249,7 +299,7 @@ const chessGlossary = (() => {
   });
   window.addEventListener('scroll', position, { capture: true, passive: true });
   window.addEventListener('resize', position);
-  return { annotate, close, open };
+  return { annotate, notationTrigger, close, open };
 })();
 
 function chessTermText(tag, text, className) {

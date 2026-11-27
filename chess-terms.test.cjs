@@ -10,11 +10,12 @@ const { chessTerms, chessTermCategories, findChessTerms, readSiteRoute } = runIn
   sources + '\n({ chessTerms, chessTermCategories, findChessTerms, readSiteRoute })', { URL }
 );
 
-test('5分野に40語あり、英語表記と関連用語の参照が揃う', () => {
+test('5分野に44語あり、英語表記と関連用語の参照が揃う', () => {
   const ids = new Set(chessTerms.map(entry => entry.id));
   const categories = new Set(chessTermCategories.map(([id]) => id));
-  assert.equal(chessTerms.length, 40);
+  assert.equal(chessTerms.length, 44);
   assert.equal(ids.size, chessTerms.length);
+  assert.equal(new Set(chessTerms.map(entry => entry.term)).size, chessTerms.length);
   assert.equal(categories.size, 5);
   assert.equal(new Set(chessTerms.map(entry => entry.category)).size, categories.size);
   for (const entry of chessTerms) {
@@ -32,6 +33,7 @@ test('用語を日本語、かなの表記ゆれ、英語と別表記から検�
   assert.ok(ids('Forsyth Edwards').includes('fen'));
   assert.ok(ids('ＥＣＯ コード').includes('eco'));
   assert.ok(ids('両取り', 'tactics').includes('fork'));
+  assert.equal(findChessTerms('発見攻撃')[0].term, 'ディスカバードアタック');
   assert.deepEqual(ids('両取り', 'analysis'), []);
   assert.deepEqual(ids('zzzz'), []);
 });
@@ -39,6 +41,7 @@ test('用語を日本語、かなの表記ゆれ、英語と別表記から検�
 test('個々の用語を直接開くルートを認識する', () => {
   const site = 'https://example.test/Rookori/';
   assert.equal(readSiteRoute(site + '#glossary').path, 'glossary');
+  assert.equal(readSiteRoute(site + '#notation').path, 'notation');
   for (const id of ['fen', 'threefold-repetition']) {
     assert.equal(readSiteRoute(site + '#glossary/' + id).termId, id);
   }

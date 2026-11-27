@@ -28,12 +28,12 @@ const openingMemoryScreen = (() => {
       return true;
     },
     onMove() {
-      text('practice-status', '正解！');
-      text('practice-comment', practice.opening.explanations[practice.study.step - 1]);
+      practiceFeedback('practice-result-feedback', practice.complete ? 'correct' : 'progress');
+      chessGlossary.annotate(byId('practice-comment'), practice.opening.explanations[practice.study.step - 1] ?? '');
       advanceOpponent();
     },
     feedback(message) {
-      if (message && !byId('practice-status').textContent.startsWith('不正解')) text('practice-status', message);
+      if (message && byId('practice-result-feedback').dataset.state !== 'wrong') text('practice-status', message);
     },
     onIllegal(message, from, to) {
       practice.wrong(from + to);
@@ -42,7 +42,7 @@ const openingMemoryScreen = (() => {
   });
 
   function incorrect(message = '登録手順と違います。同じ局面からもう一度試しましょう。') {
-    text('practice-status', `不正解。 ${message}`);
+    practiceFeedback('practice-result-feedback', 'wrong', message);
     text('practice-comment', '');
     learningTracker.observe(currentItem(), 'interrupted', { mistakes: 1 });
     save();
@@ -60,10 +60,12 @@ const openingMemoryScreen = (() => {
 
   function advanceOpponent() {
     if (!practice.complete && !practice.learnerTurn) {
+      practiceFeedback('practice-result-feedback', 'opponent');
       timer = setTimeout(() => {
         timer = undefined;
         practice.opponentMove();
-        text('practice-status', `相手は ${practice.study.lastMove.san} と指しました。`);
+        practiceFeedback('practice-result-feedback', practice.complete ? 'correct' : practice.trained ? 'progress' : null,
+          `相手の応手は ${practice.study.lastMove.san} です。`);
         advanceOpponent();
       }, 520);
     }
@@ -115,6 +117,7 @@ const openingMemoryScreen = (() => {
     close();
     practice = new OpeningPractice(opening, color, target);
     recordedCompletion = false;
+    practiceFeedback('practice-result-feedback');
     byId('practice-colors').hidden = Boolean(target);
     flipped = color === 'b';
     text('practice-title', opening.name);

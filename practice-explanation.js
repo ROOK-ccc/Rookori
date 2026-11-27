@@ -47,11 +47,17 @@ function practiceLineFacts(fen, codes) {
   }
   if (attacks.length) details.push(`${move.to}には相手の駒${attacks.length}個と味方の駒${defenders.length}個の利きがあります。取り返せるかは手順で確かめましょう。`);
   if (result !== first && result.mate) details.push(`この変化では ${result.move.san} でチェックメイトになります。`);
-  if (result.material) details.push(`この手順に出てくる駒取り・昇格の差は、手番側から見て${result.material > 0 ? '+' : '−'}${Math.abs(result.material)}点です。`);
+  if (result !== first && steps.length > 2 && result.move.captured) {
+    details.push(`最後の ${result.move.san} で、${result.move.to}の${practicePieceNames[result.move.captured]}を取ります。`);
+  }
   if (first.mate) details.push('次の実戦では、チェックしたあとに逃げ場・取り返し・合駒がすべてなくなるか確かめましょう。');
   else if (targets.length >= 2) details.push('次の実戦でも、一手でいくつの駒を狙えるか、相手がどの駒を守れるかを考えましょう。');
   return { steps, summary: `${move.san}（${move.from}→${move.to}）で、${aim}。`, details,
     marks: [...targets.map(piece => piece.square), ...(improvedGuard ? [improvedGuard.square] : [])] };
+}
+
+function practiceExplanationText(text) {
+  return text.replace(/この手順に出てくる駒取り・昇格の差は、手番側から見て[+＋−－-]?\s*[\d０-９]+(?:[.．][\d０-９]+)?点です。/gu, '').trim();
 }
 
 function showPracticeExplanation(container, toolbar, lines, edit, applyStep) {
@@ -60,14 +66,12 @@ function showPracticeExplanation(container, toolbar, lines, edit, applyStep) {
   toolbar.replaceChildren();
   if (!usable.length) return;
   const best = usable[0].facts;
-  const heading = element('h3', edit?.explanation || best.summary);
-  const origin = edit?.explanation
+  const authored = practiceExplanationText(edit?.explanation ?? '');
+  const heading = chessTermText('h3', authored ? 'この問題の解説' : best.summary);
+  const origin = authored
     ? (edit.explanationStatus === 'reviewed' ? '運営者が確認した解説' : '運営者の解説') : '盤面から生成した解説';
   container.append(element('p', origin, 'dashboard-note'), heading);
-  if (edit?.explanation) {
-    heading.textContent = 'この問題の解説';
-    container.append(element('p', edit.explanation, 'practice-authored'));
-  }
+  if (authored) container.append(chessTermText('p', authored, 'practice-authored'));
   const select = element('select');
   for (const [index, line] of usable.entries()) select.append(new Option(line.label, index));
   const label = element('label', '再生する手順 ');
@@ -92,12 +96,13 @@ function showPracticeExplanation(container, toolbar, lines, edit, applyStep) {
   function render() {
     const { facts } = usable[Number(select.value)];
     const step = facts.steps[ply - 1];
-    progress.textContent = step ? `${ply} / ${facts.steps.length}手 · ${step.move.san}（${step.move.from}→${step.move.to}）` : '着手前の局面';
+    progress.replaceChildren(...(step ? [`${ply} / ${facts.steps.length}手 · `, chessGlossary.notationTrigger(step.move.san, step.move.before),
+      `（${step.move.from}→${step.move.to}）`] : ['着手前の局面']));
     previous.disabled = ply === 0;
     next.disabled = ply >= facts.steps.length;
     reply.hidden = !facts.steps[1];
-    reply.textContent = facts.steps[1] ? '相手の応手例 ' + facts.steps[1].move.san : '';
-    copy.replaceChildren(...[facts.summary, ...facts.details].map(text => element('p', text)));
+    reply.replaceChildren(...(facts.steps[1] ? ['相手の応手例 ', chessGlossary.notationTrigger(facts.steps[1].move.san, facts.steps[1].move.before)] : []));
+    copy.replaceChildren(...[facts.summary, ...facts.details].map(text => chessTermText('p', text)));
     applyStep(step, ply === 1 ? facts.marks : []);
   }
   select.addEventListener('change', () => { ply = 1; render(); });

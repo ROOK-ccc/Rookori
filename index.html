@@ -69,7 +69,9 @@
   <script src="daily-life.js" defer></script>
   <script src="pgn-batch.js" defer></script>
   <script src="chess-terms.js" defer></script>
+  <script src="chess-notation.js" defer></script>
   <script src="chess-glossary.js" defer></script>
+  <script src="practice-feedback.js" defer></script>
   <script src="game-study-ui.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="personal-ui.js" defer></script>
@@ -95,6 +97,7 @@
     <symbol id="ui-review" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.2 7M3 5v6h6m3-4v5l3 2"/></symbol>
     <symbol id="ui-daily" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M3 5h1M3 12h1M3 19h1"/></symbol>
     <symbol id="ui-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="ui-answer-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
     <symbol id="ui-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
     <symbol id="ui-chat" viewBox="0 0 24 24"><path d="M20 16H9l-5 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2zM8 9h8m-8 3h5"/></symbol>
   </svg>
@@ -304,6 +307,7 @@
         </ul></section>
         <section><h2>自分に合う学び方</h2><ul class="reading-links">
           <li><a class="row-action" href="#general"><span>練習問題集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
+          <li><a class="row-action" href="#notation"><span>棋譜の読み方</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
           <li><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#your-style"><span>実際の対局から棋風を知る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
         <section><h2>Rookoriと設定</h2><ul class="reading-links">
@@ -516,7 +520,7 @@
             <p id="study-count" class="study-count"></p>
             <h2 id="study-move"></h2>
             <p id="study-comment"></p>
-            <p id="study-board-fact" class="dashboard-note"></p>
+            <p id="study-board-fact" class="dashboard-note" data-chess-terms></p>
           </div>
           <p id="study-feedback" class="study-feedback" role="status"></p>
           <section class="study-complete" id="study-complete" aria-labelledby="study-complete-title" hidden>
@@ -593,6 +597,7 @@
         <div class="study-board-area">
           <div class="study-board-bar"><p id="lesson-turn" class="study-turn"></p></div>
           <div id="lesson-board" class="study-board" role="group" aria-label="練習用のチェス盤" aria-describedby="lesson-task"></div>
+          <div id="lesson-result-feedback" class="answer-state" role="status" hidden></div>
         </div>
         <div class="study-panel">
           <section class="study-explanation">
@@ -661,6 +666,7 @@
             <button class="text-button" id="practice-flip" type="button">盤を回転する</button>
           </div>
           <div id="practice-board" class="study-board" role="group" aria-label="暗記練習用のチェス盤"></div>
+          <div id="practice-result-feedback" class="answer-state" role="status" hidden></div>
         </div>
         <div class="study-panel">
           <section class="study-explanation" aria-labelledby="practice-steps">
@@ -1017,8 +1023,8 @@
                   <button class="button secondary" id="game-study-position" type="button" aria-describedby="game-study-status">現在の局面を解析する</button>
                   <button class="text-button" id="game-study-stop-local" type="button" hidden>解析を停止する</button>
                 </div>
-                <div id="game-study-line-explanation" class="practice-explanation"></div>
-                <ol id="game-study-lines"></ol>
+                <div id="game-study-line-explanation" class="practice-explanation" data-chess-terms></div>
+                <ol id="game-study-lines" data-chess-terms></ol>
                 <details>
                   <summary>評価の見方・解析設定</summary>
                   <p>評価値は駒の配置や戦術も含めた形勢の目安です。白が有利ならプラス、黒が有利ならマイナス。Mはメイトまでの手数です。</p>
@@ -1372,6 +1378,8 @@
         <div>
           <p id="personal-turn"></p>
           <div id="personal-board" class="study-board" role="group" aria-label="練習問題のチェス盤"></div>
+          <div id="personal-result-feedback" class="answer-state" role="status" hidden></div>
+          <button class="button primary" id="personal-next" type="button" hidden>次の問題へ</button>
           <div id="personal-replay" class="practice-replay" hidden></div>
           <p id="personal-feedback" role="status"></p>
           <div class="study-mode-links">
@@ -1381,9 +1389,9 @@
           </div>
         </div>
         <section id="personal-answer" class="game-card" aria-labelledby="personal-verdict" hidden>
-          <h2 id="personal-verdict"></h2><p id="personal-answer-move"></p><p id="personal-answer-best"></p>
+          <h2 id="personal-verdict"></h2><p id="personal-answer-move" data-chess-terms></p><p id="personal-answer-best" data-chess-terms></p>
           <p id="personal-answer-score"></p><div id="personal-answer-explanation" class="practice-explanation"></div>
-          <p id="personal-answer-actual"></p><p id="personal-line-note" role="status"></p>
+          <p id="personal-answer-actual" data-chess-terms></p><p id="personal-line-note" role="status"></p>
           <div id="personal-comparison"></div>
           <a id="personal-related" class="button secondary" href="#general" hidden>同じテーマを練習する</a>
           <div class="study-mode-links">
@@ -1391,7 +1399,6 @@
             <button class="text-button" id="personal-explore" type="button">自由検討する</button>
             <button class="text-button" id="personal-original" type="button" hidden>元の対局を見る</button>
             <button class="text-button" id="personal-cpu" type="button">この局面からCPUと対戦する</button>
-            <button class="button primary" id="personal-next" type="button">次の問題へ進む</button>
           </div>
         </section>
       </div>
@@ -1411,7 +1418,7 @@
         <label>難易度 <select id="general-level"><option value="0">入門</option><option value="1">初級</option><option value="2">中級</option><option value="3">上級</option></select></label>
         <label>テーマ <select id="general-theme"><option value="all">すべて</option><option value="tactics">タクティクス全般</option><option value="checkmate">チェックメイト全般</option><option value="endgame">エンドゲーム全般</option><option value="due">復習予定</option><option value="saved">保存した問題</option></select></label>
       </div>
-      <p id="general-theme-help"></p><p id="general-status" role="status"></p>
+      <p id="general-theme-help" data-chess-terms></p><p id="general-status" role="status"></p>
       <div class="study-mode-links">
         <button class="button secondary" type="button" id="general-previous" hidden>前のページ</button>
         <button class="button secondary" type="button" id="general-more" hidden>次のページ</button>
@@ -1425,13 +1432,14 @@
       <div class="study-mode-links"><a class="button secondary" href="#general">問題一覧</a><a class="button secondary" href="#daily">今日の10問</a></div>
       <p id="general-load-status" role="status"></p>
       <div id="general-play-layout" hidden>
-        <p id="general-prompt"></p><p id="general-rating" class="dashboard-note"></p>
+        <p id="general-prompt" data-chess-terms></p><p id="general-rating" class="dashboard-note"></p>
         <div id="general-board" class="study-board" role="group" aria-label="一般練習のチェス盤"></div>
+        <div id="general-result-feedback" class="answer-state" role="status" hidden></div>
+        <button id="general-next-daily" class="button primary" type="button" hidden>次の問題へ</button>
         <div id="general-replay" class="practice-replay" hidden></div>
-        <p id="general-feedback" role="status"></p><div id="general-explanation" class="practice-explanation"></div>
+        <p id="general-feedback" role="status" data-chess-terms></p><div id="general-explanation" class="practice-explanation" data-chess-terms></div>
         <button id="general-hint" class="button secondary" type="button">ヒント</button>
         <button id="general-save" class="button secondary" type="button" aria-pressed="false">あとで解く</button>
-        <button id="general-next-daily" class="button primary" type="button" hidden>次の問題へ</button>
       </div>
       <dialog id="general-promotion" class="promotion-dialog" aria-labelledby="general-promotion-title">
         <form method="dialog"><h2 id="general-promotion-title">どの駒に昇格しますか？</h2>
@@ -1607,6 +1615,7 @@
     <section id="glossary" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
       <h1 id="glossary-title" tabindex="-1">チェス用語集</h1>
+      <a class="button secondary" href="#notation">棋譜の読み方を見る</a>
       <p class="guide-intro">学習画面で点線の下線が付いた言葉は、その場で意味を確認できます。</p>
       <div class="glossary-controls" role="search" aria-label="チェス用語を探す">
         <label for="chess-term-search">用語を検索 <input id="chess-term-search" type="search" placeholder="フォーク、castling など"></label>
@@ -1614,6 +1623,27 @@
       </div>
       <p id="chess-glossary-status" class="glossary-metadata" role="status"></p>
       <div id="chess-glossary-list"></div>
+    </section>
+    <section id="notation" class="screen inner-screen guide-screen reading-page" hidden>
+      <h1 id="notation-title" tabindex="-1">棋譜の読み方</h1>
+      <p data-chess-terms>チェスでは着手をSAN（標準代数式表記）で記録します。下線が付いた例を選ぶと、その手の読み方が開きます。</p>
+      <h2>駒と移動先</h2>
+      <p>Kはキング、Qはクイーン、Rはルーク、Bはビショップ、Nはナイトです。駒の記号がない手はポーンです。マス目はa〜hの縦列（ファイル）と1〜8の横段（ランク）を組み合わせます。</p>
+      <dl><dt data-san>Nf3</dt><dd>ナイトがf3に移動する。</dd><dt data-san>1.e4</dt><dd>1手目の白。ポーンがe4に移動する。</dd></dl>
+      <h2>駒取り、チェック、チェックメイト</h2>
+      <dl><dt data-san>Qxd8+</dt><dd>クイーンがd8の駒を取り、チェックをかける。取った駒の種類はこの表記だけでは分かりません。</dd>
+        <dt data-san>Qh7#</dt><dd>クイーンがh7に移動してチェックメイトになる。</dd>
+        <dt data-san>exd6</dt><dd>eファイルのポーンがd6で駒を取る。アンパッサンかどうかは盤面で確かめます。</dd></dl>
+      <h2>キャスリングと昇格</h2>
+      <dl><dt data-san>O-O</dt><dd>キングサイドにキャスリングする。文字は英字のOです。</dd>
+        <dt data-san>O-O-O</dt><dd>クイーンサイドにキャスリングする。</dd>
+        <dt data-san>e8=Q+</dt><dd>ポーンがe8でクイーンに昇格し、チェックをかける。ルーク・ビショップ・ナイトは =R・=B・=N と書きます。</dd></dl>
+      <h2>同じ種類の駒と手数</h2>
+      <dl><dt data-san>Nbd2</dt><dd>bファイルのナイトがd2に移動する。</dd>
+        <dt data-san>R1e2</dt><dd>1ランクのルークがe2に移動する。</dd>
+        <dt data-san>Nb1d2</dt><dd>b1にいるナイトがd2に移動する。縦列と横段が両方必要な例です。</dd>
+        <dt data-san>12...Nf6</dt><dd>12手目の黒。ナイトがf6に移動する。黒の手から書き始めるときは、手数の後ろを点3つにします。</dd></dl>
+      <div class="study-mode-links"><a class="button secondary" href="#game-review/sample">サンプル棋譜で試す</a><a class="button secondary" href="#glossary">チェス用語集</a></div>
     </section>
     <section id="privacy" class="screen inner-screen guide-screen" hidden>
       <h1 id="privacy-title" tabindex="-1">アクセス解析とプライバシー</h1>

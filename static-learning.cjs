@@ -33,6 +33,7 @@ function staticLearning(config, preview, entries) {
 <meta property="og:description" content="${e(description)}"><meta property="og:url" content="${e(url)}"><meta property="og:image" content="${e(new URL('brand/rookori-share.jpg', site).href)}">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="/brand/rookori.png"><link rel="stylesheet" href="/styles.css">
+<script src="/chess-terms.js" defer></script><script src="/chess-notation.js" defer></script><script src="/chess-glossary.js" defer></script>
 ${preview ? '<meta name="robots" content="noindex">' : config.ga4MeasurementId ? `<meta name="rookori-ga4-measurement-id" content="${e(config.ga4MeasurementId)}"><script src="/analytics.js" defer></script>` : ''}
 <script type="application/ld+json">${JSON.stringify(breadcrumb).replace(/</g, '\\u003c')}</script>
 </head><body>
@@ -40,10 +41,10 @@ ${preview ? '<meta name="robots" content="noindex">' : config.ga4MeasurementId ?
 <main class="shell reading-page" id="static-learning" data-kind="${opening ? 'opening' : 'guide'}">
 <nav aria-label="パンくずリスト"><ol class="reading-crumbs">${trail.map(([href, name], i) => i === trail.length - 1
     ? `<li aria-current="page">${e(name)}</li>` : `<li>${link(href, name)}</li>`).join('')}</ol></nav>
-<h1>${e(name)}</h1>${body}
+<h1>${e(name)}</h1><div data-chess-terms>${body}</div>
 <aside id="analytics-notice" hidden><p>アクセス解析に同意しますか？</p><button type="button" data-analytics-choice="granted">同意する</button> <button type="button" data-analytics-choice="denied">同意しない</button></aside>
 <details id="analytics-settings" hidden><summary>アクセス解析の設定</summary><p id="analytics-status"></p><button type="button" data-analytics-choice="granted">同意する</button> <button type="button" data-analytics-choice="denied">同意しない</button> ${link(app('privacy'), 'プライバシー')}</details>
-</main></body></html>`;
+</main><div id="chess-term-definitions" hidden></div><div id="chess-term-popup" class="chess-term-popup" hidden></div></body></html>`;
     locations.push({ url, updated });
   }
   const parents = entries.filter(entry => !entry.parentId);
@@ -62,7 +63,7 @@ ${preview ? '<meta name="robots" content="noindex">' : config.ga4MeasurementId ?
       `<p lang="en">${e(entry.english)}</p><p>${e(entry.description)}</p>
       ${entry.aliases?.length ? `<p>別名 ${e(entry.aliases.join('、'))}</p>` : ''}
       ${entry.eco ? `<p>ECOコード ${e(entry.eco)}</p>` : ''}
-      <h2>代表手順と各着手の意味</h2><ol class="reading-moves">${entry.notation.map((san, i) => `<li><strong>${e(san)}</strong> ${e(entry.explanations[i])}</li>`).join('')}</ol>
+      <h2>代表手順と各着手の意味</h2><ol class="reading-moves">${entry.notation.map((san, i) => `<li><p><strong data-san>${e(san)}</strong> ${e(entry.explanations[i])}</p></li>`).join('')}</ol>
       ${fields.map((key, i) => entry[key] ? `<section><h2>${labels[i]}</h2><p class="reading-text">${e(entry[key])}</p></section>` : '').join('')}
       ${entry.source ? `<p>${link(entry.source, '定跡名と手順の出典（Lichess）')}</p>` : ''}
       <h2>チェス盤で試す</h2>${actions([[app('study/' + entry.id), '盤で手順を再生'], [app('practice/' + entry.id + '/' + entry.color), '定跡の反復練習'], [app('cpu-opening/' + entry.id), '定跡指定CPU対戦']])}

@@ -17,7 +17,7 @@ const siteHeadings = {
   external: 'external-title',
   personal: 'personal-title',
   'your-style': 'your-style-title',
-  glossary: 'glossary-title', privacy: 'privacy-title', cpu: 'cpu-title',
+  glossary: 'glossary-title', notation: 'notation-title', privacy: 'privacy-title', cpu: 'cpu-title',
 };
 
 const quizModes = {

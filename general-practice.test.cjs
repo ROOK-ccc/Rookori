@@ -9,7 +9,7 @@ const files = ['vendor/chess.js', 'learning.js', 'personal-practice.js', 'genera
   'game-study.js', 'practice-explanation.js'];
 const storage = new Map();
 const vm = runInNewContext(files.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
-  + '\n({chessRules, validatePracticeEdit, generalRecord, generalHistory, buildPracticeMenu, practiceEvidence, validGeneralHistory, validPracticeDaily, practiceLineFacts})',
+  + '\n({chessRules, validatePracticeEdit, generalRecord, generalHistory, buildPracticeMenu, practiceEvidence, validGeneralHistory, validPracticeDaily, practiceLineFacts, practiceExplanationText})',
   { Date, localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) } });
 const raw = file => readFileSync(join(__dirname, 'puzzles', file), 'utf8');
 
@@ -60,6 +60,8 @@ test('各難易度・種類の代表問題で解説と盤面が一致し、実�
   const missed = vm.practiceLineFacts(fen, ['e2d2', 'd4d2']);
   assert.match(missed.details.join(' '), /相手はルークを取ります/);
   assert.equal(missed.steps[1].material, -5);
+  assert.doesNotMatch(missed.details.join(' '), /手番側から見て/);
+  assert.equal(vm.practiceExplanationText('取り返しを確認。 この手順に出てくる駒取り・昇格の差は、手番側から見て−３点です。'), '取り返しを確認。');
   assert.throws(() => vm.practiceLineFacts(fen, ['e2g3']));
 });
 

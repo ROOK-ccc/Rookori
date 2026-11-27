@@ -842,3 +842,11 @@ body:has(#site-menu[open]) { overflow: hidden; }
 .learn-practice-links a { margin-block: 3px; }
 .practice-home-links { display: flex; gap: 7px; flex-wrap: wrap; }
 #general-random { margin-block: 8px; }
+.answer-state { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-block: 6px; padding: 5px 8px; border-inline-start: 3px solid currentColor; color: var(--muted); }
+.answer-state[data-state="correct"], .answer-state[data-state="progress"] { background: #e3ece1; color: #214c36; }
+.answer-state[data-state="wrong"] { background: #f4e8e1; color: #873e31; }
+.answer-state .ui-icon { width: 20px; height: 20px; }
+#personal-next, #general-next-daily { margin-block: 4px 8px; }
+.chess-term-popup ul { padding-inline-start: 20px; }
+#notation dt { font-weight: 750; }
+#notation dd { margin: 4px 0 12px; }

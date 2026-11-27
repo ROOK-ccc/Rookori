@@ -23,7 +23,7 @@ function createRookoriAnalytics(win, doc) {
     external: '外部サイトとの連携', 'pgn-import': '棋譜の一括取り込み',
     personal: '個別練習問題', 'personal-play': '個別練習問題を解く', 'your-style': 'あなたの棋風',
     cpu: 'コンピューター対戦',
-    backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集',
+    backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集', notation: '棋譜の読み方',
     privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー', discover: '探す', 'learning-guide': '学習ガイド',
     general: '一般練習', 'general-play': '一般練習問題を解く',
   };
