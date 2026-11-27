@@ -7,7 +7,7 @@ const localOpeningEditor = (() => {
   };
   const key = 'rookori.opening-editor.drafts.v1';
   const fields = get('fields');
-  const catalog = [...studyOpenings, ...openingVariations];
+  const catalog = [...studyOpenings, ...openingVariations].map(row => ({ ...row }));
   const baseCatalog = [...baseStudyOpenings, ...baseOpeningVariations];
   let drafts = {};
   let entry;
@@ -109,7 +109,7 @@ const localOpeningEditor = (() => {
   function selectLesson() {
     entry = catalog.find(row => row.id === get('variant').value);
     fields.replaceChildren();
-    get('save').disabled = get('export').disabled = !entry;
+    get('save').disabled = get('export').disabled = get('apply').disabled = !entry;
     get('board').parentElement.hidden = !entry;
     if (!entry) return;
     notation = openingNotation(entry);
@@ -168,6 +168,28 @@ const localOpeningEditor = (() => {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       get('status').textContent = '公開候補を書き出しました。差分を確認して教材データに反映してください。';
     } catch (error) { get('status').textContent = error.message; }
+  });
+  get('apply').addEventListener('click', async () => {
+    const owner = entry;
+    const { changes, missing } = draft();
+    try {
+      if (missing.length) throw new Error('必須項目を入力してください。');
+      if (!Object.keys(changes).length) throw new Error('反映する変更はありません。');
+      const before = openingEdits[owner.id];
+      const edit = { ...before, ...changes };
+      validateOpeningEdits({ [owner.id]: edit }, baseCatalog);
+      if (!window.confirm(owner.name + 'の変更を作業フォルダーに反映しますか？ 本番公開には別途GitHub Desktopでの操作が必要です。')) return;
+      get('apply').disabled = true;
+      const saved = await applyEditorChange('opening', owner.id, before, edit);
+      openingEdits[owner.id] = saved;
+      Object.assign(owner, saved);
+      if (entry === owner) drafts[owner.id] = draft().changes;
+      else if (JSON.stringify(drafts[owner.id]) === JSON.stringify(changes)) delete drafts[owner.id];
+      try { localStorage.setItem(key, JSON.stringify(drafts)); } catch { /* The worktree has already been saved. */ }
+      if (entry === owner) preview();
+      get('status').textContent = '作業フォルダーに反映しました。GitHub Desktopで差分を確認できます。';
+    } catch (error) { get('status').textContent = error.message; }
+    finally { get('apply').disabled = !entry; }
   });
   get('search').dispatchEvent(new Event('input'));
 })();

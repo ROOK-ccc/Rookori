@@ -133,6 +133,25 @@
       status('書き出しました。差分を確認してから、作業フォルダーの変更ファイルに反映してください。');
     } catch (error) { status(error.message); }
   });
+  get('apply').addEventListener('click', async () => {
+    if (!current) return;
+    const id = current[0];
+    try {
+      const safe = validate();
+      diff();
+      if (!get('diff').childElementCount) throw new Error('反映する変更はありません。');
+      if (!window.confirm(id + ' の変更を作業フォルダーに反映しますか？ 本番公開には別途GitHub Desktopでの操作が必要です。')) return;
+      get('apply').disabled = true;
+      const submittedDraft = drafts[id];
+      const saved = await applyEditorChange('practice', id, edits[id], safe);
+      edits[id] = saved;
+      if (drafts[id] === submittedDraft) delete drafts[id];
+      try { localStorage.setItem(draftKey, JSON.stringify(drafts)); } catch { /* The worktree has already been saved. */ }
+      if (current?.[0] === id) { original = saved; diff(); }
+      status('作業フォルダーに反映しました。GitHub Desktopで差分を確認できます。');
+    } catch (error) { status(error.message); }
+    finally { get('apply').disabled = false; }
+  });
   Promise.all([fetchJson('puzzles/catalog.json'), fetchJson('practice-edits.json')]).then(([catalog, changes]) => {
     edits = changes;
     index = new Map(Object.entries(catalog.batches).flatMap(([name, row]) => row.ids.map(id => [id, name])));

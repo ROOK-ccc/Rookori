@@ -11,12 +11,13 @@
   <script defer src="game-study.js"></script>
   <script defer src="practice-explanation.js"></script>
   <script defer src="practice-editor-validate.js"></script>
+  <script defer src="editor-local.js"></script>
   <script defer src="practice-editor.js"></script>
 </head>
 <body>
 <main class="shell editor">
   <h1>一般練習問題の編集</h1>
-  <p><a href="opening-editor.html">オープニング教材編集へ</a></p>
+  <nav class="editor-row" aria-label="教材編集ツール"><a class="button secondary" href="opening-editor.html">オープニング教材エディターへ</a></nav>
   <div class="editor-row">
     <label>問題ID・問題名 <input id="puzzle-search" type="search"></label>
     <label><input id="puzzle-unwritten" type="checkbox"> 個別解説が未入力の問題のみ</label>
@@ -50,7 +51,8 @@
     <div class="editor-row">
       <button class="button secondary" id="puzzle-draft">下書きを保存</button>
       <button class="button secondary" id="puzzle-check">合法手を検証して盤を更新</button>
-      <button class="button primary" id="puzzle-export">この問題の変更を書き出す</button>
+      <button class="button primary" id="puzzle-apply">作業フォルダーに反映</button>
+      <button class="button secondary" id="puzzle-export">変更ファイルをダウンロード</button>
     </div>
   </div>
 </main>

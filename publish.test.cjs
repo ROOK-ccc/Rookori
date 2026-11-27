@@ -17,6 +17,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   }
   for (const dir of ['brand', 'pieces', 'vendor', 'puzzles']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
   copyFileSync(join(__dirname, 'practice-edits.json'), join(scratch, 'practice-edits.json'));
+  copyFileSync(join(__dirname, 'start-editors.bat'), join(scratch, 'start-editors.bat'));
   const configFile = join(scratch, 'site-config.json');
   copyFileSync(join(__dirname, 'site-config.cloudflare.json'), join(scratch, 'site-config.cloudflare.json'));
   writeFileSync(configFile, JSON.stringify({ ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' }));
@@ -169,6 +170,10 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.ok(!readdirSync(preview).includes('opening-editor.html'));
   assert.ok(!readdirSync(preview).includes('practice-editor.html'));
   assert.ok(!readdirSync(preview).includes('practice-edits.json'));
+  for (const file of ['start-editors.bat', 'opening-editor-server.cjs', 'editor-local.js', 'practice-editor.js']) {
+    assert.ok(!readdirSync(preview).includes(file), file);
+    assert.ok(!artifacts.includes(file), file);
+  }
   assert.match(readFileSync(join(preview, 'practice', 'personal', 'index.html'), 'utf8'), /<link rel="canonical" href="https:\/\/rookrori\.com\/practice\/personal\/">/);
   assert.deepEqual(JSON.parse(readFileSync(join(preview, 'puzzles', 'catalog.json'), 'utf8')).counts, [1000, 2000, 1500, 500]);
   const sitemap = readFileSync(join(preview, 'sitemap.xml'), 'utf8');

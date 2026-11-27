@@ -15,12 +15,14 @@
   <script src="opening-variations.js" defer></script>
   <script src="opening-study.js" defer></script>
   <script src="opening-memory.js" defer></script>
+  <script src="editor-local.js" defer></script>
   <script src="opening-editor.js" defer></script>
 </head>
 <body>
   <main class="shell editor">
     <h1>オープニング教材編集</h1>
-    <p>下書きはこのブラウザーに保存します。公開候補に書き出すのは、現在選択している教材だけです。</p>
+    <nav class="editor-row" aria-label="教材編集ツール"><a class="button secondary" href="practice-editor.html">練習問題エディターへ</a></nav>
+    <p>下書きはこのブラウザーに保存します。確認した教材は1件ずつ作業フォルダーに反映できます。</p>
     <div class="editor-fields">
       <label>教材名で検索<input type="search" id="lesson-search" placeholder="日本語、英語、ID"></label>
       <label>オープニング<select id="lesson-parent"></select></label>
@@ -41,7 +43,8 @@
     </div>
     <div class="editor-row">
       <button class="button secondary" id="lesson-save" type="button">下書きを保存</button>
-      <button class="button primary" id="lesson-export" type="button">この教材を公開候補に書き出す</button>
+      <button class="button primary" id="lesson-apply" type="button">作業フォルダーに反映</button>
+      <button class="button secondary" id="lesson-export" type="button">変更ファイルをダウンロード</button>
     </div>
     <p id="lesson-status" role="status"></p>
   </main>
