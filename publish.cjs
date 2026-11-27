@@ -5,10 +5,11 @@ const { createHash } = require('node:crypto');
 const { parseArgs } = require('node:util');
 const siteConfig = require('./site-config.json');
 const cloudflareSiteConfig = require('./site-config.cloudflare.json');
+const { staticLearning } = require('./static-learning.cjs');
 
 function versionPublicAssets(html, folder) {
   return html.replace(/\b(src|href)="([\w./-]+\.(?:js|css))"/g, (_, attr, file) => {
-    const bytes = fs.readFileSync(path.join(folder, file));
+    const bytes = fs.readFileSync(path.join(folder, file.replace(/^\//, '')));
     const version = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
     return `${attr}="${file}?v=${version}"`;
   });
@@ -52,10 +53,10 @@ function publicSiteFiles(config) {
       .replace(/<!-- SITE_MIGRATION_START -->([\s\S]*?)<!-- SITE_MIGRATION_END -->/, (_, notice) =>
         migration ? notice.replace('aria-labelledby="site-migration-title" hidden', 'aria-labelledby="site-migration-title"')
           .replaceAll('__SITE_MIGRATION_URL__', escape(canonical.href)) : ''),
-    'robots.txt': `User-agent: *\nDisallow:\n\nSitemap: ${new URL('sitemap.xml', site)}\n`,
+    'robots.txt': `User-agent: *\nDisallow:\n\nSitemap: ${new URL('sitemap.xml', canonical)}\n`,
     'sitemap.xml': '<?xml version="1.0" encoding="UTF-8"?>\n'
       + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-      + `  <url><loc>${escape(site.href)}</loc></url>\n</urlset>\n`,
+      + `  <url><loc>${escape(canonical.href)}</loc></url>\n</urlset>\n`,
   };
 }
 
@@ -74,12 +75,21 @@ try {
   const context = vm.createContext({});
   if (input) context.publishedProblemPack = JSON.parse(fs.readFileSync(path.resolve(input), 'utf8'));
   const courseScript = vm.runInContext(`${source}\nproblemCourseScript(validateProblemPack(publishedProblemPack, introLessons))`, context);
+  const openingSource = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-edits-data.js',
+    'opening-edits.js', 'opening-variations.js', 'opening-study.js', 'opening-memory.js']
+    .map(file => fs.readFileSync(path.join(__dirname, file), 'utf8')).join('\n');
+  const openingContext = vm.createContext({});
+  vm.runInContext(`${openingSource}
+    validateOpeningEdits(openingEdits, [...baseStudyOpenings, ...baseOpeningVariations]);`, openingContext);
   const generated = publicSiteFiles(target === 'cloudflare-live' ? { ...cloudflareSiteConfig, migrationUrl: undefined }
     : preview ? { ...cloudflareSiteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' } : siteConfig);
   generated['index.html'] = generated['index.html'].replace('<!-- CLOUDFLARE_PRIVACY -->', cloudflare
     ? '<p>このサイトの配信にはCloudflareを利用しており、表示時の通信はCloudflareを経由します。通信に伴い、IPアドレスなどの情報は配信事業者に伝わります。詳しくは<a href="https://www.cloudflare.com/privacypolicy/" rel="noreferrer">Cloudflareのプライバシーポリシー</a>をご覧ください。</p>'
     : '');
   if (cloudflare) {
+    const entries = vm.runInContext(`[...studyOpenings, ...openingVariations].map(entry => ({ ...entry,
+      aliases: entry.aliases ?? openingAliases[entry.id], notation: openingNotation(entry), color: openingDefaultColor(entry) }));`, openingContext);
+    Object.assign(generated, staticLearning(cloudflareSiteConfig, preview, entries));
     if (preview) generated['index.html'] = generated['index.html'].replace('</head>', '  <meta name="robots" content="noindex">\n</head>');
     generated._headers = '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n'
       + "  Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'\n"
@@ -98,7 +108,7 @@ try {
     'daily-life.js', 'daily-life-ui.js', 'pgn-batch.js', 'pgn-batch-ui.js',
     'data.js', 'scoring.js', 'card-data.js', 'cards.js', 'result-links.js',
     'opening-data.js', 'opening-scoring.js', 'opening-study.js', 'opening-study-ui.js',
-    'opening-expansion.js', 'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
+    'opening-expansion.js', 'opening-edits-data.js', 'opening-edits.js', 'opening-variations.js', 'opening-memory.js', 'opening-memory-ui.js',
     'learning.js', 'learning-insights.js', 'learning-progress-ui.js', 'learning-ui.js', 'site-menu.js',
     'game-review.js', 'opening-classification.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'game-study.js', 'game-study-ui.js', 'game-study.css',
@@ -117,7 +127,10 @@ try {
     fs.copyFileSync(path.join(__dirname, file), target);
   }
   fs.writeFileSync(path.join(output, 'course-problems.js'), courseScript);
-  generated['index.html'] = versionPublicAssets(generated['index.html'], output);
+  if (cloudflare) generated['index.html'] = generated['index.html'].replace(/href="https:\/\/rookrori\.com\/((?:openings|guides)\/)" data-reading-link/g, 'href="/$1" data-reading-link');
+  for (const file of Object.keys(generated).filter(file => file.endsWith('.html'))) {
+    generated[file] = versionPublicAssets(generated[file], output);
+  }
   // Both hosts serve the entry at the scope root. Cloudflare redirects index.html.
   const assets = ['./', 'app.webmanifest', 'brand/rookori.png', 'brand/rookori-512.png', ...pieces,
     ...[...generated['index.html'].matchAll(/\b(?:src|href)="([\w./-]+\.(?:js|css)\?v=[a-f0-9]+)"/g)].map(match => match[1])];
@@ -128,7 +141,11 @@ try {
   }
   generated['sw.js'] = worker.replace('/* ROOKORI_SW_BUILD */',
     `const build = ${JSON.stringify({ version: hash.digest('hex').slice(0, 16), assets })};`);
-  for (const [file, content] of Object.entries(generated)) fs.writeFileSync(path.join(output, file), content);
+  for (const [file, content] of Object.entries(generated)) {
+    const destination = path.join(output, file);
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    fs.writeFileSync(destination, content);
+  }
   let published = output;
   if (cloudflare) {
     const assets = fs.readdirSync(output, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile());
@@ -143,9 +160,16 @@ try {
         || !fs.readFileSync(headers, 'utf8').startsWith('/*\n  X-Content-Type-Options: nosniff\n')) {
         throw new Error('既存のCloudflare出力を確認できません。別の場所へ移動してから再実行してください。');
       }
-      fs.rmSync(published, { recursive: true });
+      fs.rmSync(published, { recursive: true, maxRetries: 5, retryDelay: 150 });
     }
-    fs.renameSync(output, published);
+    try {
+      fs.renameSync(output, published);
+    } catch (error) {
+      // Some Windows sync folders deny directory renames while allowing file copies.
+      if (process.platform !== 'win32' || !['EPERM', 'EACCES'].includes(error.code)
+        || fs.lstatSync(published, { throwIfNoEntry: false })) throw error;
+      fs.cpSync(output, published, { recursive: true, force: false, errorOnExist: true });
+    }
   }
   console.log(values['print-output'] ? published : `公開用フォルダーを作成しました。 ${published}`);
 } catch (error) {

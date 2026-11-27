@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
-const { copyFileSync, cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } = require('node:fs');
+const { appendFileSync, copyFileSync, cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { test } = require('node:test');
@@ -33,7 +33,7 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(html, /src="journey\.js\?v=/);
   assert.match(html, /id="roadmap-title"/);
   assert.match(html, /id="updates-title"/);
-  assert.match(readFileSync(join(published, 'journey.js'), 'utf8'), /version: '4\.4\.3'/);
+  assert.match(readFileSync(join(published, 'journey.js'), 'utf8'), /version: '4\.4\.4'/);
   assert.match(html, /src="opening-expansion\.js\?v=/);
   assert.match(html, /src="play-style-ui\.js\?v=/);
   assert.match(html, /rel="manifest" href="app\.webmanifest"/);
@@ -139,6 +139,10 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.doesNotMatch(previewHtml, /id="site-migration-notice"/);
   assert.doesNotMatch(previewHtml, /google-site-verification|rookori-ga4-measurement-id|name="rookori-migration-url"/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /X-Robots-Tag: noindex/);
+  const lesson = join('openings', 'caro-kann', 'index.html');
+  const previewLesson = readFileSync(join(preview, lesson), 'utf8');
+  assert.match(previewLesson, /noindex/);
+  assert.doesNotMatch(previewLesson, /rookori-ga4-measurement-id/);
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\/sw\.js\n  Cache-Control: no-cache/);
   assert.ok(workerBuild(preview).assets.includes('app.webmanifest'));
   assert.match(readFileSync(join(preview, '_headers'), 'utf8'), /\*\.nnue\n  Content-Type: application\/octet-stream/);
@@ -155,6 +159,22 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(liveHtml, /rel="canonical" href="https:\/\/rookrori\.com\/"/);
   assert.match(liveHtml, /property="og:image" content="https:\/\/rookrori\.com\/brand\/rookori-share\.jpg"/);
   assert.match(readFileSync(join(preview, 'robots.txt'), 'utf8'), /Sitemap: https:\/\/rookrori\.com\/sitemap\.xml/);
+  const liveLesson = readFileSync(join(preview, lesson), 'utf8');
+  assert.match(liveLesson, /<h1>カロカン・ディフェンス<\/h1>|<h1>カロ・カン・ディフェンス<\/h1>/);
+  assert.match(liveLesson, /代表手順と各着手の意味/);
+  assert.match(liveLesson, /https:\/\/rookrori\.com\/openings\/caro-kann\//);
+  assert.match(liveLesson, /BreadcrumbList/);
+  assert.doesNotMatch(liveLesson, /noindex/);
+  assert.ok(!readdirSync(preview).includes('opening-editor.html'));
+  const sitemap = readFileSync(join(preview, 'sitemap.xml'), 'utf8');
+  for (const [, address] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
+    const logicalPath = new URL(address).pathname.slice(1);
+    const body = readFileSync(join(preview, logicalPath, 'index.html'), 'utf8');
+    assert.ok(body.includes(`rel="canonical" href="${address}"`));
+    for (const [, href] of body.matchAll(/href="(\/(?:openings|guides)\/[^"#]*)"/g)) {
+      assert.ok(readFileSync(join(preview, href.slice(1), 'index.html'), 'utf8').includes('<h1>'), href);
+    }
+  }
   assert.doesNotMatch(html, /name="rookori-migration-url"/);
   const liveUrl = 'https://rookrori.com/';
   assert.equal(siteConfig.migrationUrl, liveUrl);
@@ -169,4 +189,18 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(migrated, /id="site-migration-link" href="https:\/\/rookrori\.com\/"/);
   assert.match(migrated, /id="migration-export"/);
   assert.ok(!readdirSync(preview).includes('wrangler.jsonc'));
+
+  writeFileSync(join(scratch, 'opening-edits-data.js'), 'const openingEdits = ' + JSON.stringify({
+    'caro-kann': { description: '編集した教材 <script>試験</script>', seoTitle: '検証用タイトル & 教材', updated: '2026-11-27' },
+  }) + ';');
+  appendFileSync(join(scratch, 'learning-articles.cjs'), '\nmodule.exports.push({ id: "private-draft", status: "draft" });');
+  const edited = cloudflareBuild('cloudflare-live');
+  const editedLesson = readFileSync(join(edited, lesson), 'utf8');
+  assert.match(editedLesson, /<title>検証用タイトル &amp; 教材<\/title>/);
+  assert.match(editedLesson, /編集した教材 &lt;script&gt;試験&lt;\/script&gt;/);
+  assert.match(readFileSync(join(edited, 'sitemap.xml'), 'utf8'),
+    /caro-kann\/<\/loc><lastmod>2026-11-27<\/lastmod>/);
+  assert.match(readFileSync(join(edited, 'opening-edits-data.js'), 'utf8'), /編集した教材/);
+  assert.doesNotMatch(readFileSync(join(edited, 'sitemap.xml'), 'utf8'), /private-draft/);
+  assert.ok(!readdirSync(join(edited, 'guides')).includes('private-draft'));
 });

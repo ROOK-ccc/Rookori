@@ -41,11 +41,31 @@ function setup({ idValue = id, url = site, hasTag = false, consent = null, canon
   };
   const analytics = runInNewContext(source + '\nrookoriAnalytics', { window, document, URL });
   return { analytics, scripts, window, storage, nodes,
-    events: () => (window.dataLayer ?? []).filter(entry => entry[0] === 'event').map(entry => entry[2]),
+    events: () => (window.dataLayer ?? []).filter(entry => entry[0] === 'event' && entry[1] === 'page_view').map(entry => entry[2]),
     choose: value => choices.get(value).click(),
     sync: value => handlers.storage({ key: consentKey, newValue: value }),
   };
 }
+
+test('学習イベントは同意後のみ送り、許可したキャンペーンと固定画面名だけを使う', () => {
+  const { analytics, window, choose } = setup({
+    url: site + '?utm_source=instagram&utm_medium=social&utm_campaign=person%40example.test',
+  });
+  analytics.screen('quiz', 'quiz-beginner');
+  analytics.event('chess_type_complete');
+  assert.equal(window.dataLayer, undefined);
+  choose('granted');
+  analytics.screen('quiz', 'quiz-beginner');
+  analytics.event('chess_type_complete', { answer: 'secret' });
+  analytics.event('person@example.test');
+  assert.deepEqual(Array.from(window.dataLayer.filter(row => row[0] === 'event'), row => row[1]),
+    ['page_view', 'chess_type_start', 'chess_type_complete']);
+  const settings = window.dataLayer.find(row => row[0] === 'config')[2];
+  assert.equal(settings.campaign_source, 'instagram');
+  assert.equal(settings.campaign_medium, 'social');
+  assert.equal(settings.campaign_name, undefined);
+  assert.doesNotMatch(JSON.stringify(window.dataLayer), /secret|person(?:%40|@)example/);
+});
 
 test('移転元の計測は新canonicalと分け、同意した場合だけ旧サイトの固定URLを送る', () => {
   const { analytics, scripts, events, choose } = setup({ canonical: 'https://rookrori.com/', analyticsAddress: site });

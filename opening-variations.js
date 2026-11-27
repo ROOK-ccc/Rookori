@@ -49,7 +49,7 @@ function sicilianVariation(id, name, english, slot, line, lastNote, description,
   };
 }
 
-const openingVariations = [
+const baseOpeningVariations = [
   sicilianVariation('najdorf', 'ナイドルフ・バリエーション', 'Najdorf Variation', 'blackE4',
     `${sicilianPrefix} d7d6 ${sicilianOpen} g8f6 b1c3 a7a6`,
     '黒はaポーンでb5を押さえ、あとでbポーンを進める準備をします。',
@@ -125,7 +125,11 @@ const openingVariations = [
   ...expandedVariations,
 ];
 
-const studyOpenings = [...openings, ...expandedOpenings];
+const baseStudyOpenings = [...openings, ...expandedOpenings];
+// The diagnosis retains its original scores and candidate IDs.
+const lessonEdits = typeof openingEdits === 'undefined' ? {} : openingEdits;
+const openingVariations = typeof applyOpeningEdits === 'undefined' ? baseOpeningVariations : applyOpeningEdits(baseOpeningVariations, lessonEdits);
+const studyOpenings = typeof applyOpeningEdits === 'undefined' ? baseStudyOpenings : applyOpeningEdits(baseStudyOpenings, lessonEdits);
 
 function findStudyOpening(id) {
   return studyOpenings.find(opening => opening.id === id) ?? openingVariations.find(variation => variation.id === id);

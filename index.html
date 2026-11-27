@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Rookori（ルーコリ）は初心者から中級者までの日本語チェス学習サイトです。駒の動きやルール、16タイプ診断、オープニング、対局の振り返りをチェス盤で学べます。">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="チェスの勉強、もう迷わない。Rookori（ルーコリ）は初心者から中級者までの日本語チェス学習サイトです。駒の動きから定跡の練習、対局の振り返りまで、自分のペースで学べます。">
   <title>Rookori（ルーコリ）｜初心者から学べる日本語チェス学習サイト</title>
   <!-- PUBLIC_SITE_METADATA -->
   <link rel="icon" type="image/png" sizes="192x192" href="brand/rookori.png">
@@ -32,6 +32,8 @@
   <script src="opening-data.js" defer></script>
   <script src="vendor/chess.js" defer></script>
   <script src="opening-expansion.js" defer></script>
+  <script src="opening-edits-data.js" defer></script>
+  <script src="opening-edits.js" defer></script>
   <script src="opening-variations.js" defer></script>
   <script src="opening-scoring.js" defer></script>
   <script src="opening-study.js" defer></script>
@@ -79,56 +81,72 @@
   <script src="pwa.js" defer></script>
 </head>
 <body>
+  <svg class="ui-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
+    <symbol id="ui-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H5V10m5 10v-6h4v6"/></symbol>
+    <symbol id="ui-learn" viewBox="0 0 24 24"><path d="M12 6c-3-2-6-2-9-1v14c3-1 6-1 9 1 3-2 6-2 9-1V5c-3-1-6-1-9 1v14"/></symbol>
+    <symbol id="ui-play" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM9 3v18m6-18v18M3 9h18M3 15h18"/></symbol>
+    <symbol id="ui-grow" viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M7 15l4-5 3 2 6-7m-5 0h5v5"/></symbol>
+    <symbol id="ui-find" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-2 4-4 2 2-4z"/></symbol>
+    <symbol id="ui-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="ui-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  </svg>
   <header class="site-header">
     <div class="shell header-inner">
       <a class="brand" href="#home" aria-label="Rookori（ルーコリ） ホーム"><img class="brand-mark" src="brand/rookori.png" width="36" height="36" alt="">Rookori</a>
-      <button class="menu-toggle" id="site-menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-menu"><span aria-hidden="true">☰</span></button>
+      <nav class="app-tabs" aria-label="主要機能">
+        <a href="#home"><svg aria-hidden="true"><use href="#ui-home"></use></svg>ホーム</a>
+        <a href="#learn"><svg aria-hidden="true"><use href="#ui-learn"></use></svg>学ぶ</a>
+        <a href="#cpu"><svg aria-hidden="true"><use href="#ui-play"></use></svg>対戦</a>
+        <a href="#dashboard"><svg aria-hidden="true"><use href="#ui-grow"></use></svg>成長</a>
+        <a href="#discover"><svg aria-hidden="true"><use href="#ui-find"></use></svg>探す</a>
+      </nav>
+      <button class="menu-toggle" id="site-menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-menu"><svg class="ui-icon" aria-hidden="true"><use href="#ui-menu"></use></svg></button>
     </div>
   </header>
   <dialog id="site-menu" aria-labelledby="site-menu-title">
     <div class="menu-panel">
-      <div class="menu-heading"><h2 id="site-menu-title">メニュー</h2><button id="site-menu-close" class="menu-toggle" type="button" aria-label="メニューを閉じる" autofocus><span aria-hidden="true">×</span></button></div>
+      <div class="menu-heading"><h2 id="site-menu-title">メニュー</h2><button id="site-menu-close" class="menu-toggle" type="button" aria-label="メニューを閉じる" autofocus><svg class="ui-icon" aria-hidden="true"><use href="#ui-close"></use></svg></button></div>
       <nav class="drawer-nav" aria-label="サイトメニュー">
         <section class="menu-group">
           <h3>ホーム</h3>
-          <a href="#home"><span aria-hidden="true">⌂</span>ホーム</a>
-          <a href="#dashboard"><span aria-hidden="true">☀</span>今日の学習・ダッシュボード</a>
+          <a href="#home"><svg class="ui-icon" aria-hidden="true"><use href="#ui-home"></use></svg>ホーム</a>
+          <a href="#dashboard"><svg class="ui-icon" aria-hidden="true"><use href="#ui-home"></use></svg>今日の学習・ダッシュボード</a>
         </section>
         <section class="menu-group">
           <h3>学ぶ</h3>
-          <a href="#learn"><span aria-hidden="true">→</span>学習を始める</a>
-          <a href="#intro"><span aria-hidden="true">♙</span>はじめてのチェス</a>
-          <a href="#openings"><span aria-hidden="true">▦</span>オープニング学習</a>
-          <a href="#memorize"><span aria-hidden="true">♘</span>定跡を暗記する</a>
-          <a href="#review"><span aria-hidden="true">↻</span>定跡を復習する</a>
+          <a href="#learn"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>学習を始める</a>
+          <a href="#intro"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>はじめてのチェス</a>
+          <a href="#openings"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>オープニング学習</a>
+          <a href="#memorize"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>定跡を暗記する</a>
+          <a href="#review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>定跡を復習する</a>
         </section>
         <section class="menu-group">
           <h3>対戦する</h3>
-          <a href="#cpu"><span aria-hidden="true">♞</span>コンピューター対戦</a>
+          <a href="#cpu"><svg class="ui-icon" aria-hidden="true"><use href="#ui-play"></use></svg>コンピューター対戦</a>
         </section>
         <section class="menu-group">
           <h3>成長する</h3>
-          <a href="#personal"><span aria-hidden="true">♘</span>自分だけの練習問題</a>
-          <a href="#game-review"><span aria-hidden="true">♟</span>対局を振り返る</a>
-          <a href="#game-library"><span aria-hidden="true">▤</span>対局履歴</a>
-          <a href="#pgn-import"><span aria-hidden="true">⇧</span>棋譜をまとめて取り込む</a>
-          <a href="#daily"><span aria-hidden="true">⊞</span>毎日の練習問題</a>
-          <a href="#progress"><span aria-hidden="true">▥</span>上達記録</a>
+          <a href="#personal"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>自分だけの練習問題</a>
+          <a href="#game-review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局を振り返る</a>
+          <a href="#game-library"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局履歴</a>
+          <a href="#pgn-import"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>棋譜をまとめて取り込む</a>
+          <a href="#daily"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>毎日の練習問題</a>
+          <a href="#progress"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>上達記録</a>
         </section>
         <section class="menu-group">
           <h3>自分を知る</h3>
-          <a href="#your-style"><span aria-hidden="true">♙</span>あなたの棋風</a>
-          <a href="#mode"><span aria-hidden="true">♜</span>チェス16タイプ診断</a>
-          <a href="#opening-quiz"><span aria-hidden="true">◇</span>オープニング診断</a>
+          <a href="#your-style"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>あなたの棋風</a>
+          <a href="#mode"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>チェス16タイプ診断</a>
+          <a href="#opening-quiz"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>オープニング診断</a>
         </section>
         <section class="menu-group">
           <h3>その他</h3>
-          <a href="#roadmap"><span aria-hidden="true">↗</span>Rookoriのこれまでと、これから</a>
-          <a href="#welcome"><span aria-hidden="true">→</span>はじめての利用ガイド</a>
-          <a href="#glossary"><span aria-hidden="true">あ</span>チェス用語集</a>
-          <a href="#about"><span aria-hidden="true">ⓘ</span>Rookoriについて</a>
-          <a href="#backup"><span aria-hidden="true">⇅</span>設定・学習データのバックアップ</a>
-          <a href="#privacy"><span aria-hidden="true">⚙</span>アクセス解析とプライバシー</a>
+          <a href="#roadmap"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>Rookoriのこれまでと、これから</a>
+          <a href="#welcome"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>はじめての利用ガイド</a>
+          <a href="#glossary"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>チェス用語集</a>
+          <a href="#about"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>Rookoriについて</a>
+          <a href="#backup"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>設定・学習データのバックアップ</a>
+          <a href="#privacy"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>アクセス解析とプライバシー</a>
         </section>
       </nav>
     </div>
@@ -171,7 +189,8 @@
     <section id="home" class="screen">
       <div class="hero">
         <div class="hero-copy">
-          <h1 id="home-title" tabindex="-1">チェスの旅を、<em>共に。</em></h1>
+          <p class="hero-tagline">チェスの旅を、共に。</p>
+          <h1 id="home-title" tabindex="-1">チェスの勉強、<em>もう迷わない。</em></h1>
           <p class="hero-description">はじめての一手から、もっと強くなるその先まで。</p>
           <p class="hero-description">Rookori（ルーコリ）は、初心者から中級者まで無料で使える日本語のチェス学習サイトです。駒の動かし方から、自分のペースで始められます。</p>
           <div class="hero-actions">
@@ -242,6 +261,21 @@
       </section>
     </section>
 
+    <section id="discover" class="screen inner-screen guide-screen" hidden>
+      <h1 id="discover-title" tabindex="-1">探す</h1>
+      <div class="app-directory">
+        <section><h2>読み物と用語</h2><ul class="reading-links">
+          <li><a href="https://rookrori.com/openings/" data-reading-link>オープニング教材を読む</a></li>
+          <li><a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a></li><li><a href="#glossary">チェス用語集</a></li>
+        </ul></section>
+        <section><h2>自分に合う学び方</h2><ul class="reading-links">
+          <li><a href="#mode">チェス16タイプ診断</a></li><li><a href="#opening-quiz">オープニング診断</a></li><li><a href="#your-style">実際の対局から棋風を知る</a></li>
+        </ul></section>
+        <section><h2>Rookoriと設定</h2><ul class="reading-links">
+          <li><a href="#roadmap">これまでと、これから</a></li><li><a href="#backup">学習データのバックアップ・復元</a></li><li><a href="#privacy">アクセス解析とプライバシー</a></li>
+        </ul></section>
+      </div>
+    </section>
     <section id="beginner" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
       <h1 id="beginner-title" tabindex="-1">これからチェスを始める</h1>
@@ -422,6 +456,7 @@
       <p class="eyebrow" id="study-slot"></p>
       <h1 id="study-title" tabindex="-1"></h1>
       <p class="study-english" id="study-english" lang="en"></p>
+      <p><a class="text-button" id="study-reading-link" href="https://rookrori.com/openings/" data-reading-link>着手の解説をまとめて読む</a></p>
       <div class="study-layout">
         <div class="study-board-area">
           <div class="study-board-bar">
@@ -1475,7 +1510,7 @@
         <li>解析結果を含むサイトデータをすべて消すには、ブラウザーの設定からこのサイトのデータを削除してください。この操作では学習記録や同意設定も消えます。同じホスト名の別サイトのデータに影響する場合があります。書き出したバックアップや棋譜ファイルは、保存先で別途削除してください。</li>
       </ul>
       <h2>Google Analytics 4 と同意の設定</h2>
-      <p>サイトの改善に役立てるため、公開サイトで同意した方の閲覧状況を Google Analytics 4 で計測します。画面の種類を送信し、GoogleはCookieなどを使ってブラウザーを区別します。Rookoriの計測タグは、元のURLのクエリや個別ID、ユーザー名、棋譜、メモ、診断の回答・結果、詳細な学習履歴をページビューに含めません。</p>
+      <p>サイトの改善に役立てるため、公開サイトで同意した方の閲覧状況を Google Analytics 4 で計測します。画面の種類、診断や練習を開始・完了したこと、共有操作、事前に登録したキャンペーン名などを送信し、GoogleはCookieなどを使ってブラウザーを区別します。Rookoriの計測タグは、元のURLのクエリや個別ID、ユーザー名、棋譜、メモ、診断の回答・結果、詳細な学習履歴を送信しません。</p>
       <p>同意はこのブラウザーに記録されます。「同意しない」を選ぶと以後の計測を停止できます。すでに送信された情報の削除やCookieの消去とは別の操作です。詳しくは<a href="https://policies.google.com/technologies/partner-sites?hl=ja" rel="noreferrer">Googleによるデータの使用</a>をご覧ください。</p>
       <p id="analytics-status" role="status">アクセス解析は無効です。</p>
       <div id="analytics-settings" class="analytics-actions" hidden>
@@ -1488,6 +1523,7 @@
   </main>
 
   <footer class="site-footer"><div class="shell">Rookori <a href="#updates" data-site-version aria-label="現在のバージョンと更新履歴"></a> · <a href="#roadmap">これまでと、これから</a> · 駒画像 <a href="pieces/cburnett/LICENSE.txt">CBurnett / BSD-3-Clause</a> · <a href="#privacy">アクセス解析とプライバシー</a> · <a href="#welcome">はじめての利用ガイド</a>
+  <div><a href="https://rookrori.com/openings/" data-reading-link>オープニング教材</a> · <a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a></div>
     <details id="rookori-install" class="install-help" hidden>
       <summary>ホーム画面に追加する</summary>
       <p id="install-ios">iPhone・iPadのSafariでは、共有メニューから「ホーム画面に追加」を選び、「Webアプリとして開く」が表示されたらオンにして「追加」を押します。</p>

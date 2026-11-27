@@ -528,7 +528,6 @@ body:has(#site-menu[open]) { overflow: hidden; }
 .menu-group { border-top: 1px solid #786849; padding-top: 8px; margin-top: 12px; }
 .menu-group h3 { font-size: .9rem; margin-bottom: 5px; }
 .menu-group a { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border-inline-start: 3px solid transparent; border-radius: 4px; color: var(--white); text-decoration: none; font-weight: 600; }
-.menu-group a span { color: var(--gold); width: 20px; text-align: center; }
 .menu-group a:hover, .menu-group a[aria-current="page"] { border-inline-start-color: var(--gold); background: #433721; }
 #site-menu :focus-visible { outline-color: var(--gold); }
 @media (max-width: 760px) {
@@ -735,4 +734,39 @@ body:has(#site-menu[open]) { overflow: hidden; }
 @media (max-width: 480px) {
   .welcome-choices { grid-template-columns: 1fr; }
   .rookori-fields .button { white-space: normal; min-height: 44px; }
+}
+.ui-symbols { position: absolute; pointer-events: none; }
+.ui-icon, .app-tabs svg { display: block; width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.menu-toggle { display: grid; place-items: center; }
+.menu-group .ui-icon { color: var(--gold); }
+.app-tabs { display: flex; gap: 4px; }
+.app-tabs a { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 5px 12px; border-radius: 9px; color: var(--green); text-decoration: none; white-space: nowrap; }
+.app-tabs a:hover, .app-tabs a[aria-current="page"] { background: #eee2cb; color: #224438; }
+.app-tabs a[aria-current="page"] { font-weight: 750; }
+.hero-tagline { color: var(--gold); margin-bottom: 10px; font-weight: 700; }
+.home-diagnostics .first-step-card { background: none; border: 0; border-radius: 0; box-shadow: none; padding-inline: 0; border-top: 1px solid var(--line); }
+#dashboard > details.opening-card { background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding-inline: 0; }
+#dashboard > details > summary { min-height: 44px; align-content: center; }
+.app-directory { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); column-gap: 26px; margin-block: 26px; }
+.app-directory h2 { font-size: 1.2rem; }
+.reading-page { max-width: 760px; padding-block: clamp(24px, 6vw, 58px); }
+.reading-page h1 { font: 700 clamp(1.8rem, 6vw, 3.4rem)/1.25 var(--serif); margin-block: 16px; overflow-wrap: anywhere; }
+.reading-page h2 { margin-top: 2rem; font-size: 1.25rem; }
+.reading-page p, .reading-moves { margin-block: 10px 16px; }
+.reading-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reading-crumbs, .reading-links { list-style: none; padding: 0; }
+.reading-crumbs { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+.reading-crumbs li + li::before { content: "›"; padding-inline-end: 10px; }
+.reading-links li { border-top: 1px solid var(--line); }
+.reading-links a { display: flex; align-items: center; min-height: 44px; padding-block: 6px; }
+.reading-moves { padding-inline-start: 2em; }
+.reading-moves li { padding-block: 6px; }
+@media (max-width: 767px) {
+  body:has(.app-tabs) { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  .app-tabs { position: fixed; inset: auto max(10px, env(safe-area-inset-right, 0px)) calc(9px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); z-index: 15; margin-inline: auto; max-width: 460px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 5px; background: #122d25; border: 1px solid #8a744b; border-radius: 19px; }
+  .app-tabs a { flex-direction: column; gap: 1px; min-width: 0; min-height: 48px; padding: 3px 1px; color: #fff4db; font-size: .74rem; }
+  .app-tabs a:hover, .app-tabs a[aria-current="page"] { color: #ffe0a3; background: #325149; }
+  .app-tabs a:focus-visible { outline-color: #ffe0a3; outline-offset: 0; }
+  body[data-screen="game-player"] .app-tabs, body[data-screen="cpu"]:has(#cpu-session:not([hidden])) .app-tabs { display: none; }
+  body[data-screen="game-player"]:has(.app-tabs), body[data-screen="cpu"]:has(#cpu-session:not([hidden])) { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }

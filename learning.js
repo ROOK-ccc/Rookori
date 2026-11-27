@@ -153,7 +153,7 @@ class LearningTracker {
 
   home() {
     return this.data.home === 'auto' ? (this.intro().completed.length || this.history().length
-      || Object.keys(this.data.items).length || this.data.explained.length ? 'dashboard' : 'intro') : this.data.home;
+      || this.data.last || Object.keys(this.data.items).length || this.data.explained.length ? 'dashboard' : 'intro') : this.data.home;
   }
 
   due(day = localDay(this.clock())) {

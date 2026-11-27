@@ -332,6 +332,7 @@ shareCard.addEventListener('click', async () => {
   if (!cardFile) return;
   try {
     await navigator.share({ files: [cardFile] });
+    if (typeof rookoriAnalytics !== 'undefined') rookoriAnalytics.event('share');
   } catch (error) {
     if (error.name !== 'AbortError') cardStatus.textContent = '共有できませんでした。PNG画像を保存して共有できます。';
   }

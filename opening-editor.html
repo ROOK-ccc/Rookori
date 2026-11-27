@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>オープニング教材編集 | Rookori</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
+  <script src="vendor/chess.js" defer></script>
+  <script src="opening-data.js" defer></script>
+  <script src="opening-expansion.js" defer></script>
+  <script src="opening-edits-data.js" defer></script>
+  <script src="opening-edits.js" defer></script>
+  <script src="opening-variations.js" defer></script>
+  <script src="opening-study.js" defer></script>
+  <script src="opening-memory.js" defer></script>
+  <script src="opening-editor.js" defer></script>
+</head>
+<body>
+  <main class="shell editor">
+    <h1>オープニング教材編集</h1>
+    <p>下書きはこのブラウザーに保存します。公開候補に書き出すのは、現在選択している教材だけです。</p>
+    <div class="editor-fields">
+      <label>教材名で検索<input type="search" id="lesson-search" placeholder="日本語、英語、ID"></label>
+      <label>オープニング<select id="lesson-parent"></select></label>
+      <label>教材・バリエーション<select id="lesson-variant"></select></label>
+    </div>
+    <div class="editor-grid">
+      <form id="lesson-fields" class="editor-card editor-fields"></form>
+      <section class="editor-card" aria-labelledby="lesson-preview-title">
+        <h2 id="lesson-preview-title">教材プレビュー</h2>
+        <div id="lesson-preview"></div>
+        <label for="lesson-ply">盤に表示する着手</label>
+        <select id="lesson-ply"></select>
+        <div class="study-board editor-board" id="lesson-board" role="img"></div>
+        <h3>編集前からの変更</h3>
+        <ul id="lesson-diff"></ul>
+        <p id="lesson-missing"></p>
+      </section>
+    </div>
+    <div class="editor-row">
+      <button class="button secondary" id="lesson-save" type="button">下書きを保存</button>
+      <button class="button primary" id="lesson-export" type="button">この教材を公開候補に書き出す</button>
+    </div>
+    <p id="lesson-status" role="status"></p>
+  </main>
+</body>
+</html>

@@ -4,6 +4,8 @@ const openingStudyScreen = (() => {
   let study;
   let flipped;
   let completionRecorded;
+  const readingLink = byId('study-reading-link');
+  const readingBase = readingLink.href;
   const board = createChessBoard(byId('study-board'), byId('study-promotion'), {
     position: () => study,
     isFlipped: () => flipped,
@@ -27,14 +29,16 @@ const openingStudyScreen = (() => {
     board.reset();
     chessGlossary.annotate(byId('study-title'), candidate.name);
     byId('study-english').textContent = candidate.english;
+    readingLink.href = new URL(candidate.id + '/', readingBase).href;
     byId('study-slot').textContent = candidate.slotLabel ?? openingSlots[candidate.slot];
     byId('study-practice').href = `#practice/${candidate.id}/${openingDefaultColor(candidate)}`;
     byId('study-parent').hidden = !candidate.parentId;
     byId('study-parent').href = candidate.parentId ? `#study/${candidate.parentId}` : '#openings';
-    byId('variation-details').hidden = !candidate.parentId && !candidate.source;
+    const edited = Object.hasOwn(lessonEdits, candidate.id);
+    byId('variation-details').hidden = !candidate.parentId && !candidate.source && !edited;
     byId('sicilian-comparison').hidden = !openingVariations.some(variation => variation.parentId === candidate.id);
     byId('study-compare').hidden = byId('sicilian-comparison').hidden;
-    if (candidate.parentId || candidate.source) {
+    if (candidate.parentId || candidate.source || edited) {
       chessGlossary.annotate(byId('variation-overview'), candidate.description);
       const facts = [
         ['代表手順', openingNotation(candidate).join(' ')], ['ECOコード', candidate.eco],
@@ -43,6 +47,8 @@ const openingStudyScreen = (() => {
         ['黒番の狙い', candidate.black], ['ポーンの形', candidate.pawns],
         ['代表手順の駒の配置', candidate.placement], ['その後の方針', candidate.tip],
         ['注意したい弱点', candidate.weakness], ['よくある間違い', candidate.mistake],
+        ['対象レベル', candidate.level], ['前提知識', candidate.prerequisites], ['長所', candidate.strengths],
+        ['実戦で意識する点', candidate.practical], ['よくある疑問', candidate.faq], ['参考文献', candidate.references],
       ];
       byId('variation-facts').replaceChildren(...facts.filter(([, value]) => value).flatMap(([label, value]) =>
         [element('dt', label), chessTermText('dd', value)]));

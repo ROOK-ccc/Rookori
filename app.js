@@ -24,6 +24,7 @@ function element(tag, text, className) {
 }
 
 function showScreen(id, focusTarget) {
+  document.body.dataset.screen = id;
   if (id === 'home' || id === 'dashboard') personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
@@ -32,6 +33,7 @@ function showScreen(id, focusTarget) {
   window.scrollTo(0, 0);
   byId(focusTarget).focus({ preventScroll: true });
   rookoriAnalytics.screen(id, displayedRoute?.path);
+  siteMenu.markTab(id, displayedRoute?.path);
 }
 
 function showQuiz(mode, savedAnswers, savedIndex) {
@@ -121,7 +123,8 @@ function renderOpeningResult(resultAnswers, studyId) {
   if (!migrationRead(savedOpeningResultKey)) rememberDiagnosis(savedOpeningResultKey, resultAnswers);
   lastOpeningAnswers = resultAnswers;
   const ratingLabel = (value) => ['低', '低', '中', '中', '高'][value - 1];
-  byId('opening-results').replaceChildren(...scoreOpenings(resultAnswers).map(({ candidate, reason }) => {
+  byId('opening-results').replaceChildren(...scoreOpenings(resultAnswers).map(({ candidate: recommendation, reason }) => {
+    const candidate = findStudyOpening(recommendation.id) ?? recommendation;
     const card = element('article', null, 'opening-card');
     card.dataset.openingId = candidate.id;
     const english = element('p', candidate.english, 'opening-english');
@@ -307,6 +310,7 @@ byId('copy-result-link').addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(url);
     if (stillViewingLink()) {
+      rookoriAnalytics.event('share');
       byId('link-status').textContent = 'リンクをコピーしました';
     }
   } catch {
@@ -321,6 +325,7 @@ byId('copy-result-link').addEventListener('click', async () => {
 byId('share-result-link').addEventListener('click', async () => {
   try {
     await navigator.share({ url: byId('result-link-url').value });
+    rookoriAnalytics.event('share');
   } catch (error) {
     if (error.name !== 'AbortError') {
       byId('link-status').textContent = 'リンクを共有できませんでした。「結果のリンクをコピー」をお試しください。';
@@ -337,6 +342,12 @@ byId('mode-options').replaceChildren(...Object.entries(modes).map(([key, mode]) 
 }));
 
 document.addEventListener('click', (event) => {
+  const readingLink = event.target.closest('[data-reading-link]');
+  if (readingLink) {
+    const target = new URL(readingLink.href);
+    if (target.origin === location.origin) readingLink.href = preserveRookoriCampaign(location.href, target).href;
+    return;
+  }
   const link = event.target.closest('a[href^="#"]');
   if (!link || event.defaultPrevented || event.button > 0
       || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -373,11 +384,13 @@ byId('next').addEventListener('click', () => {
   if (questionIndex === questions.length - 1) {
     if (currentMode === 'opening') {
       rememberDiagnosis(savedOpeningResultKey, answers);
+      rookoriAnalytics.event('opening_quiz_complete');
       goTo('opening-result', { openingAnswers: answers });
       return;
     }
     const code = scoreAnswers(questions, answers);
     rememberDiagnosis(savedTypeResultKey, { code, mode: currentMode });
+    rookoriAnalytics.event('chess_type_complete');
     goTo('result', { code, mode: currentMode });
     return;
   }

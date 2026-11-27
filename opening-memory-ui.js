@@ -67,8 +67,9 @@ const openingMemoryScreen = (() => {
         advanceOpponent();
       }, 520);
     }
-    if (practice.complete && !practice.target && !recordedCompletion) {
-      learningTracker.openingDone(practice.opening.id, 'practice');
+    if (practice.complete && !recordedCompletion) {
+      if (!practice.target) learningTracker.openingDone(practice.opening.id, 'practice');
+      rookoriAnalytics.event(practice.target ? 'review_complete' : 'opening_practice_complete');
       recordedCompletion = true;
     }
     save();
@@ -131,6 +132,7 @@ const openingMemoryScreen = (() => {
     text('practice-comment', '');
     board.reset();
     showScreen('opening-practice', 'practice-title');
+    if (!target) rookoriAnalytics.event('opening_practice_start');
     advanceOpponent();
   }
 

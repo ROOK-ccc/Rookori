@@ -58,6 +58,11 @@ test('初回・診断のみは紹介型、学習履歴があるとダッシュ�
   assert.equal(learner(store).home(), 'intro');
   store.setItem('result', '{"code":"ATCI"}');
   assert.equal(learner(store).home(), 'intro');
+  const fresh = learner(store);
+  fresh.day();
+  assert.equal(fresh.home(), 'intro');
+  fresh.lessonAnswer('first-turn', false);
+  assert.equal(learner(store).home(), 'dashboard');
   store.setItem(introStorageKey, JSON.stringify({ completed: ['first-turn'], chapter: 'basics', lesson: 'first-turn', quiz: {} }));
   const tracker = learner(store);
   assert.equal(tracker.home(), 'dashboard');

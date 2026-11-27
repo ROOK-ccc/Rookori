@@ -4,6 +4,7 @@ const siteHeadings = {
   welcome: 'welcome-title',
   'pgn-import': 'batch-title',
   learn: 'learn-title',
+  discover: 'discover-title',
   beginner: 'beginner-title',
   improve: 'improve-title',
   journal: 'journal-title',
@@ -87,9 +88,15 @@ function readSiteRoute(address, state) {
 }
 
 function siteAddress(address, path, data, hashOnly = false) {
-  if (path === 'result' && !hashOnly) return makeResultLink(address, data.code, data.mode);
+  if (path === 'result' && !hashOnly) {
+    const result = new URL(makeResultLink(address, data.code, data.mode));
+    return typeof preserveRookoriCampaign === 'function' ? preserveRookoriCampaign(address, result).href : result.href;
+  }
   const url = new URL(address);
-  if (!hashOnly) url.search = '';
+  if (!hashOnly) {
+    url.search = '';
+    if (typeof preserveRookoriCampaign === 'function') preserveRookoriCampaign(address, url);
+  }
   url.hash = path === 'home' && !hashOnly ? '' : path;
   return url.href;
 }

@@ -1,5 +1,5 @@
 function createRookoriAnalytics(win, doc) {
-  const noop = { screen() {} };
+  const noop = { screen() {}, event() {} };
   const address = doc.querySelector('meta[name="rookori-ga4-site-url"]')?.content
     || doc.querySelector('link[rel="canonical"]')?.href;
   const id = doc.querySelector('meta[name="rookori-ga4-measurement-id"]')?.content;
@@ -24,8 +24,23 @@ function createRookoriAnalytics(win, doc) {
     personal: '個別練習問題', 'personal-play': '個別練習問題を解く', 'your-style': 'あなたの棋風',
     cpu: 'コンピューター対戦',
     backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集',
-    privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー',
+    privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー', discover: '探す', 'learning-guide': '学習ガイド',
   };
+  const eventNames = new Set(['chess_type_start', 'chess_type_complete', 'opening_quiz_complete',
+    'opening_view', 'opening_practice_start', 'opening_practice_complete', 'review_complete', 'dashboard_view', 'share']);
+  const screenEvents = { quiz: 'chess_type_start', 'opening-study': 'opening_view', dashboard: 'dashboard_view' };
+  const staticKind = doc.getElementById('static-learning')?.dataset?.kind;
+  const campaign = {};
+  const campaignOptions = {
+    source: ['instagram', 'x', 'youtube', 'discord', 'newsletter'],
+    medium: ['social', 'referral', 'email'],
+    name: ['rookori', 'rookori_launch', 'opening_learning'],
+  };
+  const query = new URL(win.location.href || address).searchParams;
+  for (const [field, values] of Object.entries(campaignOptions)) {
+    const value = query.get('utm_' + (field === 'name' ? 'campaign' : field));
+    if (values.includes(value)) campaign['campaign_' + field] = value;
+  }
   const consentKey = 'rookori.analytics-consent.v1';
   const disableKey = `ga-disable-${id}`;
   const notice = doc.getElementById('analytics-notice');
@@ -66,10 +81,11 @@ function createRookoriAnalytics(win, doc) {
       allow_google_signals: false,
       allow_ad_personalization_signals: false,
       cookie_domain: 'none',
-      cookie_path: site.pathname,
+      cookie_path: staticKind ? '/' : site.pathname,
       page_location: site.href,
       page_referrer: site.href,
       page_title: 'Rookori',
+      ...campaign,
     });
     const tag = doc.createElement('script');
     tag.async = true;
@@ -78,17 +94,25 @@ function createRookoriAnalytics(win, doc) {
     doc.head.append(tag);
   }
 
+  function event(name) {
+    if (choice !== 'granted' || !current || !eventNames.has(name)) return;
+    gtag('event', name, { page_location: current.location, page_title: current.title,
+      page_referrer: current.referrer, send_to: id });
+  }
+
   function track() {
     if (choice !== 'granted' || !current || current.key === last?.key) return;
     // Only fixed screen names reach Google. The routing key is used for local deduplication.
+    current.referrer = last?.location ?? site.href;
     const context = {
       page_location: current.location,
-      page_referrer: last?.location ?? site.href,
+      page_referrer: current.referrer,
       page_title: current.title,
     };
     gtag('set', context);
     gtag('event', 'page_view', { ...context, send_to: id });
     last = current;
+    if (Object.hasOwn(screenEvents, current.name)) event(screenEvents[current.name]);
   }
 
   function changeChoice(value) {
@@ -120,20 +144,42 @@ function createRookoriAnalytics(win, doc) {
   if (choice === 'granted') start();
   updateControls();
 
-  return {
+  const api = {
     screen(id, route) {
       const name = id === 'roadmap' && route === 'updates' ? 'updates'
         : id === 'quiz' && route === 'opening-quiz' ? 'opening-quiz'
         : id === 'openings' && route === 'memorize' ? 'memorize' : id;
       if (!Object.hasOwn(titles, name)) return;
-      current = {
+      const next = {
+        name,
         key: id === 'home' ? 'home' : `${name}:${route ?? ''}`,
-        location: name === 'home' ? site.href : new URL(`#${name}`, site).href,
+        location: staticKind || name === 'home' ? site.href : new URL(`#${name}`, site).href,
         title: `Rookori | ${titles[name]}`,
       };
+      if (next.key === current?.key) return;
+      current = next;
       track();
     },
+    event,
   };
+  if (staticKind) api.screen(staticKind === 'opening' ? 'opening-study' : 'learning-guide', '');
+  return api;
 }
 
 const rookoriAnalytics = createRookoriAnalytics(window, document);
+
+function preserveRookoriCampaign(from, to) {
+  const source = new URL(from);
+  for (const field of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_content', 'utm_term']) {
+    const value = source.searchParams.get(field);
+    if (value && !to.searchParams.has(field)) to.searchParams.set(field, value);
+  }
+  return to;
+}
+
+if (document.getElementById('static-learning')?.dataset?.kind) {
+  for (const link of document.querySelectorAll('a[href^="/"]')) {
+    const target = new URL(link.href);
+    if (target.origin === window.location.origin) link.href = preserveRookoriCampaign(window.location.href, target).href;
+  }
+}

@@ -51,5 +51,19 @@ const siteMenu = (() => {
     }
   }
 
-  return { close, mark };
+  function markTab(screen, path) {
+    const tab = path === 'home' || !path ? 'home'
+      : screen === 'cpu' ? 'cpu'
+      : ['dashboard', 'daily', 'progress', 'review', 'game-player', 'game-review', 'game-library',
+        'pgn-import', 'personal', 'personal-play', 'journal'].includes(screen) ? 'dashboard'
+      : ['learn', 'beginner', 'improve', 'intro', 'intro-lesson', 'intro-summary', 'openings',
+        'opening-study', 'opening-practice'].includes(screen) || path === 'learn' ? 'learn'
+      : 'discover';
+    for (const link of document.querySelectorAll('.app-tabs a')) {
+      if (link.hash === '#' + tab) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
+  }
+
+  return { close, mark, markTab };
 })();
