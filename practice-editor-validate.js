@@ -1,9 +1,15 @@
 function validatePracticeEdit(edit, row, rules) {
-  const allowed = ['published', 'fen', 'moves', 'rating', 'tags', 'alternatives', 'title', 'prompt', 'hint', 'explanation', 'source'];
+  const allowed = ['published', 'fen', 'moves', 'rating', 'tags', 'alternatives', 'title', 'prompt', 'hint', 'explanation', 'explanationStatus', 'source'];
   const supported = new Set('fork pin skewer discoveredAttack doubleCheck deflection attraction interference clearance capturingDefender promotion mateIn1 mateIn2 mateIn3 mateIn4 mateIn5 backRankMate endgame pawnEndgame rookEndgame queenEndgame opening middlegame defensiveMove advantage crushing mate'.split(' '));
   const err = message => { throw new Error(row[0] + ' · ' + message); };
   if (!edit || typeof edit !== 'object' || Array.isArray(edit) || Object.keys(edit).some(key => !allowed.includes(key))) err('変更の構造を確認してください。');
-  const data = { published: true, fen: row[1], moves: row[2], rating: row[3], tags: row[4], alternatives: [], ...edit };
+  const data = { published: true, fen: row[1], moves: row[2], rating: row[3], tags: row[4], alternatives: [],
+    explanationStatus: edit.explanation?.trim?.() ? 'authored' : 'generated', ...edit };
+  if (!['generated', 'reviewed', 'authored'].includes(data.explanationStatus)
+    || data.explanationStatus === 'generated' && data.explanation
+    || data.explanationStatus !== 'generated' && (typeof data.explanation !== 'string' || !data.explanation.trim())) {
+    err('解説の確認状態と日本語解説の入力を確認してください。');
+  }
   if (typeof data.published !== 'boolean' || !Number.isInteger(data.rating) || data.rating < 400 || data.rating > 3000
     || typeof data.fen !== 'string' || !rules.validateFen(data.fen).ok || !Array.isArray(data.tags)
     || !data.tags.length || new Set(data.tags).size !== data.tags.length || data.tags.some(tag => !supported.has(tag))

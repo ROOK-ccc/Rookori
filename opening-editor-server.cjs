@@ -11,6 +11,7 @@ const files = new Set([
   'opening-expansion.js', 'opening-edits-data.js', 'opening-edits.js', 'opening-variations.js',
   'opening-study.js', 'opening-memory.js', 'opening-editor.js',
   'practice-editor.html', 'practice-editor.js', 'practice-editor-validate.js', 'practice-edits.json',
+  'game-study.js', 'practice-explanation.js',
 ]);
 const mime = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',

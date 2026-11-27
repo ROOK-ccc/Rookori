@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="editor.css">
   <script defer src="vendor/chess.js"></script>
+  <script defer src="game-study.js"></script>
+  <script defer src="practice-explanation.js"></script>
   <script defer src="practice-editor-validate.js"></script>
   <script defer src="practice-editor.js"></script>
 </head>
@@ -18,6 +20,7 @@
   <div class="editor-row">
     <label>問題ID・問題名 <input id="puzzle-search" type="search"></label>
     <label><input id="puzzle-unwritten" type="checkbox"> 個別解説が未入力の問題のみ</label>
+    <label>解説の確認状態 <select id="puzzle-filter"><option value="">すべて</option><option value="generated">自動生成</option><option value="reviewed">確認済み</option><option value="authored">独自執筆</option></select></label>
     <label>対象 <select id="puzzle-choice"></select></label>
   </div>
   <p id="puzzle-status" role="status"></p>
@@ -31,6 +34,7 @@
       <label class="editor-wide">問題文<textarea name="prompt"></textarea></label>
       <label class="editor-wide">ヒント<textarea name="hint"></textarea></label>
       <label class="editor-wide">日本語の個別解説<textarea name="explanation"></textarea></label>
+      <label class="editor-wide">確認状態 <select name="explanationStatus"><option value="generated">自動生成</option><option value="reviewed">確認済み</option><option value="authored">独自執筆</option></select></label>
       <label class="editor-wide">出典<textarea name="source"></textarea></label>
       <label class="editor-wide"><input type="checkbox" name="published"> 検証済みファイルを反映したときに公開する</label>
     </form>
@@ -40,6 +44,7 @@
       <label>再生する手順 <select id="puzzle-line"></select></label>
       <div class="editor-row"><button class="button secondary" id="puzzle-prev">一手戻る</button><button class="button secondary" id="puzzle-next">一手進む</button></div>
       <p id="puzzle-moves" role="status"></p>
+      <div id="puzzle-facts"></div>
       <h3>編集前後の差分</h3><ul id="puzzle-diff"></ul>
     </section>
     <div class="editor-row">

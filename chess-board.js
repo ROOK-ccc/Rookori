@@ -4,6 +4,7 @@ function createChessBoard(board, promotionDialog, {
   position, play, onMove, feedback, onIllegal = feedback,
   isFlipped = () => false, canPlay = () => !position().outcome,
   editSquare, editDrag, editSelected = () => null, hints = () => [], canSelect = () => true,
+  explanation = () => null,
 }) {
   const colorNames = chessColorNames;
   const pieceNames = { p: 'ポーン', n: 'ナイト', b: 'ビショップ', r: 'ルーク', q: 'クイーン', k: 'キング' };
@@ -47,6 +48,7 @@ function createChessBoard(board, promotionDialog, {
     const hinted = hints();
     const checked = study.game.isCheck?.() ? study.game.turn() : null;
     const last = study.lastMove;
+    const diagram = explanation();
     const buttons = positions.map(({ piece, square, dark }, index) => {
       const button = element('button', null, 'study-square');
       button.type = 'button';
@@ -67,6 +69,7 @@ function createChessBoard(board, promotionDialog, {
       button.classList.toggle('checked-square', inCheck);
       button.classList.toggle('hint-from', hintFrom);
       button.classList.toggle('hint-to', hintTo);
+      button.classList.toggle('practice-target', diagram?.marks?.includes(square) ?? false);
       button.setAttribute('aria-pressed', String(square === currentSelection));
       const description = piece ? `${colorNames[piece.color]}の${pieceNames[piece.type]}` : '空きマス';
       const marks = [square, description];
@@ -76,6 +79,7 @@ function createChessBoard(board, promotionDialog, {
       if (hintTo) marks.push('ヒントの移動先');
       if (last?.from === square) marks.push('直前の移動元');
       if (last?.to === square) marks.push('直前の移動先');
+      if (diagram?.marks?.includes(square)) marks.push('解説で注目するマス');
       button.setAttribute('aria-label', marks.join('、'));
       if (piece) {
         const image = element('img', null, 'study-piece');
@@ -95,6 +99,23 @@ function createChessBoard(board, promotionDialog, {
       return button;
     });
     board.replaceChildren(...buttons);
+    if (diagram?.move) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'practice-arrow');
+      svg.setAttribute('viewBox', '0 0 8 8');
+      svg.setAttribute('aria-hidden', 'true');
+      const point = square => {
+        const i = positions.findIndex(position => position.square === square);
+        return [i % 8 + .5, Math.floor(i / 8) + .5];
+      };
+      const [x, y] = point(diagram.move.from), [toX, toY] = point(diagram.move.to);
+      const length = Math.hypot(toX - x, toY - y);
+      const dx = (toX - x) / length, dy = (toY - y) / length;
+      const arrow = document.createElementNS(svg.namespaceURI, 'path');
+      arrow.setAttribute('d', `M${x} ${y} L${toX} ${toY} m${-dx * .3 + dy * .18} ${-dy * .3 - dx * .18} L${toX} ${toY} l${-dx * .3 - dy * .18} ${-dy * .3 + dx * .18}`);
+      svg.append(arrow);
+      board.append(svg);
+    }
     if (hadFocus) buttons.find((button) => button.dataset.square === cursor)?.focus({ preventScroll: true });
   }
 

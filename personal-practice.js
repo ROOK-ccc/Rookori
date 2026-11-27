@@ -146,6 +146,7 @@ async function verifyPersonalQuestion(engine, game, ply, automatic, active = () 
   const sourceDate = game.source?.date ?? game.cpu?.started ?? game.metadata.date;
   return { id, gameId: game.id ?? null, sourceKey, source: personalSource(game), sourceDate: typeof sourceDate === 'string' && sourceDate.length <= 40 ? sourceDate : null, ply,
     fen, initialFen, moves, side, actual: actualCode ?? null, actualScore: actual?.score ?? null,
+    ...(actual?.pv[0] === actualCode && actualCode ? { actualLine: actual.pv } : {}),
     best: scored.move, candidates: scored.candidates, accepted: alternatives.map(line => line.move),
     loss: comparison.loss, ...personalExplanation(board, scored, actual, comparison),
     engine: stockfishEngine.version, profile: 'analysis-lesson', created: new Date().toISOString(), memo: '' };

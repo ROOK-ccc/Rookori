@@ -1,43 +1,45 @@
 const journeyReleases = [
-  { version: '4.4.6', updated: '2026-11-27', title: 'あなたの対局が、あなたの教材になる。',
+  { version: '4.4.7', updated: '2026-11-27',
+    changes: { '改善': ['ホームと「学ぶ」から練習問題集を開き、難易度別のランダム問題やテーマ別練習に進めます。', '問題の解説で盤面の事実と応手例を読み、前後の着手を再生できます。', 'アップデート履歴をバージョン、確認できた公開日、変更内容の一覧に整理しました。', '「対戦」と「探す」に、オンライン対戦とコミュニティの予定を表示しました。'] } },
+  { version: '4.4.6', updated: '2026-11-27',
     changes: { '新機能': ['終了した対局から作った専用問題と、テーマ別の一般練習をつなぎました。'],
       '改善': ['今日の10問に専用問題、関連する一般問題、復習予定を組み合わせます。対局ごとの問題数や実戦手と推奨手の盤面を確認できます。'] } },
-  { version: '4.4.5', updated: '2026-11-27', title: '今日の学習を、ひと目で。',
+  { version: '4.4.5', updated: '2026-11-27',
     changes: { '改善': ['前回の学習を再開する導線、今日の学習状況、クイックアクションをホームに整理しました。'] } },
-  { version: '4.4.4', updated: '2026-11-27', title: 'チェスの勉強、もう迷わない。',
+  { version: '4.4.4', updated: '2026-11-27',
     changes: { '新機能': ['チェスの基本とオープニング教材を、URLから直接読めるようにしました。'],
       '改善': ['スマートフォンの下部タブからホーム、学習、対戦、上達記録、教材ガイドへ移動できます。'] } },
-  { version: '4.4.3', updated: '2026-11-26', title: '一手目から、広がる世界。',
+  { version: '4.4.3', updated: '2026-11-26',
     changes: { '新機能': ['オープニング26件とバリエーション44件を追加しました。新しい手順は日本語解説、定跡練習、定跡指定対戦に対応します。'],
       '改善': ['親オープニングからバリエーションを選べます。日本語名・英語名・別名の検索と、系統の絞り込みを追加しました。'] } },
-  { version: '4.4.2', updated: '2026-11-26', title: 'これまでと、これから',
+  { version: '4.4.2', updated: '2026-11-26',
     changes: { '新機能': ['開発の歩み、今後の構想、詳細な更新履歴をサイト内で読めるようにしました。'],
       '改善': ['ホーム、メニュー、「Rookoriについて」、フッターから開発の歩みを開けます。'] } },
-  { version: '4.4.1', date: '2026-11-26', title: '新しい場所で、旅の続きを。',
+  { version: '4.4.1', date: '2026-11-26',
     changes: { '新機能': ['独自ドメイン rookrori.com へ移行し、Cloudflareでの正式公開を開始しました。旧サイトには移転案内とバックアップへの入口を用意しました。'],
       '改善': ['学習履歴と棋譜のメモを移行先の記録に追加できるよう、バックアップの復元を改善しました。'],
       '不具合修正': ['ホーム画面から起動できるWebアプリ（PWA）で、再読み込みに失敗する問題を修正しました。'] } },
-  { version: '4.4.0', title: '日常にチェスを',
+  { version: '4.4.0',
     changes: { '新機能': ['初回利用ガイド、棋譜（PGN）の一括取り込み、学習目標、ホーム画面から起動できるWebアプリ（PWA）を追加しました。'],
       '改善': ['ダッシュボードに今日のおすすめと前回の続きが表示されるようになりました。'] } },
-  { version: '4.3.0', title: '自分らしいチェス',
+  { version: '4.3.0',
     changes: { '新機能': ['終了した対局から棋風を振り返る機能、棋風別CPU、定跡指定対戦を追加しました。'],
       '改善': ['棋風分析の記録を保存し、過去の結果と比較できます。'] } },
-  { version: '4.2.0', title: '自分だけの練習問題',
+  { version: '4.2.0',
     changes: { '新機能': ['自分の対局から練習問題を作成し、分野別の傾向を確認できるようにしました。'],
       '改善': ['自分の対局から作った問題を毎日の練習や間隔反復で復習できます。'] } },
   { version: '4.1.1', changes: { '改善': ['対局復習の入口を整理し、ハイライト、解析、棋譜、検討を切り替えられるようにしました。評価値バーとグラフの配置も改善しました。'] } },
-  { version: '4.1.0', title: '一局から学ぶ',
+  { version: '4.1.0',
     changes: { '新機能': ['Stockfishによる棋譜解析、評価値グラフ、自由検討、局面指定対戦を追加しました。'],
       '改善': ['解析結果と検討した手順をブラウザーに保存できます。'] } },
-  { version: '4.0.0', title: 'チェスの世界とつながる',
+  { version: '4.0.0',
     changes: { '新機能': ['Lichessの公開棋譜を取得して対局履歴に追加できるようにしました。直接取得は現在一時停止中です。'],
       '改善': ['対局履歴に取得元の絞り込み、CPU対戦に取った駒と駒得の表示を追加しました。'] } },
-  { version: '3.2.2', title: '対局の記録',
+  { version: '3.2.2',
     changes: { '新機能': ['Stockfishを導入しました。終了したCPU対局を保存し、棋譜の振り返りに進めます。'] } },
-  { version: '3.2.1', title: 'はじめての対局',
+  { version: '3.2.1',
     changes: { '新機能': ['コンピューター対戦に練習モードと実戦モードを追加しました。'] } },
-  { version: '3.2.0', title: 'はじめの一歩',
+  { version: '3.2.0',
     changes: { '改善': ['「Rookoriについて」に理念を掲載し、ホームから初心者向けの学習へ進みやすくしました。'] } },
   { version: '3.1.2', changes: { '改善': ['チェス16タイプ診断の結果カードを刷新しました。'] } },
   { version: '3.1.1', changes: { '改善': ['読みやすさを改善し、チェス用語集を拡充しました。'] } },
@@ -104,7 +106,7 @@ function renderJourney() {
   };
   const latest = journeyReleases[0];
   document.querySelectorAll('[data-site-version]').forEach(node => { node.textContent = 'v' + latest.version; });
-  byId('journey-latest-title').textContent = latest.title;
+  byId('journey-latest-title').textContent = Object.values(latest.changes).flat()[0];
   const updated = byId('journey-updated');
   updated.dateTime = latest.updated;
   const dateText = date => {
@@ -115,9 +117,9 @@ function renderJourney() {
   timeline('journey-past', journeyPast);
   timeline('journey-plans', journeyPlans);
   for (const [index, release] of journeyReleases.entries()) {
-    const details = element('details', null, 'journey-card journey-release');
+    const details = element('details', null, 'journey-release');
     details.open = index === 0;
-    const heading = ['v' + release.version, release.title, release.date && dateText(release.date)].filter(Boolean).join(' · ');
+    const heading = ['v' + release.version, release.date && dateText(release.date)].filter(Boolean).join(' · ');
     details.append(element('summary', heading));
     for (const [category, items] of Object.entries(release.changes)) {
       details.append(element('h3', category), list(items));

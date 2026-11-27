@@ -127,6 +127,7 @@ const openingStudyScreen = (() => {
     byId('study-move').textContent = last
       ? `${moveNumber}${last.color === 'w' ? '.' : '...'}${last.san}　${colorNames[last.color]}の手`
       : '初期配置';
+    byId('study-board-fact').textContent = last?.before ? practiceLineFacts(last.before, [last.lan]).summary : '';
     chessGlossary.annotate(byId('study-comment'), !last ? candidate.tip
       : study.guided ? candidate.explanations[study.step - 1]
         : '「一手戻る」で前の局面へ、「最初からやり直す」で基本手順の入口へ戻れます。');

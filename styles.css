@@ -199,9 +199,15 @@ h1, h2, h3 { line-height: 1.35; }
 .journey-entry-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); }
 .journey-card h3 { margin-block: 8px; }
 .journey-card ul { margin-block: 8px; padding-inline-start: 1.35em; }
-.journey-release { margin-block: 8px; padding-block: 0; }
+.journey-release + .journey-release { border-top: 1px solid var(--line); }
 .journey-release summary { min-height: 44px; align-content: center; font-weight: 700; cursor: pointer; }
 .journey-release[open] { padding-bottom: 12px; }
+.journey-release h3 { font-size: 1rem; margin-block: 5px; }
+.journey-release ul { padding-inline-start: 24px; }
+.journey-roadmap-link { display: none; }
+.updates-view #roadmap > :not(#journey-update-history) { display: none; }
+.updates-view #updates-title { font: 700 clamp(1.65rem, 4.6vw, 2.7rem)/1.35 var(--serif); }
+.updates-view .journey-roadmap-link { display: inline-flex; margin-block: 10px; }
 .journey-page h2 { scroll-margin-top: 16px; }
 @media (max-width: 480px) {
   .journey-facts { grid-template-columns: 1fr; }
@@ -817,3 +823,22 @@ body:has(#site-menu[open]) { overflow: hidden; }
 #personal-comparison figcaption { font-weight: 700; font-size: .9rem; }
 #personal-related { margin-block: 4px 12px; }
 #general-save[aria-pressed="true"] { background: #e7ebe0; }
+.study-board:has(.practice-arrow) { position: relative; }
+.practice-arrow { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; fill: none; stroke: #17553c; stroke-width: .12; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1px #fff); }
+.study-square.practice-target { box-shadow: inset 0 0 0 3px #17553c; }
+.practice-explanation { margin-block: 12px; }
+.practice-explanation h3 { font-size: 1.05rem; }
+.practice-explanation p { margin-block: 7px; }
+.practice-explanation summary { cursor: pointer; min-height: 44px; display: list-item; align-content: center; }
+.practice-authored { white-space: pre-wrap; }
+.practice-replay { margin-block: 8px; }
+.practice-replay select { min-height: 44px; max-width: 100%; }
+.planned-feature { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-block: 20px 0; padding-block: 12px; border-top: 1px solid var(--line); color: var(--muted); }
+.planned-feature small { font-size: .8rem; }
+.planned-feature .ui-icon { width: 20px; height: 20px; }
+.practice-entry { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-block: 14px; }
+.learn-view .practice-entry, body:not(.learn-view) .learn-practice-links { display: none; }
+.learn-practice-links :is(p, section), .practice-home-links { margin-block: 10px; }
+.learn-practice-links a { margin-block: 3px; }
+.practice-home-links { display: flex; gap: 7px; flex-wrap: wrap; }
+#general-random { margin-block: 8px; }

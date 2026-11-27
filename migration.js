@@ -137,6 +137,9 @@ async function validatePersonalBackup(rows) {
     if (board.turn() !== question.side || board.moves().length < 2
       || await personalPositionId(question.fen) !== question.id) throw invalid();
     if (question.actual) studyPlay(new chessRules.Chess(question.fen), question.actual);
+    if (question.actualLine !== undefined && (!Array.isArray(question.actualLine) || !question.actualLine.length
+      || question.actualLine.length > 10 || !question.actualLine.every(learningUci) || question.actualLine[0] !== question.actual
+      || studyPv(question.fen, question.actualLine).length !== question.actualLine.length)) throw invalid();
     for (const line of question.candidates) {
       if (line.pv[0] !== line.move || studyPv(question.fen, line.pv).join(' ') !== line.san.join(' ')) throw invalid();
     }

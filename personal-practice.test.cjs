@@ -53,6 +53,10 @@ test('再検証でメイトを問題にし、優れた別手を保持し、バ�
   assert.match(question.text, /チェックメイト/);
   const history = api.personalProgress(undefined, 'good', 0, new Date(2026, 10, 24, 12));
   assert.equal((await api.validatePersonalBackup([{ question, history }])).length, 1);
+  const { actualLine, ...oldQuestion } = question;
+  assert.equal(actualLine[0], question.actual);
+  assert.equal((await api.validatePersonalBackup([{ question: oldQuestion, history }])).length, 1);
+  await assert.rejects(api.validatePersonalBackup([{ question: { ...question, actualLine: [question.actual, 'a1a8'] }, history }]));
   await assert.rejects(api.validatePersonalBackup([{ question: { ...question, best: 'a1a8' }, history }]));
   assert.equal(await api.verifyPersonalQuestion(engine, game, 0, false, () => false), null);
   assert.equal(await api.personalPositionId(game.initialFen.replace('0 1', '10 5')), question.id);

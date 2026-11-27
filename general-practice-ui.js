@@ -4,6 +4,7 @@ const generalPractice = (() => {
   let active, serial = 0, browseSerial = 0, batchIndex = 0, dailySerial = 0;
   const routeLink = (label, route) => Object.assign(element('a', label, 'button secondary'), { href: '#' + route });
   const rowOf = puzzle => ({ id: puzzle[0], type: 'general', tags: puzzle[4], rating: puzzle[3] });
+  const groups = { tactics: 0, checkmate: 1, endgame: 2 };
   const status = text => { node('feedback').textContent = text; };
   const savedIds = () => {
     const saved = personalPreference(practiceSavedKey, []);
@@ -12,6 +13,7 @@ const generalPractice = (() => {
   const uiBoard = createChessBoard(node('board'), node('promotion'), {
     position: () => ({ game: active.board, lastMove: active.last, legalMoves: square => active.board.moves({ square, verbose: true }) }),
     isFlipped: () => active.side === 'b', canPlay: () => Boolean(active && !active.done),
+    explanation: () => active?.diagram,
     hints: () => active?.hintSquare ? [active.hintSquare] : [], feedback: status,
     play(from, to, promotion) {
       if (!active || active.done) return false;
@@ -21,6 +23,11 @@ const generalPractice = (() => {
       const move = studyPlay(board, code);
       const mateAlternative = moves.length === 1 && tags.includes('mateIn1') && board.isCheckmate();
       if (code !== moves[active.ply] && !mateAlternative) {
+        const reply = board.moves({ verbose: true }).find(candidate => candidate.captured && candidate.to === move.to);
+        active.wrongNote = reply
+          ? `${move.san} のあと、相手は ${reply.san} で動かした駒を取れます。`
+          : `${move.san} は合法手です。解説では、その手と教材の手順の違いを盤で確認できます。`;
+        if (active.ply === 0) active.wrongLine = [code, ...(reply ? [studyMoveCode(reply)] : [])];
         board.undo();
         active.hintSquare = '';
         if (!active.attemptRecorded) {
@@ -32,12 +39,10 @@ const generalPractice = (() => {
       }
       active.last = move;
       active.moves = moves;
-      active.played.push(move.san);
       active.ply++;
       active.hintSquare = '';
       if (active.ply < moves.length) {
         active.last = studyPlay(board, moves[active.ply++]);
-        active.played.push(active.last.san);
         status(`${move.san}。相手は ${active.last.san} と応じました。`);
       } else {
         active.done = true;
@@ -46,9 +51,17 @@ const generalPractice = (() => {
         rookoriAnalytics.event('general_practice_complete');
         updateDailyCompletion();
         const theme = tags.find(tag => practiceThemes[tag]?.[1]);
-        node('explanation').replaceChildren(element('p', '確認した手順 ' + active.played.join(' ')),
-          ...(theme ? [element('p', 'テーマの解説 ' + practiceThemes[theme][1])] : []));
-        if (active.edit?.explanation) node('explanation').append(element('p', active.edit.explanation));
+        const lines = active.lines.map((line, i) => ({ label: i ? '別解 ' + i : '教材の手順', facts: practiceLineFacts(active.fen, line) }));
+        if (active.wrongLine) lines.push({ label: '最初に指した別の手', facts: practiceLineFacts(active.fen, active.wrongLine) });
+        if (mateAlternative && code !== moves[0]) lines.unshift({ label: '今回の詰め方', facts: practiceLineFacts(active.fen, [code]) });
+        showPracticeExplanation(node('explanation'), node('replay'), lines, active.edit, (step, marks) => {
+          active.board.load(step?.fen ?? active.fen);
+          active.last = step?.move;
+          active.diagram = step ? { move: step.move, marks } : null;
+          uiBoard.render();
+        });
+        if (active.wrongNote) node('explanation').append(element('p', active.wrongNote));
+        if (theme) node('explanation').append(element('p', 'テーマの補足 · ' + practiceThemes[theme][1]));
         if (active.edit?.source) node('explanation').append(element('p', '出典 ' + active.edit.source));
         if (mateAlternative && code !== moves[0]) {
           node('explanation').append(element('p', 'この手もチェックメイトなので正解です。'));
@@ -75,7 +88,7 @@ const generalPractice = (() => {
       if (!row) { node('load-status').textContent = 'この問題は現在の教材にありません。'; return; }
       const [id, fen, moves, rating, tags, edit] = row;
       const board = new chessRules.Chess(fen);
-      active = { id, moves, tags, board, side: board.turn(), ply: 0, hints: 0, played: [],
+      active = { id, fen, moves, tags, board, side: board.turn(), ply: 0, hints: 0,
         lines: [moves, ...(edit?.alternatives ?? [])], daily: route.generalDaily, edit };
       node('prompt').textContent = edit?.prompt || chessColorNames[active.side] + '番です。次の一手を考えましょう。';
       node('rating').textContent = '問題レート ' + rating;
@@ -85,6 +98,7 @@ const generalPractice = (() => {
       node('save').setAttribute('aria-pressed', String(savedIds().has(id)));
       node('next-daily').hidden = true;
       node('explanation').replaceChildren();
+      node('replay').hidden = true;
       status('');
       uiBoard.reset();
       uiBoard.render();
@@ -121,6 +135,7 @@ const generalPractice = (() => {
     const request = ++browseSerial;
     if (reset) batchIndex = 0;
     const band = node('level').value, theme = node('theme').value;
+    const group = Object.hasOwn(groups, theme) ? practiceThemeGroups[groups[theme]][1] : [theme];
     const list = node('list'), history = generalHistory(), saved = savedIds();
     const matches = id => theme === 'due' ? history[id]?.due <= localDay() : saved.has(id);
     list.replaceChildren();
@@ -129,12 +144,13 @@ const generalPractice = (() => {
     node('theme-help').textContent = practiceThemes[theme]?.[1] ?? '';
     try {
       const catalog = await generalCatalog();
+      node('count').textContent = `${catalog.counts.reduce((sum, count) => sum + count, 0).toLocaleString('ja-JP')}問収録`;
       const batches = Object.keys(catalog.batches).filter(id => id.startsWith(band + '-') &&
         (theme === 'all' || (['due', 'saved'].includes(theme) ? catalog.batches[id].ids.some(matches)
-          : catalog.batches[id].themes.includes(theme))));
+          : group.some(tag => catalog.batches[id].themes.includes(tag)))));
       const batch = batches[batchIndex];
       const rows = (await generalBatch(batch ?? '', catalog)).filter(row =>
-        theme === 'all' || (['due', 'saved'].includes(theme) ? matches(row[0]) : row[4].includes(theme)));
+        theme === 'all' || (['due', 'saved'].includes(theme) ? matches(row[0]) : group.some(tag => row[4].includes(tag))));
       if (request !== browseSerial) return;
       list.replaceChildren(...rows.map(row => {
         const item = element('li');
@@ -158,10 +174,31 @@ const generalPractice = (() => {
   node('more').addEventListener('click', () => { batchIndex++; browse(false); });
   node('previous').addEventListener('click', () => { batchIndex--; browse(false); });
   function openList(theme) {
-    node('theme').value = Object.hasOwn(practiceThemes, theme) || ['due', 'saved'].includes(theme) ? theme : 'all';
+    node('theme').value = Object.hasOwn(practiceThemes, theme) || Object.hasOwn(groups, theme) || ['due', 'saved'].includes(theme) ? theme : 'all';
     showScreen('general', 'general-title');
     browse();
+    if (theme === 'themes' || theme === 'levels') node(theme === 'themes' ? 'theme' : 'level').focus();
+    if (theme === 'random') openRandom();
   }
+
+  async function openRandom() {
+    const button = node('random');
+    button.disabled = true;
+    const startingRoute = displayedRoute?.path;
+    try {
+      const catalog = await generalCatalog();
+      const ids = Object.entries(catalog.batches).filter(([key]) => key.startsWith(node('level').value + '-')).flatMap(([, batch]) => batch.ids);
+      if (!ids.length) { node('status').textContent = 'この難易度に問題はありません。'; return; }
+      if (byId('general').hidden || displayedRoute?.path !== startingRoute) return;
+      const route = 'general/' + ids[Math.floor(Math.random() * ids.length)];
+      if (startingRoute === 'general/random') {
+        history.replaceState({ ...history.state, path: route }, '', '#' + route);
+        renderSite();
+      } else goTo(route);
+    } catch { node('status').textContent = '問題を読み込めませんでした。接続を確認してください。'; }
+    finally { button.disabled = false; }
+  }
+  node('random').addEventListener('click', openRandom);
 
   async function pool(personal, history) {
     const catalog = await generalCatalog();

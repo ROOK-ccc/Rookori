@@ -19,6 +19,7 @@
     const field = form.elements;
     return { published: field.published.checked, fen: field.fen.value.trim(), rating: field.rating.valueAsNumber,
       moves: words(field.moves.value), tags: words(field.tags.value),
+      explanationStatus: field.explanationStatus.value,
       alternatives: field.alternatives.value.split('\n').filter(line => line.trim()).map(words),
       ...Object.fromEntries(['title','prompt','hint','explanation','source'].map(key => [key, field[key].value.trim()])) };
   }
@@ -63,6 +64,8 @@
       ...safe.alternatives.map((_, i) => new Option('別解 ' + (i + 1), String(i + 1))));
     ply = 0;
     board();
+    const facts = practiceLineFacts(safe.fen, safe.moves);
+    get('facts').replaceChildren(...[facts.summary, ...facts.details].map(value => make('p', value)));
     return safe;
   }
   async function open() {
@@ -87,8 +90,10 @@
   function search() {
     const query = get('search').value.trim().toLowerCase();
     const missing = get('unwritten').checked;
+    const filter = get('filter').value;
     const matches = [...index.keys()].filter(id =>
-      (id.toLowerCase().includes(query) || edits[id]?.title?.toLowerCase().includes(query)) && (!missing || !edits[id]?.explanation?.trim()));
+      (id.toLowerCase().includes(query) || edits[id]?.title?.toLowerCase().includes(query)) && (!missing || !edits[id]?.explanation?.trim())
+      && (!filter || filter === (edits[id]?.explanationStatus ?? (edits[id]?.explanation?.trim() ? 'authored' : 'generated'))));
     get('choice').replaceChildren(new Option('問題を選ぶ（' + matches.length + '件）', ''),
       ...matches.slice(0, 200).map(id => new Option(id + (edits[id]?.title ? ' · ' + edits[id].title : ''), id)));
     if (matches.length === 1) get('choice').value = matches[0];
@@ -97,9 +102,17 @@
   }
   get('search').addEventListener('input', () => { if (index) search(); });
   get('unwritten').addEventListener('change', () => { if (index) search(); });
+  get('filter').addEventListener('change', () => { if (index) search(); });
   get('choice').addEventListener('change', open);
   form.addEventListener('submit', event => event.preventDefault());
-  form.addEventListener('input', () => { if (current) drafts[current[0]] = read(); diff(); });
+  form.addEventListener('input', event => {
+    if (!current) return;
+    if (event.target.name === 'explanation' && event.target.value.trim() && form.elements.explanationStatus.value === 'generated') {
+      form.elements.explanationStatus.value = 'authored';
+    }
+    drafts[current[0]] = read();
+    diff();
+  });
   get('line').addEventListener('change', () => { ply = 0; board(); });
   get('prev').addEventListener('click', () => { ply--; board(); });
   get('next').addEventListener('click', () => { ply++; board(); });

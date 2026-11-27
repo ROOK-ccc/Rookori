@@ -64,6 +64,7 @@
   <script src="lichess-api.js" defer></script>
   <script src="personal-practice.js" defer></script>
   <script src="general-practice.js" defer></script>
+  <script src="practice-explanation.js" defer></script>
   <script src="play-style.js" defer></script>
   <script src="daily-life.js" defer></script>
   <script src="pgn-batch.js" defer></script>
@@ -94,6 +95,8 @@
     <symbol id="ui-review" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2.2 7M3 5v6h6m3-4v5l3 2"/></symbol>
     <symbol id="ui-daily" viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11M3 5h1M3 12h1M3 19h1"/></symbol>
     <symbol id="ui-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="ui-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
+    <symbol id="ui-chat" viewBox="0 0 24 24"><path d="M20 16H9l-5 4V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2zM8 9h8m-8 3h5"/></symbol>
   </svg>
   <header class="site-header">
     <div class="shell header-inner">
@@ -222,6 +225,12 @@
           </div>
         </div>
       </div>
+      <nav class="dashboard-quick practice-entry" aria-label="練習を始める">
+        <a href="#personal"><svg class="ui-icon" aria-hidden="true"><use href="#ui-home"></use></svg>専用練習問題</a>
+        <a href="#daily"><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>今日の10問</a>
+        <a href="#review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-review"></use></svg>今日の復習</a>
+        <a href="#general"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>練習問題集</a>
+      </nav>
       <section id="welcome-guide" class="opening-card" aria-labelledby="welcome-title" hidden>
         <h2 id="welcome-title" tabindex="-1">今日は何をしてみたいですか？</h2>
         <div class="welcome-choices">
@@ -234,6 +243,21 @@
       </section>
       <section class="home-section home-diagnostics" aria-labelledby="learn-title">
         <h2 id="learn-title" tabindex="-1">自分に合うところから始める</h2>
+        <div class="learn-practice-links">
+          <p><a class="button primary" href="#personal">自分専用の練習問題</a></p>
+          <p><a class="button secondary" href="#daily">今日の10問</a> <a class="button secondary" href="#review">今日の復習</a></p>
+          <section aria-labelledby="learn-puzzles"><h3 id="learn-puzzles">練習問題集</h3>
+            <a class="button secondary" href="#general">すべての問題</a>
+            <a class="button secondary" href="#general/random">ランダム問題</a>
+            <a class="button secondary" href="#general/tactics">タクティクス</a>
+            <a class="button secondary" href="#general/checkmate">チェックメイト</a>
+            <a class="button secondary" href="#general/endgame">エンドゲーム</a>
+            <a class="button secondary" href="#general/themes">テーマ別練習</a>
+            <a class="button secondary" href="#general/levels">難易度別練習</a>
+          </section>
+          <p><a class="button secondary" href="#openings">オープニング教材</a></p>
+          <p><a class="button secondary" href="#intro">基礎学習教材</a></p>
+        </div>
         <div class="first-step-grid" id="home-learning-choices">
           <section class="first-step-card">
             <h3>チェスをまだ知らない人へ</h3>
@@ -279,12 +303,17 @@
           <li><a class="row-action" href="https://rookrori.com/guides/" data-reading-link><span>チェスの学習ガイド</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
         <section><h2>自分に合う学び方</h2><ul class="reading-links">
+          <li><a class="row-action" href="#general"><span>練習問題集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
           <li><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#your-style"><span>実際の対局から棋風を知る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
         <section><h2>Rookoriと設定</h2><ul class="reading-links">
           <li><a class="row-action" href="#roadmap"><span>これまでと、これから</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#backup"><span>学習データのバックアップ・復元</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#privacy"><span>アクセス解析とプライバシー</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
       </div>
+      <p class="planned-feature" id="discover-community-planned">
+        <svg class="ui-icon" aria-hidden="true"><use href="#ui-chat"></use></svg>
+        <span>コミュニティ</span><small>今後実装予定</small>
+      </p>
     </section>
     <section id="beginner" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
@@ -487,6 +516,7 @@
             <p id="study-count" class="study-count"></p>
             <h2 id="study-move"></h2>
             <p id="study-comment"></p>
+            <p id="study-board-fact" class="dashboard-note"></p>
           </div>
           <p id="study-feedback" class="study-feedback" role="status"></p>
           <section class="study-complete" id="study-complete" aria-labelledby="study-complete-title" hidden>
@@ -748,6 +778,10 @@
           <p>Stockfish 19 Liteは、このブラウザー内で動作します。<a href="vendor/stockfish/NOTICE.txt">ライセンスとソースコードの案内</a>・<a href="vendor/chess.LICENSE.txt">chess.jsのライセンス</a></p>
           <p><a href="vendor/stockfish/stockfish.js-19.0.0-source.tar.gz" download>Stockfishの対応ソース</a>・<a href="vendor/stockfish/nn-61e7af4bb97d.nnue" download>対応する評価ネットワーク</a></p>
         </details>
+        <p class="planned-feature" id="cpu-online-planned">
+          <svg class="ui-icon" aria-hidden="true"><use href="#ui-globe"></use></svg>
+          <span>オンライン対戦</span><small>今後実装予定</small>
+        </p>
       </div>
       <div id="cpu-session" hidden>
         <div class="study-layout cpu-layout">
@@ -983,6 +1017,7 @@
                   <button class="button secondary" id="game-study-position" type="button" aria-describedby="game-study-status">現在の局面を解析する</button>
                   <button class="text-button" id="game-study-stop-local" type="button" hidden>解析を停止する</button>
                 </div>
+                <div id="game-study-line-explanation" class="practice-explanation"></div>
                 <ol id="game-study-lines"></ol>
                 <details>
                   <summary>評価の見方・解析設定</summary>
@@ -1231,6 +1266,10 @@
         <a href="#daily"><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>今日の10問</a>
         <a href="#progress"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>上達記録</a>
       </nav>
+      <nav class="practice-home-links" aria-label="練習問題">
+        <a class="button secondary" href="#personal">自分専用の練習問題</a>
+        <a class="button primary" href="#general">練習問題集</a>
+      </nav>
       <section class="dashboard-feature" id="dashboard-recommendation"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
       <section id="dashboard-plan"></section>
       <div id="dashboard-personal-progress" hidden></div>
@@ -1333,6 +1372,7 @@
         <div>
           <p id="personal-turn"></p>
           <div id="personal-board" class="study-board" role="group" aria-label="練習問題のチェス盤"></div>
+          <div id="personal-replay" class="practice-replay" hidden></div>
           <p id="personal-feedback" role="status"></p>
           <div class="study-mode-links">
             <button class="button secondary" id="personal-hint" type="button">ヒント</button>
@@ -1342,13 +1382,12 @@
         </div>
         <section id="personal-answer" class="game-card" aria-labelledby="personal-verdict" hidden>
           <h2 id="personal-verdict"></h2><p id="personal-answer-move"></p><p id="personal-answer-best"></p>
-          <p id="personal-answer-score"></p><p id="personal-answer-explanation"></p>
+          <p id="personal-answer-score"></p><div id="personal-answer-explanation" class="practice-explanation"></div>
           <p id="personal-answer-actual"></p><p id="personal-line-note" role="status"></p>
           <div id="personal-comparison"></div>
           <a id="personal-related" class="button secondary" href="#general" hidden>同じテーマを練習する</a>
           <div class="study-mode-links">
             <button class="button secondary" id="personal-retry" type="button">もう一度考える</button>
-            <button class="button secondary" id="personal-line" type="button">推奨手の続きを見る</button>
             <button class="text-button" id="personal-explore" type="button">自由検討する</button>
             <button class="text-button" id="personal-original" type="button" hidden>元の対局を見る</button>
             <button class="text-button" id="personal-cpu" type="button">この局面からCPUと対戦する</button>
@@ -1363,12 +1402,14 @@
       </dialog>
     </section>
     <section id="general" class="screen inner-screen guide-screen" hidden>
-      <h1 id="general-title" tabindex="-1">一般練習問題</h1>
+      <h1 id="general-title" tabindex="-1">練習問題集</h1>
+      <p id="general-count" class="dashboard-note"></p>
+      <button class="button primary" id="general-random" type="button">ランダム問題を解く</button>
       <p>問題レートは練習問題の難しさの目安です。対局のレーティングとは別の指標です。</p>
       <div class="study-mode-links"><a class="button secondary" href="#personal">自分専用の練習</a><a class="button secondary" href="#daily">今日の10問</a></div>
       <div class="rookori-fields">
         <label>難易度 <select id="general-level"><option value="0">入門</option><option value="1">初級</option><option value="2">中級</option><option value="3">上級</option></select></label>
-        <label>テーマ <select id="general-theme"><option value="all">すべて</option><option value="due">復習予定</option><option value="saved">保存した問題</option></select></label>
+        <label>テーマ <select id="general-theme"><option value="all">すべて</option><option value="tactics">タクティクス全般</option><option value="checkmate">チェックメイト全般</option><option value="endgame">エンドゲーム全般</option><option value="due">復習予定</option><option value="saved">保存した問題</option></select></label>
       </div>
       <p id="general-theme-help"></p><p id="general-status" role="status"></p>
       <div class="study-mode-links">
@@ -1386,7 +1427,8 @@
       <div id="general-play-layout" hidden>
         <p id="general-prompt"></p><p id="general-rating" class="dashboard-note"></p>
         <div id="general-board" class="study-board" role="group" aria-label="一般練習のチェス盤"></div>
-        <p id="general-feedback" role="status"></p><div id="general-explanation"></div>
+        <div id="general-replay" class="practice-replay" hidden></div>
+        <p id="general-feedback" role="status"></p><div id="general-explanation" class="practice-explanation"></div>
         <button id="general-hint" class="button secondary" type="button">ヒント</button>
         <button id="general-save" class="button secondary" type="button" aria-pressed="false">あとで解く</button>
         <button id="general-next-daily" class="button primary" type="button" hidden>次の問題へ</button>
@@ -1550,9 +1592,10 @@
           <a class="text-button" href="#pgn-import">棋譜の取り込みを開く</a>
         </div>
       </section>
-      <section class="journey-section" aria-labelledby="updates-title">
+      <section class="journey-section" id="journey-update-history" aria-labelledby="updates-title">
         <h2 id="updates-title" tabindex="-1">アップデート履歴</h2>
         <p>公開日を確認できた更新には日付を表示しています。</p>
+        <a class="button secondary journey-roadmap-link" href="#roadmap">ロードマップに戻る</a>
         <div id="journey-releases"></div>
       </section>
       <section class="journey-section" aria-labelledby="journey-policy-title">

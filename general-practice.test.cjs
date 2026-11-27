@@ -5,10 +5,11 @@ const { createHash } = require('node:crypto');
 const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 
-const files = ['vendor/chess.js', 'learning.js', 'personal-practice.js', 'general-practice.js', 'practice-editor-validate.js'];
+const files = ['vendor/chess.js', 'learning.js', 'personal-practice.js', 'general-practice.js', 'practice-editor-validate.js',
+  'game-study.js', 'practice-explanation.js'];
 const storage = new Map();
 const vm = runInNewContext(files.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
-  + '\n({chessRules, validatePracticeEdit, generalRecord, generalHistory, buildPracticeMenu, practiceEvidence, validGeneralHistory, validPracticeDaily})',
+  + '\n({chessRules, validatePracticeEdit, generalRecord, generalHistory, buildPracticeMenu, practiceEvidence, validGeneralHistory, validPracticeDaily, practiceLineFacts})',
   { Date, localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) } });
 const raw = file => readFileSync(join(__dirname, 'puzzles', file), 'utf8');
 
@@ -39,6 +40,34 @@ test('編集で非合法着手を拒否し、編集中の別解と公開状態�
   const edit = vm.validatePracticeEdit({ alternatives: [['d2d4']], published: false }, row, vm.chessRules);
   assert.equal(edit.published, false);
   assert.deepEqual(edit.alternatives, [['d2d4']]);
+});
+
+test('各難易度・種類の代表問題で解説と盤面が一致し、実戦手の応手と駒損を説明する', () => {
+  for (let band = 0; band < 4; band++) {
+    const rows = JSON.parse(raw(band + '-0.json'));
+    for (const group of [['fork', 'pin'], ['mateIn1', 'mateIn2', 'mate'], ['endgame'], ['opening', 'middlegame']]) {
+      const row = rows.find(row => row[4].some(tag => group.includes(tag)));
+      assert.ok(row, band + ' ' + group.join(' '));
+      const facts = vm.practiceLineFacts(row[1], row[2]);
+      assert.ok(facts.summary.includes(row[2][0].slice(2, 4)));
+      assert.equal(facts.steps.length, row[2].length);
+      assert.equal(facts.steps[0].move.lan, row[2][0]);
+      if (row[2].length > 1) assert.ok(facts.details.some(text => text.includes('応手例') && text.includes(facts.steps[1].move.san)));
+      if (row[4].includes('mateIn1')) assert.match(facts.summary, /チェックメイト/);
+    }
+  }
+  const fen = '4k3/8/8/8/3q4/8/4R3/4K3 w - - 0 1';
+  const missed = vm.practiceLineFacts(fen, ['e2d2', 'd4d2']);
+  assert.match(missed.details.join(' '), /相手はルークを取ります/);
+  assert.equal(missed.steps[1].material, -5);
+  assert.throws(() => vm.practiceLineFacts(fen, ['e2g3']));
+});
+
+test('手書きの解説と確認状態が既存データと互換になる', () => {
+  const row = ['Demo1', vm.chessRules.DEFAULT_POSITION, ['e2e4'], 950, ['opening']];
+  assert.equal(vm.validatePracticeEdit({ explanation: '既存の解説' }, row, vm.chessRules).explanationStatus, 'authored');
+  assert.equal(vm.validatePracticeEdit({ explanationStatus: 'reviewed', explanation: '確認した解説' }, row, vm.chessRules).explanation, '確認した解説');
+  assert.throws(() => vm.validatePracticeEdit({ explanationStatus: 'reviewed' }, row, vm.chessRules));
 });
 
 test('個別・関連・復習・未学習から日次メニューを重複なしで選び、履歴と初回記録を保存できる', () => {

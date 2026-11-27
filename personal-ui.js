@@ -21,6 +21,7 @@ const personalPages = (() => {
   const board = createChessBoard(el('board'), el('promotion'), {
     position: () => ({ game: view.board, lastMove: view.last, legalMoves: square => view.board.moves({ square, verbose: true }) }),
     isFlipped: () => view.question.side === 'b', canPlay: playable, feedback,
+    explanation: () => view?.diagram,
     hints: () => view.phase !== 'ask' || !view.hints ? [] : [view.question.best.slice(0, view.hints === 1 ? 2 : 4)],
     play(from, to, promotion) {
       const code = from + to + (promotion ?? '');
@@ -58,7 +59,6 @@ const personalPages = (() => {
     if (view !== owner) return;
     const question = owner.question;
     owner.phase = 'answer';
-    owner.linePly = 0;
     const best = question.candidates.find(line => line.move === question.best);
     const alternatives = question.candidates.filter(line => line.move !== question.best && question.accepted.includes(line.move));
     el('answer').hidden = false;
@@ -68,7 +68,24 @@ const personalPages = (() => {
     const compared = evaluated?.baseline ?? best;
     el('answer-score').textContent = `評価値（白基準） ${evaluated?.baseline ? '再解析の推奨手' : '登録時の推奨手'} ${studyScoreText(compared.score)}`
       + (evaluated?.line ? ` ／ 今回の手 ${studyScoreText(evaluated.line.score)}` : '');
-    el('answer-explanation').textContent = question.text;
+    const lines = [{ label: '推奨手順', facts: practiceLineFacts(question.fen, best.pv) }];
+    if (question.actual) lines.push({ label: '実戦手からの確認', facts: practiceLineFacts(question.fen, question.actualLine ?? [question.actual]) });
+    for (const line of alternatives) lines.push({ label: '別解 ' + line.san[0], facts: practiceLineFacts(question.fen, line.pv) });
+    showPracticeExplanation(el('answer-explanation'), el('replay'), lines, null, (step, marks) => {
+      owner.phase = 'line';
+      owner.board.load(step?.fen ?? question.fen);
+      owner.last = step?.move;
+      owner.diagram = step ? { move: step.move, marks } : null;
+      renderBoard();
+    });
+    if (question.actual) {
+      const reply = lines[1].facts.steps[1];
+      if (reply?.move.captured && !lines[0].facts.steps[1]?.move.captured) {
+        el('answer-explanation').append(element('p', `実戦手の変化では相手の ${reply.move.san} で${practicePieceNames[reply.move.captured]}を失います。次の実戦では、指す前に相手の取り返しを一手確認しましょう。`));
+      } else if (!question.actualLine) {
+        el('answer-explanation').append(element('p', 'この記録には実戦手に対する解析の続きが保存されていません。'));
+      }
+    }
     const old = question.actual && studyPlay(new chessRules.Chess(question.fen), question.actual).san;
     el('answer-actual').textContent = old ? `実戦で指した手 ${old}${question.actualScore ? ' · ' + studyScoreText(question.actualScore) : ''}` : '';
     el('comparison').replaceChildren(...[[question.actual, '実戦'], [question.best, '推奨手']].flatMap(([move, label]) => {
@@ -86,8 +103,6 @@ const personalPages = (() => {
       el('related').textContent = '一般練習で学ぶ：' + practiceThemes[theme][0];
     }
     el('line-note').textContent = verdict === 'hold' ? '比較に必要な精度がそろわなかったため、学習結果には記録しません。' : '';
-    el('line').textContent = '推奨手の続きを見る';
-    el('line').disabled = !best.pv.length;
     el('play-status').textContent = '';
     renderBoard();
   }
@@ -140,10 +155,11 @@ const personalPages = (() => {
     view.phase = 'ask';
     view.board = new chessRules.Chess(view.question.fen);
     view.last = null;
-    view.linePly = 0;
+    view.diagram = null;
     view.hints = 0;
     el('play-status').textContent = '以前の対局に出てきた局面です。次にどの手を指しますか？';
     el('answer').hidden = true;
+    el('replay').hidden = true;
     const question = view.question;
     el('play-source').textContent = [personalSources[question.source], question.sourceDate, `対局の${question.ply}手のあと`].filter(Boolean).join(' · ');
     board.reset();
@@ -198,22 +214,11 @@ const personalPages = (() => {
   el('skip').addEventListener('click', () => { if (view?.phase === 'ask') showAnswer(view); });
   el('stop-answer').addEventListener('click', restart);
   el('retry').addEventListener('click', restart);
-  el('line').addEventListener('click', () => {
-    const { question } = view;
-    const best = question.candidates.find(line => line.move === question.best);
-    view.phase = 'line';
-    view.linePly = view.linePly >= best.pv.length ? 1 : view.linePly + 1;
-    view.board = new chessRules.Chess(question.fen);
-    for (const code of best.pv.slice(0, view.linePly)) view.last = studyPlay(view.board, code);
-    el('line-note').textContent = `${view.linePly} / ${best.pv.length}手　${best.san.slice(0, view.linePly).join(' ')}`;
-    el('line').textContent = view.linePly >= best.pv.length ? '推奨手を最初から見る' : '推奨変化を1手進める';
-    renderBoard();
-  });
   el('explore').addEventListener('click', () => {
     view.phase = 'explore';
     view.board = new chessRules.Chess(view.question.fen);
     view.last = null;
-    view.linePly = 0;
+    view.diagram = null;
     el('line-note').textContent = '自由検討中です。白と黒の手を盤で試せます。';
     board.reset();
     renderBoard();

@@ -39,6 +39,7 @@ function showScreen(id, focusTarget) {
   if (id === 'backup') learningPages.homePreferences();
   document.body.dataset.screen = id;
   document.body.classList.toggle('learn-view', displayedRoute?.path === 'learn');
+  document.body.classList.toggle('updates-view', displayedRoute?.path === 'updates');
   if (id === 'home' || id === 'dashboard') personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
@@ -305,7 +306,6 @@ function renderSite() {
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
   } else if (path === 'updates') {
     showScreen('roadmap', siteHeadings.updates);
-    byId(siteHeadings.updates).scrollIntoView({ block: 'start' });
   } else if (path === 'learn') {
     dailyLife.showGuide('learn');
     showScreen('home', siteHeadings.learn);

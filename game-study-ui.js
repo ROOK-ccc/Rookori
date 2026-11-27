@@ -405,6 +405,12 @@ function createGameStudyUI({ current, goToPly, repaint }) {
         element('p', `深さ ${line.depth} · ${line.san.join(' ')}`));
       return li;
     }));
+    const firstCandidate = evaluation?.candidates.find(line => line.move);
+    const fen = firstCandidate ? outputPosition().game.fen() : null;
+    const variation = fen ? firstCandidate.pv.slice(0, 3) : [];
+    const facts = variation.length && studyPv(fen, variation).length === variation.length ? practiceLineFacts(fen, variation) : null;
+    el('line-explanation').replaceChildren(...(facts?.summary ? [element('h3', '第一候補の狙い'),
+      element('p', facts.summary), ...facts.details.slice(0, 2).map(text => element('p', text))] : []));
     const partial = record.scores.some(Boolean);
     el('results').hidden = !partial;
     el('graph-empty').hidden = partial;
