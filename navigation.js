@@ -4,6 +4,7 @@ const siteHeadings = {
   welcome: 'welcome-title',
   'pgn-import': 'batch-title',
   learn: 'learn-title',
+  general: 'general-title',
   discover: 'discover-title',
   beginner: 'beginner-title',
   improve: 'improve-title',
@@ -35,6 +36,13 @@ function readSiteRoute(address, state) {
   const path = new URL(address).hash.slice(1);
   // 履歴の各項目には、その画面の回答や学習の進行だけを保存します。
   const entry = state?.path === path ? state : {};
+  const general = /^general\/([A-Za-z0-9]{5})(?:\/(daily|recommended|daily-recommended))?$/.exec(path);
+  if (general) return { path, generalId: general[1], generalDaily: general[2]?.startsWith('daily') ?? false,
+    generalRecommended: general[2]?.endsWith('recommended') ?? false };
+  const theme = /^general\/([A-Za-z0-9]+)$/.exec(path);
+  if (theme) return { path, generalTheme: theme[1] };
+  const themes = /^general\/theme\/([A-Za-z0-9]+)$/.exec(path);
+  if (themes) return { path, generalTheme: themes[1] };
   if (path === 'cpu') return { path, cpuReplay: entry.cpuReplay, cpuPosition: entry.cpuPosition };
   const openingCpu = /^cpu-opening\/([a-z0-9-]+)(?:\/([0-9]+))?$/.exec(path);
   if (openingCpu) return { path, cpuOpening: openingCpu[1], cpuOpeningPly: openingCpu[2] ? Number(openingCpu[2]) : undefined };

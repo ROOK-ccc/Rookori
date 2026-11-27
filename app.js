@@ -230,9 +230,14 @@ function renderSite() {
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
   if (previous?.game && previous.path !== path) gameReviewPages.close();
   if (previous?.personalId && previous.path !== path) personalPages.close();
+  if (previous?.generalId && previous.path !== path) generalPractice.close();
   if (previous?.path === 'your-style' && path !== 'your-style') stylePage.cancel();
 
-  if (path === 'your-style') {
+  if (route.generalId) {
+    generalPractice.open(route);
+  } else if (path === 'general' || route.generalTheme) {
+    generalPractice.openList(route.generalTheme);
+  } else if (path === 'your-style') {
     stylePage.open();
   } else if (route.personalId) {
     personalPages.openProblem(route);
@@ -270,7 +275,8 @@ function renderSite() {
   } else if (path === 'review') {
     openingMemoryScreen.review();
     learningPages.todayReview('today-review', true);
-  } else if (path === 'dashboard' || (path === 'home' && learningTracker.home() === 'dashboard')) {
+  } else if (path === 'dashboard' || (path === 'home' && (learningTracker.home() === 'dashboard'
+    || learningTracker.data.home === 'auto' && Object.keys(generalHistory()).length))) {
     learningPages.dashboard();
     stylePage.dashboard();
     dailyLife.dashboard();

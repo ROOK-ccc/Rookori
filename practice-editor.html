@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>一般練習問題の編集 | Rookori</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="editor.css">
+  <script defer src="vendor/chess.js"></script>
+  <script defer src="practice-editor-validate.js"></script>
+  <script defer src="practice-editor.js"></script>
+</head>
+<body>
+<main class="shell editor">
+  <h1>一般練習問題の編集</h1>
+  <p><a href="opening-editor.html">オープニング教材編集へ</a></p>
+  <div class="editor-row">
+    <label>問題ID・問題名 <input id="puzzle-search" type="search"></label>
+    <label><input id="puzzle-unwritten" type="checkbox"> 個別解説が未入力の問題のみ</label>
+    <label>対象 <select id="puzzle-choice"></select></label>
+  </div>
+  <p id="puzzle-status" role="status"></p>
+  <div class="editor-grid" id="puzzle-workspace" hidden>
+    <form id="puzzle-edit" class="editor-card editor-fields">
+      <label>問題名<input name="title"></label><label>問題レート<input name="rating" type="number" min="400" max="3000"></label>
+      <label class="editor-wide">FEN（出題する盤面）<textarea name="fen"></textarea></label>
+      <label class="editor-wide">正解手順（例 e2e4 e7e5 g1f3）<textarea name="moves"></textarea></label>
+      <label class="editor-wide">別解（別の初手ごとに1行）<textarea name="alternatives"></textarea></label>
+      <label class="editor-wide">テーマ（空白で区切る）<input name="tags"></label>
+      <label class="editor-wide">問題文<textarea name="prompt"></textarea></label>
+      <label class="editor-wide">ヒント<textarea name="hint"></textarea></label>
+      <label class="editor-wide">日本語の個別解説<textarea name="explanation"></textarea></label>
+      <label class="editor-wide">出典<textarea name="source"></textarea></label>
+      <label class="editor-wide"><input type="checkbox" name="published"> 検証済みファイルを反映したときに公開する</label>
+    </form>
+    <section class="editor-card" aria-labelledby="puzzle-preview-title">
+      <h2 id="puzzle-preview-title">プレビュー</h2>
+      <div id="puzzle-board" class="study-board editor-board" role="img" aria-label="問題の盤面"></div>
+      <label>再生する手順 <select id="puzzle-line"></select></label>
+      <div class="editor-row"><button class="button secondary" id="puzzle-prev">一手戻る</button><button class="button secondary" id="puzzle-next">一手進む</button></div>
+      <p id="puzzle-moves" role="status"></p>
+      <h3>編集前後の差分</h3><ul id="puzzle-diff"></ul>
+    </section>
+    <div class="editor-row">
+      <button class="button secondary" id="puzzle-draft">下書きを保存</button>
+      <button class="button secondary" id="puzzle-check">合法手を検証して盤を更新</button>
+      <button class="button primary" id="puzzle-export">この問題の変更を書き出す</button>
+    </div>
+  </div>
+</main>
+</body>
+</html>

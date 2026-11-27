@@ -60,10 +60,11 @@ const learningPages = (() => {
     const solved = new Set(plan.checked.filter(id => questionIds.has(id))).size;
     const today = localDay();
     const week = weekStart(today);
-    const days = learningTracker.activity().filter(row => row.day >= week && row.day <= today && activeLearningDay(row)).length;
+    const days = new Set(learningTracker.activity().filter(row => activeLearningDay(row)).map(row => row.day));
+    for (const history of Object.values(generalHistory())) for (const event of history.events) days.add(event.day);
     byId('dashboard-due').textContent = learningTracker.due().length;
     byId('dashboard-solved').textContent = solved + '/' + questionIds.size;
-    byId('dashboard-days').textContent = days;
+    byId('dashboard-days').textContent = [...days].filter(day => day >= week && day <= today).length;
 
     const target = targetLink(plan.target);
     const lastRound = learningTracker.history().sort((a, b) => Date.parse(b.date) - Date.parse(a.date))[0];
@@ -97,7 +98,7 @@ const learningPages = (() => {
       if (plan.checked.includes(lesson.id)) row.append(element('span', '正解済み', 'learning-done'));
       return row;
     }));
-    personalPages.daily();
+    generalPractice.daily();
   }
 
   const normalize = value => value.normalize('NFKC').toLowerCase()
@@ -185,7 +186,8 @@ const learningPages = (() => {
   function homePreferences() {
     homeForm.elements.home.value = learningTracker.data.home;
     byId('home-preference-status').textContent = learningTracker.data.home === 'auto'
-      ? (learningTracker.home() === 'dashboard' ? '現在、自動で学習ダッシュボードを表示します。' : '現在、自動で紹介型ホームを表示します。')
+      ? (learningTracker.home() === 'dashboard' || Object.keys(generalHistory()).length
+        ? '現在、自動で学習ダッシュボードを表示します。' : '現在、自動で紹介型ホームを表示します。')
       : '';
   }
 

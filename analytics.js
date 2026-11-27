@@ -25,9 +25,13 @@ function createRookoriAnalytics(win, doc) {
     cpu: 'コンピューター対戦',
     backup: 'バックアップ', about: 'サイトについて', glossary: 'チェス用語集',
     privacy: 'アクセス解析とプライバシー', error: 'リンクのエラー', discover: '探す', 'learning-guide': '学習ガイド',
+    general: '一般練習', 'general-play': '一般練習問題を解く',
   };
   const eventNames = new Set(['chess_type_start', 'chess_type_complete', 'opening_quiz_complete',
-    'opening_view', 'opening_practice_start', 'opening_practice_complete', 'review_complete', 'dashboard_view', 'share']);
+    'opening_view', 'opening_practice_start', 'opening_practice_complete', 'review_complete', 'dashboard_view', 'share',
+    'personal_practice_generated', 'personal_practice_start', 'personal_practice_complete', 'personal_review_complete',
+    'general_practice_start', 'general_practice_complete', 'daily_practice_complete', 'practice_recommendation_start',
+    'game_review_complete']);
   const screenEvents = { quiz: 'chess_type_start', 'opening-study': 'opening_view', dashboard: 'dashboard_view' };
   const staticKind = doc.getElementById('static-learning')?.dataset?.kind;
   const campaign = {};

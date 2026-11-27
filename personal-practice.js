@@ -1,10 +1,15 @@
 const personalRules = Object.freeze({ perGame: 5, checks: 8, minimumDepth: 9, depthGap: 4,
   good: 35, close: 105, meaningful: 115, lost: -500, historyLimit: 80 });
-const personalTags = { mate: 'メイト', capture: '駒を取る手', threat: '相手の脅威', chance: '勝機', swing: '形勢の変化', other: '局面の判断' };
+const personalTags = { mate: 'メイト', mateIn1: '1手詰め', capture: '駒を取る手',
+  threat: '相手の脅威', defensiveMove: '守備的な着手', fork: 'フォーク', chance: '勝機', swing: '形勢の変化',
+  endgame: '終盤', other: '局面の判断' };
 const personalSources = { cpu: 'Rookori CPU対戦', positioned: '局面指定CPU対戦', lichess: 'Lichess', manual: '手動取り込み' };
 const personalVerdicts = { good: '正解', close: '惜しい', retry: '再挑戦', hold: '判定保留' };
 const personalAutoKey = 'rookori.personal-auto.v1';
 const personalDailyKey = 'rookori.personal-daily.v1';
+const generalHistoryKey = 'rookori.general-practice.v1';
+const practiceDailyKey = 'rookori.practice-daily.v1';
+const practiceSavedKey = 'rookori.practice-saved.v1';
 const personalId = /^[a-f0-9]{64}$/;
 
 function personalSide(game) {
@@ -70,14 +75,31 @@ async function personalPositionId(fen) {
 
 function personalExplanation(board, best, actual, comparison) {
   const recommended = studyPlay(new chessRules.Chess(board.fen()), best.move);
-  if (recommended.san.endsWith('#')) return { tags: ['mate'], confidence: 'board', text: `${recommended.san}でチェックメイトになります。` };
+  if (recommended.san.endsWith('#')) return { tags: ['mate', 'mateIn1'], confidence: 'board', text: `${recommended.san}でチェックメイトになります。` };
   if (best.score.unit === 'mate' && best.score.winner === board.turn()) {
     return { tags: ['mate'], confidence: 'engine', text: '解析ではメイトにつながる手順があります。推奨手からの続きを盤で確認しましょう。' };
+  }
+  if (recommended.piece === 'n' && recommended.san.endsWith('+') && best.pv.length >= 3) {
+    const position = new chessRules.Chess(board.fen());
+    const move = studyPlay(position, best.move);
+    const target = position.board().flat().find(piece => piece?.color === position.turn()
+      && ['r', 'q'].includes(piece.type) && position.attackers(piece.square, board.turn()).includes(move.to)
+      && best.pv[2].slice(2, 4) === piece.square);
+    if (target) {
+      const reply = studyPlay(position, best.pv[1]);
+      const capture = studyPlay(position, best.pv[2]);
+      if (capture.from === move.to && capture.captured === target.type) return {
+        tags: ['fork'], confidence: 'line',
+        text: `${move.san} はキングと${cpuPieceLabels[target.type]}の両取りです。解析候補では ${reply.san} のあと ${capture.san} で取れます。`,
+      };
+    }
   }
   if (actual?.pv[1] && comparison.kind === 'retry') {
     const copy = new chessRules.Chess(board.fen());
     studyPlay(copy, actual.move);
     const reply = studyPlay(copy, actual.pv[1]);
+    if (cpuPieceValues[reply.captured] >= 3 && reply.to === actual.move.slice(2, 4)) return { tags: ['threat', 'defensiveMove'], confidence: 'line',
+      text: `実戦では動かした駒が、解析候補の ${reply.san} で取られます。移動先を相手のどの駒が攻撃しているか確かめましょう。` };
     if (cpuPieceValues[reply.captured] >= 3) return { tags: ['threat'], confidence: 'line',
       text: `実戦の手のあと、解析候補の ${reply.san} で${cpuPieceLabels[reply.captured]}を取られます。相手の応手まで盤で確認しましょう。` };
   }
@@ -86,7 +108,9 @@ function personalExplanation(board, best, actual, comparison) {
   if (comparison.loss >= personalRules.meaningful) {
     const chance = best.score.unit === 'cp' && personalValue(best.score, board.turn()) >= 130
       && actual.score.unit === 'cp' && personalValue(actual.score, board.turn()) < 60;
-    return { tags: [chance ? 'chance' : 'swing'], confidence: 'engine', text: '実戦の手と推奨手で解析上の評価に差があります。推奨手のあとに相手がどう応じるかを比べましょう。' };
+    const majorPieces = board.board().flat().filter(piece => piece && !['p', 'k'].includes(piece.type)).length;
+    return { tags: [chance ? 'chance' : 'swing', ...(majorPieces <= 4 ? ['endgame'] : [])], confidence: 'engine',
+      text: '実戦の手と推奨手で解析上の評価に差があります。推奨手のあとに相手がどう応じるかを比べましょう。' };
   }
   return { tags: ['other'], confidence: 'engine', text: '解析の候補から、次の一手と相手の応手を盤で確かめましょう。' };
 }
@@ -113,12 +137,16 @@ async function verifyPersonalQuestion(engine, game, ply, automatic, active = () 
     || (scored.score.unit === 'cp' && personalValue(scored.score, side) <= personalRules.lost)
     || (scored.score.unit === 'mate' && scored.score.winner !== side))) return null;
   if (scored.score.unit === 'mate' && scored.score.winner !== side) return null;
+  const alternatives = scored.candidates.filter(line => line.move === scored.move || personalCompare(scored, line, side).kind === 'good');
+  const immediateMate = studyPlay(new chessRules.Chess(fen), scored.move).san.endsWith('#');
+  if (automatic && !immediateMate && (scored.candidates.length < Math.min(3, board.moves().length)
+    || scored.candidates.some(line => line.depth < personalRules.minimumDepth || Math.abs(line.depth - scored.depth) > personalRules.depthGap)
+    || alternatives.some(line => !line.pv.length))) return null;
   const id = await personalPositionId(fen);
   const sourceDate = game.source?.date ?? game.cpu?.started ?? game.metadata.date;
   return { id, gameId: game.id ?? null, sourceKey, source: personalSource(game), sourceDate: typeof sourceDate === 'string' && sourceDate.length <= 40 ? sourceDate : null, ply,
     fen, initialFen, moves, side, actual: actualCode ?? null, actualScore: actual?.score ?? null,
-    best: scored.move, candidates: scored.candidates, accepted: scored.candidates.filter(line =>
-      line.move === scored.move || personalCompare(scored, line, side).kind === 'good').map(line => line.move),
+    best: scored.move, candidates: scored.candidates, accepted: alternatives.map(line => line.move),
     loss: comparison.loss, ...personalExplanation(board, scored, actual, comparison),
     engine: stockfishEngine.version, profile: 'analysis-lesson', created: new Date().toISOString(), memo: '' };
 }
@@ -141,19 +169,36 @@ function personalDue(rows, day = localDay()) {
       || (a.history?.level ?? -1) - (b.history?.level ?? -1) || b.question.created.localeCompare(a.question.created));
 }
 
-function personalGeneralQuestions(lessons, weak, newQuestion, count) {
-  const related = lessons.filter(lesson => (lesson.problem?.tags ?? []).some(tag =>
-    weak.has(tag) || [...weak].some(key => personalTags[key] === tag))).slice(0, 3);
-  const fresh = lessons.filter(lesson => !related.includes(lesson) && newQuestion(lesson)).slice(0, 3);
-  return [...new Set([...related, ...fresh, ...lessons])].slice(0, count);
-}
-
 function personalPreference(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 }
 
 function savePersonalPreference(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; }
+}
+
+function validGeneralHistory(rows) {
+  return learningObject(rows) && Object.entries(rows).length <= 15000
+    && Object.entries(rows).every(([id, row]) => /^[A-Za-z0-9]{5}$/.test(id) && learningObject(row)
+      && learningDate(row.due) && learningDate(row.reviewedDay) && learningDateTime(row.lastAt)
+      && ['level', 'interval', 'streak', 'correct', 'wrong', 'hints', 'mistakes'].every(key => learningCount(row[key]))
+      && learningObject(row.first) && typeof row.first.correct === 'boolean' && learningCount(row.first.hints)
+      && learningDate(row.first.day) && Array.isArray(row.events) && row.events.length > 0 && row.events.length <= 12
+      && row.events.every(event => learningDate(event?.day) && learningDateTime(event.at)
+        && ['good', 'retry'].includes(event.kind) && learningCount(event.hints)));
+}
+
+function validPracticeDaily(value) {
+  return learningObject(value) && learningDate(value.day) && typeof value.complete === 'boolean' && learningObject(value.menus)
+    && Object.entries(value.menus).every(([mode, rows]) => ['recommended', 'general', 'personal'].includes(mode)
+      && Array.isArray(rows) && rows.length <= 10 && new Set(rows.map(row => row?.id)).size === rows.length
+      && rows.every(row => learningObject(row) && (row.type === 'personal' ? personalId.test(row.id ?? '')
+        : row.type === 'general' && /^[A-Za-z0-9]{5}$/.test(row.id ?? ''))
+        && typeof row.reason === 'string' && row.reason.length < 80));
+}
+
+function validPracticeSaved(value) {
+  return learningIds(value) && value.length <= 10000 && value.every(id => /^[A-Za-z0-9]{5}$/.test(id));
 }
 
 function createPersonalStore() {

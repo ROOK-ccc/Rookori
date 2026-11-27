@@ -805,3 +805,15 @@ body:has(#site-menu[open]) { overflow: hidden; }
   body[data-screen="game-player"] .app-tabs, body[data-screen="cpu"]:has(#cpu-session:not([hidden])) .app-tabs { display: none; }
   body[data-screen="game-player"]:has(.app-tabs), body[data-screen="cpu"]:has(#cpu-session:not([hidden])) { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
+#personal .dashboard-quick { margin-block: 16px; }
+#general-list > li { margin-block: 6px; border: 0; }
+#general-list a { padding-inline: 12px; }
+#daily-list:has(.row-action) { list-style: none; padding-inline-start: 0; }
+#general-board { max-width: 520px; margin-block: 10px; }
+#general-feedback, #general-explanation { margin-block: 8px; }
+#personal-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-block: 12px; }
+#personal-comparison figure { margin: 0; }
+#personal-comparison .study-mini-board { width: min(100%, 180px); }
+#personal-comparison figcaption { font-weight: 700; font-size: .9rem; }
+#personal-related { margin-block: 4px 12px; }
+#general-save[aria-pressed="true"] { background: #e7ebe0; }

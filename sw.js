@@ -44,6 +44,24 @@ async function navigate(request) {
   }
 }
 
+async function puzzleData(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok && !response.redirected && response.headers.get('content-type')?.includes('json')) {
+      try {
+        const cache = await caches.open(cacheName);
+        const keys = (await cache.keys()).filter(key => new URL(key.url).pathname.startsWith(scope.pathname + 'puzzles/')
+          && key.url !== request.url && !new URL(key.url).pathname.endsWith('/catalog.json'));
+        await cache.put(request, response.clone());
+        while (keys.length >= 8) await cache.delete(keys.shift());
+      } catch { /* Keep the online response even when storage is unavailable. */ }
+    }
+    return response;
+  } catch {
+    return await cachedResponse(request.url) ?? new Response('', { status: 503 });
+  }
+}
+
 self.addEventListener('fetch', event => {
   const { request } = event;
   if (request.method !== 'GET') return;
@@ -52,6 +70,11 @@ self.addEventListener('fetch', event => {
   if (request.mode === 'navigate') {
     if (url.pathname === scope.pathname) event.respondWith(navigate(request));
     // Let the browser handle redirects from /index.html and other aliases.
+    return;
+  }
+  const puzzlePath = url.pathname.slice(scope.pathname.length);
+  if (url.pathname.startsWith(scope.pathname) && /^puzzles\/(catalog|[0-3]-\d+)\.json$/.test(puzzlePath)) {
+    event.respondWith(puzzleData(request));
     return;
   }
   if (url.href !== shell && assetUrls.has(url.href)) {

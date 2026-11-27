@@ -2,7 +2,7 @@ const personalPages = (() => {
   const store = createPersonalStore();
   const library = createGameLibrary();
   const el = suffix => byId(suffix ? 'personal-' + suffix : 'personal');
-  let view, request = 0, dailyRequest = 0, listRequest = 0;
+  let view, request = 0, dashboardRequest = 0, listRequest = 0;
   const feedback = text => { el('feedback').textContent = text; };
   const action = (text, listener, className = 'text-button') => {
     const button = element('button', text, className);
@@ -71,6 +71,20 @@ const personalPages = (() => {
     el('answer-explanation').textContent = question.text;
     const old = question.actual && studyPlay(new chessRules.Chess(question.fen), question.actual).san;
     el('answer-actual').textContent = old ? `実戦で指した手 ${old}${question.actualScore ? ' · ' + studyScoreText(question.actualScore) : ''}` : '';
+    el('comparison').replaceChildren(...[[question.actual, '実戦'], [question.best, '推奨手']].flatMap(([move, label]) => {
+      if (!move) return [];
+      const position = new chessRules.Chess(question.fen);
+      const san = studyPlay(position, move).san;
+      const figure = element('figure');
+      figure.append(studyMiniature(position.fen()), element('figcaption', label + ' ' + san));
+      return [figure];
+    }));
+    const theme = question.tags.find(tag => practiceThemes[tag]?.[1]);
+    el('related').hidden = !theme;
+    if (theme) {
+      el('related').href = '#general/theme/' + theme;
+      el('related').textContent = '一般練習で学ぶ：' + practiceThemes[theme][0];
+    }
     el('line-note').textContent = verdict === 'hold' ? '比較に必要な精度がそろわなかったため、学習結果には記録しません。' : '';
     el('line').textContent = '推奨手の続きを見る';
     el('line').disabled = !best.pv.length;
@@ -83,9 +97,10 @@ const personalPages = (() => {
     const question = owner.question;
     const best = question.candidates.find(line => line.move === question.best);
     const existing = question.candidates.find(line => line.move === code);
+    const mate = view.board.isCheckmate();
     let evaluated = existing ? { line: existing } : owner.cache.get(code);
-    let verdict = question.accepted.includes(code) ? 'good' : personalCompare(best, existing, question.side).kind;
-    if (!existing && !evaluated) {
+    let verdict = mate || question.accepted.includes(code) ? 'good' : personalCompare(best, existing, question.side).kind;
+    if (!mate && !existing && !evaluated) {
       const work = owner.job = createStockfishSession();
       el('play-status').textContent = '選んだ手をStockfishで確認しています…';
       try {
@@ -104,10 +119,17 @@ const personalPages = (() => {
       finally { if (owner.job === work) { owner.job = null; work.close(); } }
     }
     if (view !== owner) return;
-    if (!existing && evaluated) verdict = personalCompare(evaluated.baseline, evaluated.line, question.side).kind;
+    if (!mate && !existing && evaluated) verdict = personalCompare(evaluated.baseline, evaluated.line, question.side).kind;
     showAnswer(owner, code, san, verdict, evaluated);
     if (verdict !== 'hold') {
-      try { await store.answer(question.id, verdict, owner.hints); }
+      try {
+        await store.answer(question.id, verdict, owner.hints);
+        if (view === owner && verdict === 'good' && !owner.completed) {
+          rookoriAnalytics.event(owner.reviewing ? 'personal_review_complete' : 'personal_practice_complete');
+          owner.completed = true;
+        }
+        generalPractice.updateDailyCompletion();
+      }
       catch { if (view === owner) el('play-status').textContent = '学習記録を保存できませんでした。'; }
     }
   }
@@ -122,6 +144,8 @@ const personalPages = (() => {
     view.hints = 0;
     el('play-status').textContent = '以前の対局に出てきた局面です。次にどの手を指しますか？';
     el('answer').hidden = true;
+    const question = view.question;
+    el('play-source').textContent = [personalSources[question.source], question.sourceDate, `対局の${question.ply}手のあと`].filter(Boolean).join(' · ');
     board.reset();
     renderBoard();
   }
@@ -139,12 +163,29 @@ const personalPages = (() => {
       if (token !== request) return;
       const found = rows.find(({ question }) => question.id === route.personalId);
       if (!found) { el('play-status').textContent = '問題が見つかりません。登録済みの問題一覧をご確認ください。'; return; }
-      view = { question: found.question, rows, daily: route.personalDaily, cache: new Map() };
+      view = { question: found.question, daily: route.personalDaily, reviewing: Boolean(found.history), cache: new Map() };
       const owner = view;
       el('original').hidden = true;
       el('play-layout').hidden = false;
       restart();
-      if (owner.question.gameId && await library.get(owner.question.gameId) && view === owner) el('original').hidden = false;
+      rookoriAnalytics.event('personal_practice_start');
+      const { gameId, sourceKey } = owner.question;
+      let game = gameId ? await library.get(gameId).catch(() => null) : null;
+      if (!game && sourceKey) {
+        for (const candidate of await library.all().catch(() => [])) {
+          if (view !== owner) return;
+          if (candidate.positions[owner.question.ply]?.fen === owner.question.fen && await studyContentKey(candidate) === sourceKey) {
+            game = candidate;
+            break;
+          }
+        }
+      }
+      if (game && view === owner) {
+        owner.originalGameId = game.id;
+        const { white, black } = game.metadata;
+        if (white && black) el('play-source').textContent += ` · ${white} 対 ${black}`;
+        el('original').hidden = false;
+      }
     } catch { if (token === request) el('play-status').textContent = '練習問題を読み込めませんでした。'; }
   }
 
@@ -178,8 +219,7 @@ const personalPages = (() => {
     renderBoard();
   });
   el('original').addEventListener('click', () => {
-    const { gameId, ply } = view.question;
-    goTo(`game-review/${gameId}`, { gamePly: ply });
+    if (view?.originalGameId) goTo(`game-review/${view.originalGameId}`, { gamePly: view.question.ply });
   });
   el('cpu').addEventListener('click', () => {
     const { fen, initialFen, moves, gameId, ply, side } = view.question;
@@ -187,26 +227,23 @@ const personalPages = (() => {
   });
   el('next').addEventListener('click', async () => {
     const owner = view;
+    if (!owner) return;
     try {
+      if (owner.daily) {
+        const next = await generalPractice.nextDaily(owner.question.id);
+        if (view === owner) goTo(next);
+        return;
+      }
       const rows = await store.all();
       if (view !== owner) return;
-      const pool = owner.daily ? personalDailyRows(rows, el('daily-mode').value).filter(({ history }) => history?.reviewedDay !== localDay()) : personalDue(rows);
-      const next = pool.find(({ question }) => question.id !== owner.question.id);
-      goTo(next ? practiceHref(next.question.id, owner.daily).slice(1) : owner.daily ? 'daily' : 'personal');
+      const next = personalDue(rows).find(({ question }) => question.id !== owner.question.id);
+      goTo(next ? practiceHref(next.question.id).slice(1) : 'personal');
     } catch { if (view === owner) el('play-status').textContent = '次の問題を開けませんでした。'; }
   });
   window.addEventListener('pagehide', close);
   window.addEventListener('pageshow', event => {
     if (event.persisted && displayedRoute?.personalId) openProblem(displayedRoute);
   });
-
-  function personalDailyRows(rows, mode) {
-    if (mode === 'general') return [];
-    const day = localDay();
-    const completed = rows.filter(({ history }) => history?.reviewedDay === day)
-      .sort((a, b) => a.history.lastAt.localeCompare(b.history.lastAt));
-    return [...completed, ...personalDue(rows, day)].slice(0, mode === 'personal' ? 10 : 4);
-  }
 
   function trends(rows) {
     const categories = new Map();
@@ -233,9 +270,13 @@ const personalPages = (() => {
       if (token !== listRequest || el('').hidden) return;
       const due = personalDue(rows);
       const dueIds = new Set(due.map(({ question }) => question.id));
-      el('counts').textContent = `今日の復習 ${due.length}問 ／ 登録 ${rows.length}問 ／ 習得済み ${rows.filter(({ history }) => learned(history)).length}問`;
+      const latest = rows[0]?.question;
+      const recentCount = latest ? rows.filter(({ question }) => latest.sourceKey ? question.sourceKey === latest.sourceKey
+        : latest.gameId && question.gameId === latest.gameId).length : 0;
+      el('counts').textContent = rows.length ? `登録 ${rows.length}問 ／ 今日の復習 ${due.length}問 ／ 最後に登録した対局から ${recentCount || 1}問` : '';
       el('start').hidden = !due.length;
       if (due.length) el('start').href = practiceHref(due[0].question.id);
+      else if (rows.length) { el('start').hidden = false; el('start').href = practiceHref(rows[0].question.id); }
       el('empty').hidden = Boolean(rows.length);
       const insight = trends(rows);
       el('analysis-trend').textContent = insight.games.length ? '対局から登録した改善候補（3局以上）　' + insight.games.map(group => `${personalTags[group.tag]} ${group.games.size}局`).join('、') + '。相手の応手まで盤で確かめてみましょう。'
@@ -304,38 +345,6 @@ const personalPages = (() => {
     list();
   }
 
-  function daily() {
-    const token = ++dailyRequest;
-    const mode = el('daily-mode').value;
-    if (mode === 'general') return;
-    store.all().then(rows => {
-      if (token !== dailyRequest || displayedRoute?.path !== 'daily') return;
-      const featured = personalDailyRows(rows, mode);
-      if (!featured.length && mode === 'recommended') return;
-      const plan = learningTracker.day();
-      const weak = new Set(trends(rows).practice.filter(group => rate(group) < .75).map(group => group.tag));
-      const lessons = plan.questions.map(id => introLessons.find(lesson => lesson.id === id)).filter(Boolean);
-      const intro = learningTracker.intro();
-      const general = mode === 'personal' ? [] : personalGeneralQuestions(lessons, weak,
-        lesson => !intro.completed.includes(lesson.id) && !intro.quiz[lesson.id] && !learningTracker.data.questions[lesson.id],
-        10 - featured.length);
-      const day = localDay();
-      const solved = featured.filter(({ history }) => history?.events.some(event => event.day === day && event.kind === 'good')).length
-        + general.filter(lesson => plan.checked.includes(lesson.id)).length;
-      byId('daily-status').textContent = featured.length || general.length ? `${solved} / ${featured.length + general.length}問 正解済み · 個別 ${featured.length}問` : '今日は復習予定の個別問題がありません。';
-      byId('daily-list').replaceChildren(...featured.map(({ question, history }) => {
-        const li = element('li');
-        li.append(link('自分の対局からの問題', practiceHref(question.id, true)));
-        if (history?.reviewedDay === day) li.append(element('span', '復習済み', 'learning-done'));
-        return li;
-      }), ...general.map(lesson => {
-        const li = element('li');
-        li.append(link(lesson.title, '#lesson/' + lesson.id));
-        if (plan.checked.includes(lesson.id)) li.append(element('span', '正解済み', 'learning-done'));
-        return li;
-      }));
-    }).catch(() => { if (token === dailyRequest && displayedRoute?.path === 'daily') byId('daily-status').textContent += ' 個別問題は読み込めませんでした。'; });
-  }
   const mode = personalPreference(personalDailyKey, 'recommended');
   el('daily-mode').value = ['recommended', 'general', 'personal'].includes(mode) ? mode : 'recommended';
   el('daily-mode').addEventListener('change', () => {
@@ -347,19 +356,52 @@ const personalPages = (() => {
     const node = byId(`${screen}-personal-progress`);
     if (!node) return;
     node.hidden = true;
-    store.all().then(rows => {
+    const loaded = store.all();
+    loaded.then(rows => {
       const due = personalDue(rows).length;
       if (!rows.length || (screen === 'home' && !due)) return;
       const answered = rows.filter(({ history }) => history).length;
       const recent = rows.flatMap(({ history }) => history?.events ?? []).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
       const clean = recent.filter(event => event.kind === 'good' && !event.hints).length;
       node.replaceChildren(element('p', screen === 'home' ? `自分の対局からの復習が${due}問あります。`
-        : `今日の個別問題 ${due}問 · 復習した問題 ${answered}問 · 習得済み ${rows.filter(({ history }) => learned(history)).length}問`
+        : `専用問題 ${rows.length}問 · 今日の復習 ${due}問 · 解いた問題 ${answered}問 · 習得済み ${rows.filter(({ history }) => learned(history)).length}問`
           + (recent.length >= 5 ? ` · 最近${recent.length}回のヒントなし正解 ${Math.round(clean / recent.length * 100)}%` : '')),
       link('自分だけの練習問題', '#personal'));
       node.hidden = false;
     }).catch(() => {});
+    if (screen === 'dashboard') {
+      const request = ++dashboardRequest;
+      const ledger = generalHistory();
+      const details = byId('dashboard-general-progress');
+      details.parentElement.querySelector('[data-practice-evidence]')?.remove();
+      const history = Object.values(ledger);
+      const correct = history.filter(row => row.first.correct && !row.first.hints).length;
+      details.textContent = history.length
+        ? `一般練習 ${history.length}問 · 復習予定 ${history.filter(row => row.due <= localDay()).length}問${history.length >= 5 ? ` · 初回ヒントなし正解 ${Math.round(correct / history.length * 100)}%` : ' · 傾向を表示するには記録がもう少し必要です。'}`
+        : '一般練習の記録はまだありません。';
+      loaded.then(async personal => {
+        if (request !== dashboardRequest) return;
+        const summary = generalPractice.dailySummary(el('daily-mode').value, personal, ledger);
+        byId('dashboard-solved').textContent = summary ? summary.join('/') : byId('dashboard-solved').textContent;
+        if (!personal.length && !history.length) return;
+        const { rows, evidence } = await generalPractice.pool(personal, ledger);
+        if (!evidence || request !== dashboardRequest || byId('dashboard').hidden) return;
+        const candidate = rows.find(row => row.tags.includes(evidence.tag) && !ledger[row.id]);
+        const label = practiceThemes[evidence.tag][0];
+        const basis = evidence.games.size >= 2 ? `最近の登録問題のうち${evidence.games.size}局に共通`
+          : `${evidence.attempted}問のうち初回で迷ったかヒントを使った問題が${evidence.missed}問`;
+        const hint = element('div', null, 'dashboard-note');
+        hint.append(element('p', `おすすめ：${label}（${basis}）`));
+        details.after(hint);
+        hint.dataset.practiceEvidence = 'true';
+        if (candidate) hint.append(setRowAction(link(label + 'の問題を解く', '#general/' + candidate.id + '/recommended')));
+        if (evidence.early.length >= 3 && evidence.late.length >= 3) {
+          const percent = events => Math.round(100 * events.reduce((sum, event) => sum + event, 0) / events.length);
+          hint.append(element('span', `ヒントなし正解率：前週 ${percent(evidence.early)}%（${evidence.early.length}回） → 直近7日 ${percent(evidence.late)}%（${evidence.late.length}回）`));
+        }
+      }).catch(() => {});
+    }
   }
 
-  return { daily, openList, openProblem, close, progress };
+  return { openList, openProblem, close, progress };
 })();

@@ -13,6 +13,7 @@ function staticLearning(config, preview, entries) {
   const app = route => '/' + '#' + route;
   const actions = items => `<ul class="reading-links">${items.map(([href, label]) => `<li>${link(href, label)}</li>`).join('')}</ul>`;
   const publicArticles = articles.filter(article => article.status === 'public');
+  const practiceArticles = require('./practice-articles.cjs');
   const index = new Map(entries.map(entry => [entry.id, entry]));
   if (index.size !== entries.length || new Set(publicArticles.map(article => article.id)).size !== publicArticles.length
     || [...index.keys(), ...publicArticles.map(article => article.id)].some(id => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))) {
@@ -76,6 +77,13 @@ ${preview ? '<meta name="robots" content="noindex">' : config.ga4MeasurementId ?
       `<section><h2>${e(title)}</h2><p>${e(body)}</p></section>`).join('')}<p>${link(app(action[1]), action[0])}</p>
       ${references.length ? '<h2>参考資料</h2>' + actions(references) : ''}`,
     [['/guides/', 'チェスの学習ガイド']], updated);
+  }
+  for (const { route, title, description, sections, action, related = [] } of practiceArticles) {
+    page(route, title, description, `<p>${e(description)}</p>${sections.map(([label, body]) =>
+      `<section><h2>${e(label)}</h2><p>${e(body)}</p></section>`).join('')}
+      <h2>盤で練習する</h2>${actions(action.map(([label, hash]) => [app(hash), label]))}
+      ${related.length ? '<h2>関連するガイド</h2>' + actions(related) : ''}`,
+    route === '/practice/' ? [] : [['/practice/', 'チェスの練習']], '2026-11-27');
   }
   files['sitemap.xml'] = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     + locations.map(({ url, updated }) => `  <url><loc>${e(url)}</loc>${updated ? `<lastmod>${e(updated)}</lastmod>` : ''}</url>`).join('\n')

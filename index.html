@@ -63,6 +63,7 @@
   <script src="game-study.js" defer></script>
   <script src="lichess-api.js" defer></script>
   <script src="personal-practice.js" defer></script>
+  <script src="general-practice.js" defer></script>
   <script src="play-style.js" defer></script>
   <script src="daily-life.js" defer></script>
   <script src="pgn-batch.js" defer></script>
@@ -71,6 +72,7 @@
   <script src="game-study-ui.js" defer></script>
   <script src="game-review-ui.js" defer></script>
   <script src="personal-ui.js" defer></script>
+  <script src="general-practice-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
   <script src="migration.js" defer></script>
   <script src="play-style-ui.js" defer></script>
@@ -130,6 +132,7 @@
         <section class="menu-group">
           <h3>成長する</h3>
           <a href="#personal"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>自分だけの練習問題</a>
+          <a href="#general"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>テーマ別の一般練習</a>
           <a href="#game-review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局を振り返る</a>
           <a href="#game-library"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局履歴</a>
           <a href="#pgn-import"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>棋譜をまとめて取り込む</a>
@@ -198,7 +201,7 @@
           <p class="hero-description">Rookori（ルーコリ）は、初心者から中級者まで無料で使える日本語のチェス学習サイトです。駒の動かし方から、自分のペースで始められます。</p>
           <div class="hero-actions">
             <a class="button hero-button" id="home-start" href="#intro">チェスの基本を学ぶ</a>
-            <a class="button hero-secondary" href="#about">Rookoriについて</a>
+            <a class="button hero-secondary" href="#personal">自分の対局から練習する</a>
           </div>
           <div id="home-personal-progress" hidden></div>
         </div>
@@ -257,6 +260,12 @@
           <a class="text-button" href="#glossary">チェス用語集</a>
         </div>
         <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+        <section class="dashboard-feature home-section"><h2>あなたの対局が、あなたの教材になる。</h2>
+          <p>自分の対局から、自分だけの練習問題を。過去のミスを復習し、次の一手に生かす。</p>
+          <a class="button primary" href="#personal">練習を始める</a>
+          <a class="button secondary" href="#openings">日本語の定跡解説を読む</a>
+          <a class="button secondary" href="#mode">チェス16タイプ診断</a>
+        </section>
         <p class="journey-home"><a class="text-button" href="#updates">最新アップデート <span data-site-version></span> · 開発の歩みと今後のロードマップ</a></p>
       </section>
     </section>
@@ -265,6 +274,7 @@
       <h1 id="discover-title" tabindex="-1">探す</h1>
       <div class="app-directory">
         <section><h2>読み物と用語</h2><ul class="reading-links">
+          <li><a class="row-action" href="https://rookrori.com/practice/" data-reading-link><span>チェスの練習方法</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
           <li><a class="row-action" href="https://rookrori.com/openings/" data-reading-link><span>オープニング教材を読む</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
           <li><a class="row-action" href="https://rookrori.com/guides/" data-reading-link><span>チェスの学習ガイド</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
         </ul></section>
@@ -763,7 +773,7 @@
               <p id="cpu-result-note"></p>
               <p id="cpu-save-status" role="status"></p>
               <div class="study-complete-actions">
-                <button class="button primary" id="cpu-review" type="button">この対局を復習する</button>
+                <button class="button primary" id="cpu-review" type="button">この対局から学ぶ</button>
                 <button class="button secondary" id="cpu-continue" type="button" hidden>時間無制限で続きを指す</button>
                 <button class="button secondary" id="cpu-rematch" type="button">同じ設定でもう一局</button>
                 <button class="button secondary" id="cpu-change" type="button">対局設定を変更</button>
@@ -872,6 +882,7 @@
         <a class="text-button" href="#game-library">対局履歴を見る</a>
       </nav>
       <h1 id="game-player-title" tabindex="-1">対局を振り返る</h1>
+      <div id="game-practice-action" class="study-mode-links" hidden><button type="button" id="game-practice-open" class="button primary">この対局から学ぶ</button><span id="game-practice-count" role="status"></span></div>
       <button class="text-button" id="game-origin" type="button" hidden>元の対局に戻る</button>
       <p id="game-player-status" role="status" class="game-status"></p>
       <div id="game-player-content" hidden>
@@ -954,7 +965,7 @@
                   </div>
                   <div class="study-mode-links">
                     <button type="button" id="personal-generate-one" class="button secondary">この局面を練習問題にする</button>
-                    <button type="button" id="personal-generate-many" class="text-button">対局全体から候補を探す</button>
+                    <button type="button" id="personal-generate-many" class="button secondary">対局全体から候補を探す</button>
                     <button type="button" id="personal-generate-stop" class="text-button" hidden>問題の生成を中止</button>
                   </div>
                   <p id="personal-generate-status" role="status"></p>
@@ -966,6 +977,7 @@
                     <button type="button" id="personal-dismiss-candidates" class="text-button">今回は追加しない</button>
                   </div>
                   <a class="text-button" href="#personal">自分だけの練習問題を開く</a>
+                  <a id="personal-generated-first" class="button primary" href="#personal" hidden>追加した問題を解く</a>
                 </details>
                 <div class="review-analysis-actions">
                   <button class="button secondary" id="game-study-position" type="button" aria-describedby="game-study-status">現在の局面を解析する</button>
@@ -1222,6 +1234,9 @@
       <section class="dashboard-feature" id="dashboard-recommendation"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
       <section id="dashboard-plan"></section>
       <div id="dashboard-personal-progress" hidden></div>
+      <section><h2>練習の記録</h2><p id="dashboard-general-progress" class="dashboard-note"></p>
+        <a class="row-action" href="#personal">練習のメニューを開く<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      </section>
       <details class="opening-card">
         <summary id="learning-goal-summary">目標を設定する（任意）</summary>
         <form id="learning-goal-form" class="rookori-fields">
@@ -1276,15 +1291,21 @@
       <section class="opening-card"><h2>16タイプ診断と比べる</h2><div id="style-diagnosis"></div></section>
     </section>
     <section id="personal" class="screen inner-screen guide-screen" hidden>
-      <h1 id="personal-title" tabindex="-1">自分だけの練習問題</h1>
+      <h1 id="personal-title" tabindex="-1">あなたの対局が、あなたの教材になる。</h1>
+      <p>自分の対局から、自分だけの練習問題を。過去のミスを復習し、次の一手に生かす。</p>
       <p class="guide-intro">過去の一手を、未来の強さに。</p>
       <p id="personal-counts" role="status"></p>
       <div class="study-mode-links">
-        <a id="personal-start" class="button primary" href="#personal" hidden>今日の復習を始める</a>
-        <a class="text-button" href="#game-review">対局を振り返る</a>
-        <a class="text-button" href="#daily">毎日の練習問題へ</a>
+        <a id="personal-start" class="button primary" href="#personal" hidden>専用問題を解く</a>
+        <a class="button secondary" href="#game-review">棋譜を取り込む・振り返る</a>
+        <a class="button secondary" href="#cpu">CPUと対局する</a>
       </div>
-      <p id="personal-empty" hidden>対局を取り込むか、CPUとの対局を終えたら、振り返りの「対局から練習問題を作る」を開いてみましょう。</p>
+      <p id="personal-empty" hidden>対局を取り込むかCPUとの対局を終えたあと、「この対局から学ぶ」から問題を作れます。対局がないときは一般練習から始められます。</p>
+      <nav class="dashboard-quick" aria-label="練習メニュー">
+        <a href="#daily"><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>今日の10問</a>
+        <a href="#general/due"><svg class="ui-icon" aria-hidden="true"><use href="#ui-review"></use></svg>一般問題の復習</a>
+        <a href="#general"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>一般練習</a>
+      </nav>
       <details class="opening-card" id="personal-settings">
         <summary>問題の追加設定</summary>
         <p><label><input id="personal-auto" type="checkbox"> 終了済み対局の全体解析後、候補を自動で追加する</label></p>
@@ -1304,9 +1325,10 @@
       <ul id="personal-list" class="game-history"></ul>
     </section>
     <section id="personal-play" class="screen inner-screen game-page" hidden>
-      <nav class="study-navigation" aria-label="問題のメニュー"><a class="text-button" href="#personal">自分だけの練習問題へ</a><a class="text-button" href="#daily">毎日の練習問題へ</a></nav>
-      <h1 id="personal-play-title" tabindex="-1">次の一手を考える</h1>
+      <nav class="study-navigation" aria-label="問題のメニュー"><a class="button secondary" href="#personal">専用問題の一覧</a><a class="button secondary" href="#daily">今日の10問</a></nav>
+      <h1 id="personal-play-title" tabindex="-1">専用練習 · 次の一手</h1>
       <p id="personal-play-status" role="status"></p>
+      <p id="personal-play-source"></p>
       <div id="personal-play-layout" class="personal-play-layout" hidden>
         <div>
           <p id="personal-turn"></p>
@@ -1322,6 +1344,8 @@
           <h2 id="personal-verdict"></h2><p id="personal-answer-move"></p><p id="personal-answer-best"></p>
           <p id="personal-answer-score"></p><p id="personal-answer-explanation"></p>
           <p id="personal-answer-actual"></p><p id="personal-line-note" role="status"></p>
+          <div id="personal-comparison"></div>
+          <a id="personal-related" class="button secondary" href="#general" hidden>同じテーマを練習する</a>
           <div class="study-mode-links">
             <button class="button secondary" id="personal-retry" type="button">もう一度考える</button>
             <button class="button secondary" id="personal-line" type="button">推奨手の続きを見る</button>
@@ -1335,6 +1359,42 @@
       <dialog id="personal-promotion" class="promotion-dialog" aria-labelledby="personal-promotion-title">
         <form method="dialog"><h2 id="personal-promotion-title">どの駒に昇格しますか？</h2>
           <div class="study-mode-links"><button value="q">クイーン</button><button value="r">ルーク</button><button value="b">ビショップ</button><button value="n">ナイト</button><button value="cancel">キャンセル</button></div>
+        </form>
+      </dialog>
+    </section>
+    <section id="general" class="screen inner-screen guide-screen" hidden>
+      <h1 id="general-title" tabindex="-1">一般練習問題</h1>
+      <p>問題レートは練習問題の難しさの目安です。対局のレーティングとは別の指標です。</p>
+      <div class="study-mode-links"><a class="button secondary" href="#personal">自分専用の練習</a><a class="button secondary" href="#daily">今日の10問</a></div>
+      <div class="rookori-fields">
+        <label>難易度 <select id="general-level"><option value="0">入門</option><option value="1">初級</option><option value="2">中級</option><option value="3">上級</option></select></label>
+        <label>テーマ <select id="general-theme"><option value="all">すべて</option><option value="due">復習予定</option><option value="saved">保存した問題</option></select></label>
+      </div>
+      <p id="general-theme-help"></p><p id="general-status" role="status"></p>
+      <div class="study-mode-links">
+        <button class="button secondary" type="button" id="general-previous" hidden>前のページ</button>
+        <button class="button secondary" type="button" id="general-more" hidden>次のページ</button>
+        <button class="button secondary" type="button" id="general-reload">再読み込み</button>
+      </div>
+      <ul class="reading-links" id="general-list"></ul>
+      <p>出典 <a href="https://database.lichess.org/#puzzles" rel="noreferrer">Lichess Open Database（CC0）</a></p>
+    </section>
+    <section id="general-play" class="screen inner-screen guide-screen" hidden>
+      <h1 id="general-play-title" tabindex="-1">一般練習 · 次の一手</h1>
+      <div class="study-mode-links"><a class="button secondary" href="#general">問題一覧</a><a class="button secondary" href="#daily">今日の10問</a></div>
+      <p id="general-load-status" role="status"></p>
+      <div id="general-play-layout" hidden>
+        <p id="general-prompt"></p><p id="general-rating" class="dashboard-note"></p>
+        <div id="general-board" class="study-board" role="group" aria-label="一般練習のチェス盤"></div>
+        <p id="general-feedback" role="status"></p><div id="general-explanation"></div>
+        <button id="general-hint" class="button secondary" type="button">ヒント</button>
+        <button id="general-save" class="button secondary" type="button" aria-pressed="false">あとで解く</button>
+        <button id="general-next-daily" class="button primary" type="button" hidden>次の問題へ</button>
+      </div>
+      <dialog id="general-promotion" class="promotion-dialog" aria-labelledby="general-promotion-title">
+        <form method="dialog"><h2 id="general-promotion-title">どの駒に昇格しますか？</h2>
+          <div class="promotion-choices"><button value="q">クイーン</button><button value="r">ルーク</button><button value="b">ビショップ</button><button value="n">ナイト</button></div>
+          <button value="cancel">キャンセル</button>
         </form>
       </dialog>
     </section>
@@ -1533,7 +1593,7 @@
         <li>解析結果を含むサイトデータをすべて消すには、ブラウザーの設定からこのサイトのデータを削除してください。この操作では学習記録や同意設定も消えます。同じホスト名の別サイトのデータに影響する場合があります。書き出したバックアップや棋譜ファイルは、保存先で別途削除してください。</li>
       </ul>
       <h2>Google Analytics 4 と同意の設定</h2>
-      <p>サイトの改善に役立てるため、公開サイトで同意した方の閲覧状況を Google Analytics 4 で計測します。画面の種類、診断や練習を開始・完了したこと、共有操作、事前に登録したキャンペーン名などを送信し、GoogleはCookieなどを使ってブラウザーを区別します。Rookoriの計測タグは、元のURLのクエリや個別ID、ユーザー名、棋譜、メモ、診断の回答・結果、詳細な学習履歴を送信しません。</p>
+      <p>サイトの改善に役立てるため、公開サイトで同意した方の閲覧状況を Google Analytics 4 で計測します。画面の種類、診断・練習・復習の開始や完了、専用問題の生成完了、共有操作、事前に登録したキャンペーン名などを送信し、GoogleはCookieなどを使ってブラウザーを区別します。Rookoriの計測タグは、元のURLのクエリや個別ID、ユーザー名、棋譜、盤面の情報、メモ、診断の回答・結果、詳細な学習履歴を送信しません。</p>
       <p>同意はこのブラウザーに記録されます。「同意しない」を選ぶと以後の計測を停止できます。すでに送信された情報の削除やCookieの消去とは別の操作です。詳しくは<a href="https://policies.google.com/technologies/partner-sites?hl=ja" rel="noreferrer">Googleによるデータの使用</a>をご覧ください。</p>
       <p id="analytics-status" role="status">アクセス解析は無効です。</p>
       <div id="analytics-settings" class="analytics-actions" hidden>
@@ -1550,6 +1610,7 @@
     <nav class="footer-links" aria-label="フッター">
       <a href="https://rookrori.com/openings/" data-reading-link>オープニング教材</a>
       <a href="https://rookrori.com/guides/" data-reading-link>チェスの学習ガイド</a>
+      <a href="https://rookrori.com/practice/" data-reading-link>チェスの練習方法</a>
       <a href="#welcome">はじめての利用ガイド</a>
       <a href="#roadmap">これまでと、これから</a>
       <a href="#privacy">アクセス解析とプライバシー</a>

@@ -55,7 +55,7 @@ const siteMenu = (() => {
     const tab = path === 'home' || !path ? 'home'
       : screen === 'cpu' ? 'cpu'
       : ['dashboard', 'daily', 'progress', 'review', 'game-player', 'game-review', 'game-library',
-        'pgn-import', 'personal', 'personal-play', 'journal'].includes(screen) ? 'dashboard'
+        'pgn-import', 'personal', 'personal-play', 'general', 'general-play', 'journal'].includes(screen) ? 'dashboard'
       : ['learn', 'beginner', 'improve', 'intro', 'intro-lesson', 'intro-summary', 'openings',
         'opening-study', 'opening-practice'].includes(screen) || path === 'learn' ? 'learn'
       : 'discover';

@@ -117,6 +117,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   async function open(next) {
     close();
     view = next;
+    byId('personal-generated-first').hidden = true;
     byId('personal-generate-panel').open = false;
     const selected = personalPreference(styleOwnershipKey, {})[next.game.id];
     const known = ['w', 'b'].includes(selected) ? selected : personalSide(next.game);
@@ -138,6 +139,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
       const id = await studyContentKey(next.game);
       if (view !== next) return;
       key = id;
+      updatePracticeCount(next, id);
       const saved = memory.get(id) ?? await store.get(id);
       if (view !== next) return;
       if (saved) {
@@ -435,6 +437,19 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     if (scroll) panel.scrollIntoView({ block: 'nearest' });
   }
 
+  async function updatePracticeCount(owner, contentKey) {
+    try {
+      const key = contentKey ?? await studyContentKey(owner.game);
+      const rows = (await personalStore.all()).filter(({ question }) => question.sourceKey === key
+        || owner.game.id && question.gameId === owner.game.id);
+      if (view !== owner) return;
+      byId('game-practice-count').textContent = rows.length ? `この対局の練習問題 ${rows.length}問` : '';
+      const first = byId('personal-generated-first');
+      first.hidden = !rows.length;
+      if (rows.length) first.href = '#personal/' + rows[0].question.id;
+    } catch { /* Practice remains available if the count is unavailable. */ }
+  }
+
   function showPersonalCandidates() {
     const list = byId('personal-candidate-list');
     list.replaceChildren(...pendingQuestions.map(question => {
@@ -461,10 +476,13 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     if (!chosen.length) { personalStatus('追加する局面を選んでください。'); return; }
     try {
       const count = await personalStore.merge(chosen.map(question => ({ question, history: null })));
+      if (count) rookoriAnalytics.event('personal_practice_generated');
       if (view !== owner) return;
+      updatePracticeCount(owner, chosen[0].sourceKey);
       pendingQuestions = [];
       showPersonalCandidates();
-      personalStatus(`${count}問を追加しました。${count < chosen.length ? '登録済みの局面とその学習記録を残しました。' : ''}`);
+      personalStatus(`${count}問を追加しました。${count < chosen.length ? '登録済みの局面とその学習記録を残しました。' : ''}`
+        + (owner.game.id ? '' : ' 元の対局へ戻る導線を使うには、この棋譜も履歴に保存してください。'));
     } catch { if (view === owner) personalStatus('問題を保存できませんでした。ブラウザーの空き容量や保存設定を確認してください。'); }
   }
 
@@ -493,7 +511,11 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     pendingQuestions = [];
     byId('personal-candidate-list').hidden = true;
     showPersonalCandidates();
-    if (!plies.length) { personalStatus('この対局から、解析で十分な改善が確認できる候補は見つかりませんでした。'); return; }
+    if (!plies.length) {
+      personalStatus(record.scores.some(Boolean) ? 'この対局から、解析で十分な改善が確認できる候補は見つかりませんでした。'
+        : '対局全体から探すには、先に「対局全体を解析」を実行してください。');
+      return;
+    }
     const work = begin('personal');
     if (!work) return;
     byId('personal-generate-stop').hidden = false;
@@ -527,6 +549,13 @@ function createGameStudyUI({ current, goToPly, repaint }) {
   }
 
   byId('personal-generate-one').addEventListener('click', () => generateQuestions(view?.position.ply));
+  byId('game-practice-open').addEventListener('click', () => {
+    selectTab('analysis');
+    generationPanel(true);
+    const generate = byId('personal-generate-many');
+    if (generate.disabled) el('batch').focus({ preventScroll: true });
+    else generate.focus({ preventScroll: true });
+  });
   byId('personal-generate-many').addEventListener('click', () => generateQuestions());
   byId('personal-add-all').addEventListener('click', () => savePersonalCandidates());
   byId('personal-add-selected').addEventListener('click', () => savePersonalCandidates(true));
@@ -589,6 +618,7 @@ function createGameStudyUI({ current, goToPly, repaint }) {
     record.version = stockfishEngine.version;
     record.analyzed = new Date().toISOString();
     const count = game.positions.length;
+    const neededAnalysis = game.positions.some((position, ply) => !record.scores[ply] && ply < count - 1);
     const prefix = game.cpu?.origin?.moves ?? [];
     const moves = [...prefix, ...studyMainMoves(game, count - 1)];
     let completed = false;
@@ -614,6 +644,10 @@ function createGameStudyUI({ current, goToPly, repaint }) {
         render();
         highlights();
         repaint();
+        if (completed && neededAnalysis && personalEligibility(game) === 'finished'
+          && game.positions.every((position, ply) => ply === count - 1 || Boolean(record.scores[ply]))) {
+          rookoriAnalytics.event('game_review_complete');
+        }
         if (completed && !['sample', 'live'].includes(personalEligibility(game))) {
           selectTab('analysis');
           generateQuestions(null, true);

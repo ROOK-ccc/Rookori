@@ -15,7 +15,8 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   for (const file of readdirSync(__dirname).filter(name => /\.(cjs|css|html|js|webmanifest)$/.test(name))) {
     copyFileSync(join(__dirname, file), join(scratch, file));
   }
-  for (const dir of ['brand', 'pieces', 'vendor']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
+  for (const dir of ['brand', 'pieces', 'vendor', 'puzzles']) cpSync(join(__dirname, dir), join(scratch, dir), { recursive: true });
+  copyFileSync(join(__dirname, 'practice-edits.json'), join(scratch, 'practice-edits.json'));
   const configFile = join(scratch, 'site-config.json');
   copyFileSync(join(__dirname, 'site-config.cloudflare.json'), join(scratch, 'site-config.cloudflare.json'));
   writeFileSync(configFile, JSON.stringify({ ...siteConfig, migrationUrl: undefined, googleSearchVerification: '', ga4MeasurementId: '' }));
@@ -166,6 +167,10 @@ test('公開用ビルドに学習レポート・自作問題・対局復習が�
   assert.match(liveLesson, /BreadcrumbList/);
   assert.doesNotMatch(liveLesson, /noindex/);
   assert.ok(!readdirSync(preview).includes('opening-editor.html'));
+  assert.ok(!readdirSync(preview).includes('practice-editor.html'));
+  assert.ok(!readdirSync(preview).includes('practice-edits.json'));
+  assert.match(readFileSync(join(preview, 'practice', 'personal', 'index.html'), 'utf8'), /<link rel="canonical" href="https:\/\/rookrori\.com\/practice\/personal\/">/);
+  assert.deepEqual(JSON.parse(readFileSync(join(preview, 'puzzles', 'catalog.json'), 'utf8')).counts, [1000, 2000, 1500, 500]);
   const sitemap = readFileSync(join(preview, 'sitemap.xml'), 'utf8');
   for (const [, address] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
     const logicalPath = new URL(address).pathname.slice(1);

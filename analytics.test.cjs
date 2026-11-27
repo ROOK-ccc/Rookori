@@ -9,6 +9,23 @@ const site = 'https://rook-ccc.github.io/Rookori/';
 const id = 'G-TEST000000';
 const consentKey = 'rookori.analytics-consent.v1';
 
+test('練習イベントは同意後だけ送り、問題ID・棋譜・盤面を送らない', () => {
+  const { analytics, window, choose } = setup();
+  const names = ['personal_practice_generated', 'personal_practice_start', 'personal_practice_complete', 'personal_review_complete',
+    'general_practice_start', 'general_practice_complete', 'daily_practice_complete', 'practice_recommendation_start', 'game_review_complete'];
+  analytics.screen('general-play', 'general/ABC12/daily');
+  for (const name of names) analytics.event(name);
+  assert.equal(window.dataLayer, undefined);
+  choose('granted');
+  for (const name of names) analytics.event(name, { fen: 'example-private-fen', gameId: 'private-game' });
+  const sent = window.dataLayer.filter(row => row[0] === 'event' && row[1] !== 'page_view');
+  assert.deepEqual(Array.from(sent, row => row[1]), names);
+  assert.doesNotMatch(JSON.stringify(window.dataLayer), /ABC12|example-private-fen|private-game/);
+  choose('denied');
+  analytics.event('game_review_complete');
+  assert.equal(window.dataLayer.filter(row => row[0] === 'event').length, names.length + 1);
+});
+
 function setup({ idValue = id, url = site, hasTag = false, consent = null, canonical = site, analyticsAddress } = {}) {
   const scripts = [];
   const nodes = new Map();

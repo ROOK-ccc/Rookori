@@ -298,6 +298,8 @@ const gameReviewPages = (() => {
   function showGame(view, start) {
     const { game } = view;
     byId('game-player-title').textContent = title(game);
+    byId('game-practice-action').hidden = ['sample', 'live'].includes(personalEligibility(game));
+    byId('game-practice-count').textContent = '';
     byId('game-origin').hidden = !game.cpu?.origin?.gameId;
     const summary = describe(game);
     byId('game-player-summary').textContent = game.metadata.hasEndMarker ? summary
@@ -643,6 +645,7 @@ const gameReviewPages = (() => {
     byId('game-player-title').textContent = '対局を振り返る';
     byId('game-origin').hidden = true;
     byId('game-player-content').hidden = true;
+    byId('game-practice-action').hidden = true;
     const status = byId('game-player-status');
     status.textContent = '対局を開いています。';
     showScreen('game-player', 'game-player-title');

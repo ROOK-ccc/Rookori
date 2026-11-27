@@ -10,15 +10,18 @@ const files = new Set([
   'opening-editor.html', 'styles.css', 'editor.css', 'vendor/chess.js', 'opening-data.js',
   'opening-expansion.js', 'opening-edits-data.js', 'opening-edits.js', 'opening-variations.js',
   'opening-study.js', 'opening-memory.js', 'opening-editor.js',
+  'practice-editor.html', 'practice-editor.js', 'practice-editor-validate.js', 'practice-edits.json',
 ]);
 const mime = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
 };
 
 createServer((request, response) => {
   const file = request.url.split('?')[0].slice(1);
-  if (request.method !== 'GET' || !files.has(file) && !/^pieces\/cburnett\/[wb][KQRBNP]\.svg$/.test(file)) {
+  if (request.method !== 'GET' || !files.has(file) && !/^pieces\/cburnett\/[wb][KQRBNP]\.svg$/.test(file)
+    && !/^puzzles\/(catalog|[0-3]-\d+)\.json$/.test(file)) {
     response.writeHead(404).end();
     return;
   }

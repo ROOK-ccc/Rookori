@@ -60,6 +60,11 @@ function publicSiteFiles(config) {
   };
 }
 
+function puzzleFiles() {
+  const { preparePuzzleFiles } = require('./practice-edits.cjs');
+  return preparePuzzleFiles(path.join(__dirname, 'puzzles'), path.join(__dirname, 'practice-edits.json'));
+}
+
 try {
   const { values, positionals: [input] } = parseArgs({
     options: { 'print-output': { type: 'boolean' }, target: { type: 'string', default: 'pages' } },
@@ -86,6 +91,7 @@ try {
   generated['index.html'] = generated['index.html'].replace('<!-- CLOUDFLARE_PRIVACY -->', cloudflare
     ? '<p>このサイトの配信にはCloudflareを利用しており、表示時の通信はCloudflareを経由します。通信に伴い、IPアドレスなどの情報は配信事業者に伝わります。詳しくは<a href="https://www.cloudflare.com/privacypolicy/" rel="noreferrer">Cloudflareのプライバシーポリシー</a>をご覧ください。</p>'
     : '');
+  Object.assign(generated, puzzleFiles());
   if (cloudflare) {
     const entries = vm.runInContext(`[...studyOpenings, ...openingVariations].map(entry => ({ ...entry,
       aliases: entry.aliases ?? openingAliases[entry.id], notation: openingNotation(entry), color: openingDefaultColor(entry) }));`, openingContext);
@@ -112,7 +118,7 @@ try {
     'learning.js', 'learning-insights.js', 'learning-progress-ui.js', 'learning-ui.js', 'site-menu.js',
     'game-review.js', 'opening-classification.js', 'game-library.js', 'game-review-ui.js', 'game-review.css',
     'game-study.js', 'game-study-ui.js', 'game-study.css',
-    'lichess-api.js', 'lichess-ui.js', 'migration.js', 'personal-practice.js', 'personal-ui.js', 'play-style.js', 'play-style-ui.js',
+    'lichess-api.js', 'lichess-ui.js', 'migration.js', 'personal-practice.js', 'personal-ui.js', 'general-practice.js', 'general-practice-ui.js', 'play-style.js', 'play-style-ui.js',
     'chess-terms.js', 'chess-glossary.js',
     'intro-data.js', 'intro-course.js', 'intro-ui.js', 'chess-board.js',
     'problem-data.js', 'problem-curriculum.js',
@@ -127,7 +133,7 @@ try {
     fs.copyFileSync(path.join(__dirname, file), target);
   }
   fs.writeFileSync(path.join(output, 'course-problems.js'), courseScript);
-  if (cloudflare) generated['index.html'] = generated['index.html'].replace(/href="https:\/\/rookrori\.com\/((?:openings|guides)\/)" data-reading-link/g, 'href="/$1" data-reading-link');
+  if (cloudflare) generated['index.html'] = generated['index.html'].replace(/href="https:\/\/rookrori\.com\/((?:openings|guides|practice)\/)" data-reading-link/g, 'href="/$1" data-reading-link');
   for (const file of Object.keys(generated).filter(file => file.endsWith('.html'))) {
     generated[file] = versionPublicAssets(generated[file], output);
   }
@@ -135,7 +141,8 @@ try {
   const assets = ['./', 'app.webmanifest', 'brand/rookori.png', 'brand/rookori-512.png', ...pieces,
     ...[...generated['index.html'].matchAll(/\b(?:src|href)="([\w./-]+\.(?:js|css)\?v=[a-f0-9]+)"/g)].map(match => match[1])];
   const worker = fs.readFileSync(path.join(__dirname, 'sw.js'), 'utf8');
-  const hash = createHash('sha256').update(worker).update(JSON.stringify(assets)).update(generated['index.html']);
+  const hash = createHash('sha256').update(worker).update(JSON.stringify(assets)).update(generated['index.html'])
+    .update(generated['puzzles/catalog.json']);
   for (const asset of assets.filter(asset => asset !== './' && !asset.includes('?'))) {
     hash.update(fs.readFileSync(path.join(output, asset)));
   }

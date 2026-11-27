@@ -5,7 +5,7 @@ const { webcrypto } = require('node:crypto');
 const { runInNewContext } = require('node:vm');
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
   'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'daily-life.js', 'migration.js'];
-const api = runInNewContext(scripts.map(name => readFileSync(`${__dirname}/${name}`, 'utf8')).join('\n') + '\n({ personalSide, personalSource, personalCompare, personalEligibility, personalProgress, personalDue, personalPositionId, personalCandidates, personalGeneralQuestions, verifyPersonalQuestion, parseReviewGames, validatePersonalBackup })',
+const api = runInNewContext(scripts.map(name => readFileSync(`${__dirname}/${name}`, 'utf8')).join('\n') + '\n({ personalSide, personalSource, personalCompare, personalEligibility, personalProgress, personalDue, personalPositionId, personalCandidates, verifyPersonalQuestion, parseReviewGames, validatePersonalBackup })',
   { TextEncoder, crypto: webcrypto, stockfishEngine: { version: '19' }, window: { addEventListener() {} } });
 
 const line = (value, depth = 12, unit = 'cp', winner) => ({ move: 'g6h6', depth, score: { unit, value, winner } });
@@ -75,10 +75,4 @@ test('間隔反復を共有し、当日再挑戦では復習レベルを二重�
   assert.equal(history.due, '2026-11-29');
   assert.equal(history.streak, 0);
   assert.equal(history.hints, 1);
-});
-
-test('一般問題は明示タグの一致と未学習を優先し、残枠を重複なしで補う', () => {
-  const lessons = [{ id: 'usual' }, { id: 'new' }, { id: 'match', problem: { tags: ['mate'] } }];
-  const selected = api.personalGeneralQuestions(lessons, new Set(['mate']), lesson => lesson.id === 'new', 6);
-  assert.deepEqual(Array.from(selected, lesson => lesson.id), ['match', 'new', 'usual']);
 });

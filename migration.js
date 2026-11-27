@@ -22,6 +22,9 @@ const migrationSettings = new Map([
   [savedOpeningResultKey, validOpeningAnswers],
   [personalAutoKey, value => typeof value === 'boolean'],
   [personalDailyKey, value => ['recommended', 'general', 'personal'].includes(value)],
+  [generalHistoryKey, validGeneralHistory],
+  [practiceDailyKey, validPracticeDaily],
+  [practiceSavedKey, validPracticeSaved],
   [styleOwnershipKey, validStyleOwnership],
   [styleSnapshotsKey, validStyleSnapshots],
   [welcomeKey, value => typeof value === 'boolean'],
@@ -159,7 +162,8 @@ function addMigrationSettings(storage, values) {
     if (storage.getItem(key) === null) {
       storage.setItem(key, key === lichessUsernameKey ? value : JSON.stringify(value));
       added++;
-    } else if ([styleOwnershipKey, learningKey, introStorageKey, openingHistoryKey, styleSnapshotsKey, cpuResultsKey].includes(key)) {
+    } else if ([styleOwnershipKey, learningKey, introStorageKey, openingHistoryKey, styleSnapshotsKey,
+      cpuResultsKey, generalHistoryKey, practiceSavedKey].includes(key)) {
       let current;
       try { current = JSON.parse(storage.getItem(key)); } catch { /* Preserve unreadable settings. */ }
       const baseline = { [learningKey]: null, [introStorageKey]: null, [openingHistoryKey]: null, [key]: current };
@@ -169,8 +173,22 @@ function addMigrationSettings(storage, values) {
       let combined;
       if (key === learningKey) combined = mergeLearningProgress(current, value);
       else if (key === introStorageKey) combined = mergeIntroProgress(current, value);
+      else if (key === practiceSavedKey) combined = [...new Set([...current, ...value])];
       else if (key === openingHistoryKey) combined = { ...current, records:
         [...new Map([...value.records, ...current.records].map(row => [row.id, row])).values()] };
+      else if (key === generalHistoryKey) {
+        combined = { ...current };
+        for (const [id, incoming] of Object.entries(value)) {
+          const previous = current[id];
+          if (!previous) { combined[id] = incoming; continue; }
+          const events = [...new Map([...previous.events, ...incoming.events].map(event =>
+            [JSON.stringify([event.at, event.kind, event.hints]), event])).values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-12);
+          const latest = incoming.lastAt > previous.lastAt ? incoming : previous;
+          combined[id] = { ...latest, events, first: incoming.first.day < previous.first.day ? incoming.first : previous.first,
+            correct: Math.max(previous.correct, incoming.correct, events.filter(event => event.kind === 'good').length),
+            wrong: Math.max(previous.wrong, incoming.wrong, events.filter(event => event.kind === 'retry').length) };
+        }
+      }
       else if (key === styleSnapshotsKey || key === cpuResultsKey) {
         const limit = key === styleSnapshotsKey ? 30 : 50;
         const signature = row => key === cpuResultsKey
