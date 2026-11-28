@@ -10,6 +10,7 @@ const dailyLife = (() => {
   };
   let guideDismissed = personalPreference(welcomeKey, false) === true;
   let dashboardRequest = 0;
+  let homeRequest = 0;
   for (const [value, label] of Object.entries(learningGoals)) {
     const option = element('option', label);
     option.value = value;
@@ -19,6 +20,14 @@ const dailyLife = (() => {
   function showGuide(view = 'home') {
     guide.hidden = view === 'learn' || (view === 'home' && guideDismissed);
     byId('home-learning-choices').hidden = !guide.hidden;
+    const next = byId('home-practice-next');
+    const current = ++homeRequest;
+    const ledger = generalHistory();
+    if (view === 'home') {
+      practice.all().catch(() => []).then(rows => {
+        if (current === homeRequest) renderPracticeNext(next.querySelector('div'), rows, ledger, () => current === homeRequest, next);
+      });
+    } else next.hidden = true;
   }
 
   function dismissGuide() {
@@ -59,6 +68,8 @@ const dailyLife = (() => {
       learnedOpening: Boolean(learningTracker.history().length || learningTracker.data.last?.type === 'study'),
       problemsDone: plan.questions.length > 0 && plan.questions.length === plan.checked.length };
     const recommendation = byId('dashboard-next');
+    const practiceNext = byId('dashboard-practice-next');
+    practiceNext.hidden = true;
     function recommend() {
       const [label, href, detail] = dailyRecommendation(settings?.goal, state);
       byId('dashboard-recommendation').hidden = resume === href;
@@ -66,10 +77,11 @@ const dailyLife = (() => {
     }
     recommend();
     await Promise.allSettled([
-      practice.all().then(rows => {
+      practice.all().catch(() => []).then(rows => {
         if (request !== dashboardRequest) return;
         state.personalDue = personalDue(rows).length;
         recommend();
+        return renderPracticeNext(practiceNext.querySelector('div'), rows, generalHistory(), () => request === dashboardRequest, practiceNext);
       }),
       games.all().then(rows => {
         if (request !== dashboardRequest) return;

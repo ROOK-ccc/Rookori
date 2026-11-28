@@ -151,6 +151,9 @@ async function validatePersonalBackup(rows) {
       || !['correct', 'wrong', 'streak', 'hints', 'mistakes'].every(key => learningCount(history[key]))
       || !Array.isArray(history.events) || !history.events.length || history.events.length > personalRules.historyLimit
       || history.events.length > history.correct + history.wrong
+      || (history.firstAnswer !== undefined && !(typeof history.firstAnswer?.correct === 'boolean'
+        && learningCount(history.firstAnswer.hints) && history.firstAnswer.hints <= 2
+        && learningDate(history.firstAnswer.day) && cpuTimestamp(history.firstAnswer.at)))
       || !history.events.every(event => cpuTimestamp(event?.at) && learningDate(event.day)
         && ['good', 'close', 'retry'].includes(event.kind) && learningCount(event.hints) && event.hints <= 2)) throw invalid();
   }
@@ -281,7 +284,8 @@ function mergePersonalHistory(current, incoming) {
     .sort((a, b) => a.at.localeCompare(b.at));
   const progress = incoming.lastAt > current.lastAt ? incoming : current;
   const correct = events.filter(event => event.kind === 'good').length;
-  return { ...progress, events: retained,
+  const firstAnswer = [current.firstAnswer, incoming.firstAnswer].filter(Boolean).sort((a, b) => a.at.localeCompare(b.at))[0];
+  return { ...progress, events: retained, ...(firstAnswer && { firstAnswer }),
     correct: Math.max(current.correct, incoming.correct, correct),
     wrong: Math.max(current.wrong, incoming.wrong, events.length - correct),
     hints: Math.max(current.hints, incoming.hints),

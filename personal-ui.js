@@ -380,32 +380,9 @@ const personalPages = (() => {
     loaded.then(rows => {
       const due = personalDue(rows).length;
       if (!rows.length || (screen === 'home' && !due)) return;
-      const answered = rows.filter(({ history }) => history).length;
-      const recent = rows.flatMap(({ history }) => history?.events ?? []).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
-      const clean = recent.filter(event => event.kind === 'good' && !event.hints).length;
-      const action = link('自分専用の練習問題', '#personal');
-      if (screen !== 'progress') {
-        node.replaceChildren(element('p', '自分の対局からの復習が' + due + '問あります。'), action);
-      } else {
-        const measures = element('dl', null, 'dashboard-metrics growth-metrics');
-        const values = [['専用問題', rows.length + '問'], ['今日の復習', due + '問'], ['解いた問題', answered + '問'],
-          ['習得済み', rows.filter(({ history }) => learned(history)).length + '問']];
-        if (recent.length >= 5) values.push(['最近' + recent.length + '回のヒントなし正解', Math.round(clean / recent.length * 100) + '％']);
-        for (const [label, value] of values) {
-          const item = element('div');
-          item.append(element('dt', label), element('dd', value));
-          measures.append(item);
-        }
-        node.replaceChildren(measures, action);
-      }
+      node.replaceChildren(element('p', '自分の対局からの復習が' + due + '問あります。'), link('自分専用の練習問題', '#personal'));
       node.hidden = false;
     }).catch(() => {});
-    if (screen === 'progress') {
-      const general = Object.values(generalHistory());
-      byId('progress-general-metrics').textContent = general.length
-        ? '一般練習で取り組んだ問題 ' + general.length + '問 ／ 復習予定 ' + general.filter(row => row.due <= localDay()).length + '問'
-        : '一般練習の記録はまだありません。';
-    }
     if (screen === 'dashboard') {
       loaded.then(personal => {
         const summary = generalPractice.dailySummary(el('daily-mode').value, personal, generalHistory());

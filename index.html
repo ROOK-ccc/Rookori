@@ -272,6 +272,7 @@
             <a class="text-button" href="#review">今日の復習をする</a>
           </section>
         </div>
+        <section id="home-practice-next" hidden><h2>次に取り組むこと</h2><div></div></section>
         <div class="study-mode-links home-more">
           <a class="button secondary" href="#game-review">対局を振り返る</a>
           <a class="text-button" href="#glossary">チェス用語集</a>
@@ -283,7 +284,7 @@
           <a class="button secondary" href="#openings">日本語の定跡解説を読む</a>
           <a class="button secondary" href="#mode">チェス16タイプ診断</a>
         </section>
-        <p class="journey-home"><a class="text-button" href="#updates">最新アップデート <span data-site-version></span> · 開発の歩みと今後のロードマップ</a></p>
+        <section class="home-section home-updates" aria-label="最新アップデート"><div class="home-updates-heading"><h2><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>最新アップデート</h2><span class="home-version" data-site-version></span></div><a class="row-action" href="#updates"><span>更新内容を見る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#roadmap"><span>開発の歩みと今後のロードマップ</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
       </section>
     </section>
 
@@ -308,14 +309,15 @@
     <section id="play" class="screen inner-screen guide-screen journey-app" hidden>
       <h1 id="play-title" tabindex="-1">対戦</h1>
       <p class="guide-intro">コンピューターを相手に、自分のペースで一局指せます。</p>
-      <div class="dashboard-feature"><h2>コンピューター対戦</h2><a class="button primary" href="#cpu">最初の局面から対戦する</a><a class="row-action" href="#cpu/setup-opening"><span>オープニングを選んで対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#game-review"><span>棋譜の途中の局面から対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      <div class="dashboard-feature"><h2>コンピューター対戦</h2><a class="button primary play-primary" href="#cpu">対戦設定をする</a><a class="row-action" href="#cpu/setup-opening"><span>オープニングを選んで対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#game-review"><span>棋譜の途中の局面から対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
         <details id="play-position"><summary>局面を指定して対戦する</summary><form id="play-position-form" class="rookori-fields"><p id="play-position-help" data-chess-terms>棋譜の検討画面などから、盤面を記録したFENをコピーできます。</p><label>盤面の記録 <input name="fen" required maxlength="150" autocomplete="off" spellcheck="false" aria-describedby="play-position-help"></label><button class="button secondary" type="submit">この局面を開く</button><p id="play-position-status" role="status"></p></form></details></div>
       <p class="planned-feature" id="play-online-planned"><svg class="ui-icon" aria-hidden="true"><use href="#ui-globe"></use></svg><span>オンライン対戦</span><small>今後実装予定</small></p>
     </section>
     <section id="discover" class="screen inner-screen guide-screen journey-app" hidden>
       <h1 id="discover-title" tabindex="-1">探す</h1>
-      <p class="guide-intro">診断や用語集から、自分のチェスの学び方を見つけましょう。</p>
+      <p class="guide-intro">診断や教材、用語集から、自分に合う学び方を見つけましょう。</p>
       <section><h2>診断を試す</h2><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>学び方を知る</h2><a class="row-action" href="https://rookrori.com/openings/" data-reading-link><span>オープニング教材</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="https://rookrori.com/guides/" data-reading-link><span>チェスの学習ガイド</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="https://rookrori.com/practice/" data-reading-link><span>チェスの練習方法</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
       <section><h2>チェスの言葉を調べる</h2><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
       <p class="planned-feature" id="discover-community-planned"><svg class="ui-icon" aria-hidden="true"><use href="#ui-chat"></use></svg><span>コミュニティ</span><small>今後実装予定</small></p>
     </section>
@@ -1305,10 +1307,12 @@
         <a class="button secondary" href="#personal">自分専用の練習問題</a>
         <a class="button primary" href="#general">練習問題集</a>
       </nav>
+      <section id="dashboard-practice-next" aria-labelledby="dashboard-practice-next-title" hidden><h2 id="dashboard-practice-next-title">次に取り組むこと</h2><div></div></section>
       <section class="dashboard-feature" id="dashboard-recommendation"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
       <section id="dashboard-plan"></section>
       <div id="dashboard-personal-progress" hidden></div>
       <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      <section class="home-section home-updates" aria-label="最新アップデート"><div class="home-updates-heading"><h2><svg class="ui-icon" aria-hidden="true"><use href="#ui-daily"></use></svg>最新アップデート</h2><span class="home-version" data-site-version></span></div><a class="row-action" href="#updates"><span>更新内容を見る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#roadmap"><span>開発の歩みと今後のロードマップ</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
     </section>
     <section id="daily" class="screen inner-screen guide-screen" hidden>
       <h1 id="daily-title" tabindex="-1">今日の練習問題</h1>
@@ -1457,38 +1461,28 @@
         </form>
       </dialog>
     </section>
-    <section id="progress" class="screen inner-screen guide-screen" hidden>
+    <section id="progress" class="screen inner-screen guide-screen journey-app" hidden>
       <h1 id="progress-title" tabindex="-1">上達記録</h1>
       <p><a class="text-button" href="#growth">成長に戻る</a></p>
-      <section aria-labelledby="progress-practice-title"><h2 id="progress-practice-title">練習問題の記録</h2><div id="progress-personal-progress" hidden></div><p id="progress-general-metrics"></p></section>
-      <p class="guide-intro">学習した内容と練習の成績を振り返れます。</p>
-      <div id="progress-summary" class="report-summary"></div>
-      <section class="opening-card report-section" aria-labelledby="calendar-title">
-        <h2 id="calendar-title">学習の継続状況</h2>
-        <div id="progress-calendar"></div>
-      </section>
-      <section class="opening-card report-section" aria-labelledby="accuracy-title">
-        <h2 id="accuracy-title">初回正解率の推移</h2>
+      <p class="guide-intro">学習した内容を振り返り、次に取り組むことを見つけましょう。</p>
+      <label class="report-date-picker">表示期間
+        <select id="progress-period"><option value="7">直近7日間</option><option value="30">直近30日間</option><option value="0">全期間</option></select>
+      </label>
+      <p id="progress-range" class="report-note" aria-live="polite"></p>
+      <section class="report-section"><h2>学習サマリー</h2><div id="progress-summary"></div></section>
+      <section class="report-section"><h2>学習の継続状況</h2><div id="progress-calendar"></div></section>
+      <section class="report-section"><h2>学習量の推移</h2><div id="progress-volume"></div></section>
+      <section class="report-section"><h2>初回正解率の推移</h2>
+        <label class="report-date-picker">集計対象
+          <select id="progress-accuracy-kind"><option value="general">一般練習（ヒントなし）</option>
+            <option value="personal">自分専用の練習問題</option><option value="opening">定跡の暗記・復習</option></select>
+        </label>
         <div id="progress-accuracy"></div>
       </section>
-      <section class="opening-card report-section" aria-labelledby="volume-title">
-        <h2 id="volume-title">日別学習量</h2>
-        <div id="progress-volume"></div>
-      </section>
-      <section class="opening-card report-section" aria-labelledby="mastery-title">
-        <h2 id="mastery-title">オープニング別の習熟度</h2>
-        <p>盤上で練習した手数、復習段階、初回の回答、ヒント、復習期限から、教材の習得状況を計算します。</p>
-        <div id="progress-mastery"></div>
-      </section>
-      <section class="opening-card report-section" aria-labelledby="weakness-title">
-        <h2 id="weakness-title">次に復習したい手順</h2>
-        <div id="progress-weakness"></div>
-      </section>
-      <details class="opening-card report-section">
-        <summary>詳しい学習統計</summary>
-        <p id="progress-totals"></p>
-        <div class="progress-table" id="progress-activity"></div>
-      </details>
+      <section class="report-section"><h2>テーマ別の傾向</h2><div id="progress-themes"></div></section>
+      <section class="report-section"><h2>自分専用の練習問題の習得状況</h2><div id="progress-personal"></div></section>
+      <section class="report-section"><h2>オープニング学習の進捗</h2><div id="progress-mastery"></div></section>
+      <section class="report-section"><h2>次に取り組むこと</h2><div id="progress-next"></div><div id="progress-weakness"></div></section>
     </section>
     <section id="backup" class="screen inner-screen guide-screen" hidden>
       <h1 id="backup-title" tabindex="-1">設定・学習データのバックアップ</h1>

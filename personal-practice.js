@@ -162,6 +162,12 @@ function personalProgress(previous = {}, kind, hints, date = new Date()) {
     events: [...(previous.events ?? []), { day, at: date.toISOString(), kind, hints }].slice(-personalRules.historyLimit) };
 }
 
+function personalAnswerProgress(previous, kind, hints, date = new Date()) {
+  const next = personalProgress(previous, kind, hints, date);
+  if (!previous) next.firstAnswer = { correct: kind === 'good', hints, day: localDay(date), at: date.toISOString() };
+  return next;
+}
+
 function personalDue(rows, day = localDay()) {
   const recentMiss = row => ['close', 'retry'].includes(row.history?.events.at(-1)?.kind);
   return rows.filter(({ history }) => !history || (history.due <= day && history.reviewedDay !== day))
@@ -257,7 +263,7 @@ function createPersonalStore() {
       exists.onsuccess = () => {
         if (!exists.result) return;
         const get = history.get(id);
-        get.onsuccess = () => history.put(personalProgress(get.result, kind, hints), id);
+        get.onsuccess = () => history.put(personalAnswerProgress(get.result, kind, hints), id);
       };
     }),
     memo: (id, memo) => access('readwrite', questions => {

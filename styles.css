@@ -886,3 +886,40 @@ body:has(#site-menu[open]) { overflow: hidden; }
 .diagnosis-players { margin-block: 1rem; }
 .profile-detail h2 { font-size: 1rem; margin-bottom: .25rem; }
 .profile-detail p { margin-top: 0; }
+
+.home-updates { border-top: 1px solid var(--line); padding-block: 1rem 0; margin-block-start: 1.6rem; }
+.home-updates-heading { display: flex; justify-content: space-between; align-items: baseline; gap: .55rem; margin-block-end: .45rem; }
+.home-updates-heading h2 { display: flex; align-items: center; gap: .35rem; margin: 0; font-size: clamp(1rem, 4vw, 1.3rem); }
+.home-updates-heading .ui-icon { width: 17px; height: 17px; }
+.home-version, .profile-opening-slot { color: var(--muted); font-size: .83rem; }
+.home-version { white-space: nowrap; }
+.home-updates .row-action + .row-action, .play-primary + .row-action { margin-top: .4rem; }
+.play-primary { display: flex; width: 100%; justify-content: center; }
+#dashboard-practice-next, #home-practice-next { padding-block: .7rem; border-block-start: 1px solid var(--line); }
+.report-section { padding: 0; }
+.report-kpis > div { display: grid; grid-template-rows: auto auto 1fr; align-content: start; padding: .6rem 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.report-kpis small { font-size: .75rem; color: var(--muted); }
+.report-date-picker input[type="month"] { min-height: 44px; max-width: 100%; }
+.report-date-picker select { min-width: 0; }
+.calendar-day:disabled { color: #716d64; background: transparent; cursor: default; }
+.calendar-day[data-future] { background: repeating-linear-gradient(135deg, transparent 0 3px, #eee9dd 3px 5px); }
+.chart-general { --series: #325e4a; }
+.chart-personal { --series: #9a5a32; }
+#progress .mastery-card { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding-inline: 0; }
+#progress .report-chart { height: auto; min-height: 120px; }
+#progress .report-legend span { flex: none; }
+#progress details > summary, .readable-summary { min-height: 44px; align-content: center; }
+#progress .mastery-list + .row-action { margin-top: .55rem; }
+@media (max-width: 375px) {
+  .home-updates .row-action, #discover .row-action { font-size: .9rem; }
+  .home-updates .ui-icon { inline-size: 17px; }
+  #progress .report-chart text { font-size: 20px; }
+}
+
+.calendar-controls { display: flex; max-width: 435px; gap: .6rem; align-items: center; justify-content: space-between; margin-top: .5rem; }
+.calendar-controls button { min-height: 44px; padding: .35rem .65rem; }
+.calendar-controls h3 { margin: 0; }
+@media (max-width: 430px) {
+  #progress .calendar-day { min-height: 38px; }
+  .report-kpis dt { font-size: .79rem; }
+}

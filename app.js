@@ -41,7 +41,7 @@ function showScreen(id, focusTarget) {
   if (id === 'backup') { learningPages.homePreferences(); refreshDiagnosisBackupLinks(); }
   document.body.dataset.screen = id;
   document.body.classList.toggle('updates-view', displayedRoute?.path === 'updates');
-  if (['home', 'dashboard', 'progress'].includes(id)) personalPages.progress(id);
+  if (['home', 'dashboard'].includes(id)) personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
     screen.hidden = screen.id !== id;

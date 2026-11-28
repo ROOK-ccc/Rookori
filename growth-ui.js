@@ -1,3 +1,22 @@
+async function renderPracticeNext(container, personal, ledger, current, heading) {
+  if (heading) heading.hidden = true;
+  container.replaceChildren();
+  if (!heading) container.append(element('p', '練習の記録が集まると、おすすめの復習テーマを表示します。'),
+    diagnosisLink('練習問題集を開く', 'general'));
+  if (!personal.length && !Object.keys(ledger).length) return;
+  try {
+    const { rows, evidence } = await generalPractice.pool(personal, ledger);
+    if (!evidence || !current()) return;
+    const candidate = rows.find(row => row.tags.includes(evidence.tag) && !ledger[row.id]);
+    const label = practiceThemes[evidence.tag][0];
+    const basis = evidence.games.size >= 2 ? '自分の対局から作った問題で、' + evidence.games.size + '局に共通しています。'
+      : evidence.attempted + '問のうち、初回で迷ったかヒントを使った問題が' + evidence.missed + '問あります。';
+    container.replaceChildren(chessTermText('h3', label), element('p', basis),
+      diagnosisLink(label + 'を練習する', candidate ? 'general/' + candidate.id + '/recommended' : 'general/theme/' + evidence.tag));
+    if (heading) heading.hidden = false;
+  } catch { /* Existing practice remains accessible offline. */ }
+}
+
 // Add only entries reviewed by the site operator. Optional games and lesson IDs can accompany each entry.
 const approvedStylePlayers = Object.freeze({});
 const diagnosisDate = row => row.at ? new Date(row.at).toLocaleDateString('ja-JP', { dateStyle: 'long' }) : '診断日不明';
@@ -117,10 +136,13 @@ const growthPage = (() => {
     openingsNode.replaceChildren(element('p', opening ? diagnosisDate(opening) : '保存した診断結果はまだありません。'));
     if (opening) {
       const list = element('ul', null, 'growth-rows');
+      const labels = { white: '白番', blackE4: '黒番：相手が1.e4', blackD4: '黒番：相手が1.d4' };
       for (const pick of opening.picks) {
         const candidate = findStudyOpening(pick.id);
         if (!candidate) continue;
         const item = element('li');
+        const slot = openings.find(opening => opening.id === pick.id)?.slot;
+        if (labels[slot]) item.append(element('small', labels[slot], 'profile-opening-slot'));
         item.append(diagnosisLink(candidate.name, 'study/' + pick.id), chessTermText('p', pick.reason));
         list.append(item);
       }
@@ -248,20 +270,7 @@ const growthPage = (() => {
       byId('growth-goal').textContent += ' ／ 今週 ' + active + '日 / 目標 ' + goal.days + '日';
     }
     recentGames(gameRows, request);
-    const next = byId('growth-weakness');
-    next.replaceChildren(element('p', '練習問題や対局の記録が集まると、おすすめの復習テーマを表示します。'),
-      diagnosisLink('練習問題集を開く', 'general'));
-    if (!personal?.length && !general.length) return;
-    try {
-      const { rows, evidence } = await generalPractice.pool(personal ?? [], ledger);
-      if (!evidence || request !== revision) return;
-      const candidate = rows.find(row => row.tags.includes(evidence.tag) && !ledger[row.id]);
-      const label = practiceThemes[evidence.tag][0];
-      const basis = evidence.games.size >= 2 ? '自分の対局から作った問題で、' + evidence.games.size + '局に共通しています。'
-        : evidence.attempted + '問のうち、初回で迷ったかヒントを使った問題が' + evidence.missed + '問あります。';
-      next.replaceChildren(chessTermText('h3', label), element('p', basis),
-        diagnosisLink(label + 'を練習する', candidate ? 'general/' + candidate.id + '/recommended' : 'general/theme/' + evidence.tag));
-    } catch { /* Keep the practice entry available offline. */ }
+    await renderPracticeNext(byId('growth-weakness'), personal ?? [], ledger, () => request === revision);
   }
 
   byId('play-position-form').addEventListener('submit', event => {

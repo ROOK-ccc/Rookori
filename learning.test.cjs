@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const source = ['vendor/chess.js', 'opening-data.js', 'opening-expansion.js', 'opening-variations.js', 'opening-study.js',
   'opening-memory.js', 'intro-data.js', 'intro-course.js', 'learning.js', 'learning-insights.js']
   .map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n');
-const api = runInNewContext(source + '\n({ chessRules, openings, introLessons, findStudyOpening, localDay, offsetDay, reviewItemsFor, freshLearning, scheduleReview, planQuestions, summarizeLearningDays, firstAnswerRate, activityVolume, activeLearningDay, weekStart, learningPeriod, openingMastery, LearningTracker, OpeningPractice, learningKey, introStorageKey, openingHistoryKey, learningBackup, validateLearningBackup, restoreLearningBackup })');
+const api = runInNewContext(source + '\n({ chessRules, openings, introLessons, findStudyOpening, localDay, offsetDay, reviewItemsFor, freshLearning, scheduleReview, planQuestions, summarizeLearningDays, firstAnswerRate, activityVolume, activeLearningDay, weekStart, learningPeriod, openingMastery, reportLearningData, reportRate, reportSummary, reportThemeStats, LearningTracker, OpeningPractice, learningKey, introStorageKey, openingHistoryKey, learningBackup, validateLearningBackup, restoreLearningBackup })');
 const { localDay, offsetDay, scheduleReview, reviewItemsFor, OpeningPractice, LearningTracker,
   introLessons, openings, findStudyOpening, learningKey, introStorageKey, openingHistoryKey } = api;
 const date = (year, month, day, hour = 12) => new Date(year, month - 1, day, hour);
@@ -211,4 +211,44 @@ test('新しい回答イベントと学習日記録をバックアップで復�
   assert.deepEqual(plain(JSON.parse(restored.getItem(learningKey)).days['2026-11-23'].questionAttempts), ['quiz-knight']);
   backup.data[openingHistoryKey].records[0].answerEvents.push(practice.record().answerEvents[0]);
   assert.equal(api.validateLearningBackup(backup), false);
+});
+
+test('上達記録は一般・専用・定跡を日別にまとめ、再回答と初回不明の履歴を区別する', () => {
+  const oldDay = '2026-11-19', today = '2026-11-28';
+  const tracker = {
+    activity: () => [{ day: today, moves: 4, first: 3,
+      counts: { practice: 1, review: 1, questions: 1, study: 1, unknown: 0 } }],
+    history: () => [{ activityAt: '2026-11-28T12:00:00', openingId: 'italian-game' }],
+    data: { days: { [today]: { explanations: ['italian-game'] } }, items: {} },
+  };
+  const events = (...dates) => dates.map(day => ({ day }));
+  const ledger = {
+    ABC01: { first: { day: oldDay, correct: true, hints: 0 }, events: events(today, today) },
+    ABC02: { first: { day: today, correct: true, hints: 1 }, events: events(today) },
+  };
+  const personal = [
+    { question: { id: 'known' }, history: { events: events(today),
+      firstAnswer: { day: today, correct: true, hints: 1 } } },
+    { question: { id: 'legacy' }, history: { events: events(today) } },
+  ];
+  const { rows, all } = api.reportLearningData(tracker, ledger, personal);
+  const week = api.learningPeriod(rows, today, 7).rows;
+  assert.equal(week.length, 1);
+  assert.equal(api.activityVolume(week[0]), 8);
+  assert.equal(week[0].counts.general, 2);
+  assert.equal(week[0].counts.personal, 2);
+  assert.equal(api.reportRate(week, 'general').percent, 0);
+  assert.equal(api.reportRate(week, 'general').total, 1);
+  assert.equal(api.reportRate(week, 'personal').percent, 100);
+  assert.equal(api.reportRate(week, 'personal').total, 1);
+  assert.equal(api.reportRate(week, 'opening').percent, 75);
+  assert.equal(api.reportRate(api.learningPeriod(rows, today, 30).rows, 'general').percent, 50);
+  assert.equal(api.reportSummary(rows).problems, 4);
+  assert.equal(api.reportSummary(rows).openings, 1);
+  assert.equal(api.reportRate([], 'general').percent, null);
+  const tags = new Map([['ABC01', ['fork', 'pin']], ['known', ['fork']], ['legacy', ['pin']]]);
+  const themes = api.reportThemeStats(all, oldDay, today, tags, today);
+  assert.equal(themes.find(row => row.tag === 'fork').count, 2);
+  assert.equal(themes.find(row => row.tag === 'fork').hinted, 1);
+  assert.equal(themes.find(row => row.tag === 'pin').total, 1);
 });

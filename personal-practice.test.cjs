@@ -5,7 +5,7 @@ const { webcrypto } = require('node:crypto');
 const { runInNewContext } = require('node:vm');
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
   'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'daily-life.js', 'diagnosis-history.js', 'migration.js'];
-const api = runInNewContext(scripts.map(name => readFileSync(`${__dirname}/${name}`, 'utf8')).join('\n') + '\n({ personalSide, personalSource, personalCompare, personalEligibility, personalProgress, personalDue, personalPositionId, personalCandidates, verifyPersonalQuestion, parseReviewGames, validatePersonalBackup })',
+const api = runInNewContext(scripts.map(name => readFileSync(`${__dirname}/${name}`, 'utf8')).join('\n') + '\n({ personalSide, personalSource, personalCompare, personalEligibility, personalProgress, personalAnswerProgress, mergePersonalHistory, personalDue, personalPositionId, personalCandidates, verifyPersonalQuestion, parseReviewGames, validatePersonalBackup })',
   { TextEncoder, crypto: webcrypto, stockfishEngine: { version: '19' }, window: { addEventListener() {} } });
 
 const line = (value, depth = 12, unit = 'cp', winner) => ({ move: 'g6h6', depth, score: { unit, value, winner } });
@@ -79,4 +79,14 @@ test('間隔反復を共有し、当日再挑戦では復習レベルを二重�
   assert.equal(history.due, '2026-11-29');
   assert.equal(history.streak, 0);
   assert.equal(history.hints, 1);
+});
+
+test('専用問題は初回を保存し、再回答・バックアップ統合・旧記録で上書きしない', () => {
+  const when = new Date(2026, 10, 24, 12);
+  const first = api.personalAnswerProgress(undefined, 'retry', 1, when);
+  const retry = api.personalAnswerProgress(first, 'good', 0, new Date(2026, 10, 25, 12));
+  assert.deepEqual(JSON.parse(JSON.stringify(retry.firstAnswer)), { correct: false, hints: 1, day: '2026-11-24', at: when.toISOString() });
+  const legacy = api.personalProgress(undefined, 'good', 0, when);
+  assert.equal(api.personalAnswerProgress(legacy, 'good', 0).firstAnswer, undefined);
+  assert.equal(api.mergePersonalHistory(first, retry).firstAnswer.correct, false);
 });
