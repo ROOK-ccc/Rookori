@@ -20,6 +20,7 @@ const migrationSettings = new Map([
   [lichessUsernameKey, value => typeof value === 'string' && lichessUsername.test(value)],
   [savedTypeResultKey, validSavedTypeResult],
   [savedOpeningResultKey, validOpeningAnswers],
+  [diagnosisHistoryKey, validDiagnosisHistory],
   [personalAutoKey, value => typeof value === 'boolean'],
   [personalDailyKey, value => ['recommended', 'general', 'personal'].includes(value)],
   [generalHistoryKey, validGeneralHistory],
@@ -33,10 +34,6 @@ const migrationSettings = new Map([
 
 function migrationRead(key) {
   try { return JSON.parse(localStorage.getItem(key) ?? 'null'); } catch { return null; }
-}
-
-function rememberDiagnosis(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* The current result remains visible. */ }
 }
 
 function validMigrationLine(line) {
@@ -102,7 +99,10 @@ async function validateMigration(backup) {
     keys.add(key);
   }
   const personal = await validatePersonalBackup(backup.personal ?? []);
-  return { games, studies: backup.studies, personal, values: { ...backup.learning.data, ...backup.settings } };
+  const values = { ...backup.learning.data, ...backup.settings };
+  const legacy = legacyDiagnoses(values[savedTypeResultKey], values[savedOpeningResultKey]);
+  if (legacy.records.length) values[diagnosisHistoryKey] = mergeDiagnosisHistory(legacy, values[diagnosisHistoryKey] ?? emptyDiagnosisHistory());
+  return { games, studies: backup.studies, personal, values };
 }
 
 async function validatePersonalBackup(rows) {
@@ -166,7 +166,7 @@ function addMigrationSettings(storage, values) {
       storage.setItem(key, key === lichessUsernameKey ? value : JSON.stringify(value));
       added++;
     } else if ([styleOwnershipKey, learningKey, introStorageKey, openingHistoryKey, styleSnapshotsKey,
-      cpuResultsKey, generalHistoryKey, practiceSavedKey].includes(key)) {
+      cpuResultsKey, generalHistoryKey, practiceSavedKey, diagnosisHistoryKey].includes(key)) {
       let current;
       try { current = JSON.parse(storage.getItem(key)); } catch { /* Preserve unreadable settings. */ }
       const baseline = { [learningKey]: null, [introStorageKey]: null, [openingHistoryKey]: null, [key]: current };
@@ -174,7 +174,8 @@ function addMigrationSettings(storage, values) {
         : current && validateLearningBackup({ schemaVersion: 1, data: baseline });
       if (!valid || JSON.stringify(current) === JSON.stringify(value)) { skipped++; continue; }
       let combined;
-      if (key === learningKey) combined = mergeLearningProgress(current, value);
+      if (key === diagnosisHistoryKey) combined = mergeDiagnosisHistory(current, value);
+      else if (key === learningKey) combined = mergeLearningProgress(current, value);
       else if (key === introStorageKey) combined = mergeIntroProgress(current, value);
       else if (key === practiceSavedKey) combined = [...new Set([...current, ...value])];
       else if (key === openingHistoryKey) combined = { ...current, records:
@@ -309,9 +310,12 @@ function initializeMigration() {
       const [games, analysis, personal] = await Promise.all([library.all(), studies.all(), personalStore.all()]);
       const settings = {};
       for (const key of migrationSettings.keys()) {
+        if ([savedTypeResultKey, savedOpeningResultKey, diagnosisHistoryKey].includes(key)) continue;
         const text = localStorage.getItem(key);
         if (text !== null) settings[key] = key === lichessUsernameKey ? text : JSON.parse(text);
       }
+      const diagnosis = readDiagnosisHistory();
+      if (diagnosis.records.length || diagnosis.removed.length) settings[diagnosisHistoryKey] = diagnosis;
       const backup = { type: migrationType, version: 1, learning: learningBackup(localStorage),
         library: makeGameBackup(games), studies: analysis, personal, settings };
       const json = new Blob([JSON.stringify(backup)], { type: 'application/json' });
@@ -361,6 +365,7 @@ function initializeMigration() {
         + (games.conflicts ? ` 同じ局面にあった別のメモ ${games.conflicts} 件を「移行元のメモ」として残しました。` : '');
       staged = null;
       restore.hidden = true;
+      refreshDiagnosisBackupLinks();
     } catch {
       status.textContent = '復元の途中で保存できなくなりました。すでに追加した分は残ります。空き容量やブラウザーの設定を確認し、同じファイルで再実行できます。';
     } finally {
@@ -370,17 +375,17 @@ function initializeMigration() {
   });
   refresh.addEventListener('click', () => location.reload());
 
-  const type = migrationRead(savedTypeResultKey);
-  if (validSavedTypeResult(type)) {
-    byId('migration-type-result').hidden = false;
-    byId('migration-type-result').addEventListener('click', () => goTo('result', { code: type.code, mode: type.mode }));
+  for (const kind of ['type', 'opening']) {
+    byId('migration-' + kind + '-result').addEventListener('click', () => {
+      const latest = readDiagnosisHistory().records.find(row => row.kind === kind);
+      if (latest) goTo('diagnosis/' + latest.id);
+    });
   }
-  const opening = migrationRead(savedOpeningResultKey);
-  if (validOpeningAnswers(opening)) {
-    lastOpeningAnswers = opening;
-    byId('migration-opening-result').hidden = false;
-    byId('migration-opening-result').addEventListener('click', () => goTo('opening-result', { openingAnswers: opening }));
-  }
+}
+
+function refreshDiagnosisBackupLinks() {
+  const history = readDiagnosisHistory().records;
+  for (const kind of ['type', 'opening']) byId('migration-' + kind + '-result').hidden = !history.some(row => row.kind === kind);
 }
 
 function updateMigrationLink() {
@@ -394,7 +399,8 @@ function updateMigrationLink() {
     dest.searchParams.set('mode', result.mode);
   }
   const route = readSiteRoute(current, history.state);
-  if (current.hash === '#' + route.path && !['game-review/preview', 'opening-result'].includes(route.path)) dest.hash = current.hash;
+  if (route.diagnosisId) dest.hash = 'profile';
+  else if (current.hash === '#' + route.path && !['game-review/preview', 'opening-result'].includes(route.path)) dest.hash = current.hash;
   byId('site-migration-link').href = dest.href;
 }
 

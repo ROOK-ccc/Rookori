@@ -166,3 +166,17 @@ test('一括取り込み・個別練習・棋風は固定のパスだけを送�
     ['pgn-import', 'personal', 'personal-play', 'your-style'].map(screen => site + '#' + screen));
   assert.doesNotMatch(JSON.stringify(window.dataLayer), /private-local-id/);
 });
+
+test('成長・プロフィール・個別の診断結果を同意後だけ固定URLで計測する', () => {
+  const { analytics, events, choose, window } = setup();
+  const diagnosis = 'diagnosis/' + 'b'.repeat(32);
+  analytics.screen('growth', 'growth');
+  analytics.screen('profile', 'profile');
+  assert.equal(events().length, 0);
+  choose('granted');
+  analytics.screen('result', diagnosis);
+  analytics.screen('result', diagnosis);
+  analytics.screen('growth', 'growth');
+  assert.deepEqual(Array.from(events(), event => event.page_location), [site + '#profile', site + '#result', site + '#growth']);
+  assert.doesNotMatch(JSON.stringify(window.dataLayer), new RegExp(diagnosis));
+});

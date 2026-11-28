@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { webcrypto } = require('node:crypto');
 const { runInNewContext } = require('node:vm');
 const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
-  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'daily-life.js', 'migration.js'];
+  'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js', 'daily-life.js', 'diagnosis-history.js', 'migration.js'];
 const api = runInNewContext(scripts.map(name => readFileSync(`${__dirname}/${name}`, 'utf8')).join('\n') + '\n({ personalSide, personalSource, personalCompare, personalEligibility, personalProgress, personalDue, personalPositionId, personalCandidates, verifyPersonalQuestion, parseReviewGames, validatePersonalBackup })',
   { TextEncoder, crypto: webcrypto, stockfishEngine: { version: '19' }, window: { addEventListener() {} } });
 

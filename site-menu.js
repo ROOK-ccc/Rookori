@@ -35,7 +35,7 @@ const siteMenu = (() => {
   function mark(route) {
     const path = route.path;
     const current = route.termId ? 'glossary'
-      : route.cpuOpening ? 'cpu'
+      : (route.cpuOpening || route.cpuSetup) ? 'cpu'
       : route.personalId ? 'personal'
       : route.reviewId ? 'review'
       : route.game ? 'game-review'
@@ -53,9 +53,10 @@ const siteMenu = (() => {
 
   function markTab(screen, path) {
     const tab = path === 'home' || !path ? 'home'
-      : screen === 'cpu' ? 'cpu'
-      : ['dashboard', 'daily', 'progress', 'review', 'game-player', 'game-review', 'game-library',
-        'pgn-import', 'personal', 'personal-play', 'general', 'general-play', 'journal'].includes(screen) ? 'dashboard'
+      : ['cpu', 'play'].includes(screen) ? 'play'
+      : screen === 'dashboard' || path === 'welcome' ? 'home'
+      : path.startsWith('diagnosis/') || ['growth', 'profile', 'goals', 'progress', 'your-style', 'game-player', 'game-review', 'game-library', 'pgn-import', 'journal'].includes(screen) ? 'growth'
+      : ['daily', 'review', 'personal', 'personal-play', 'general', 'general-play'].includes(screen) ? 'learn'
       : ['learn', 'beginner', 'improve', 'intro', 'intro-lesson', 'intro-summary', 'openings',
         'opening-study', 'opening-practice'].includes(screen) || path === 'learn' ? 'learn'
       : 'discover';

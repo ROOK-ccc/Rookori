@@ -39,14 +39,19 @@ const dailyLife = (() => {
     byId('home-start').focus();
   });
 
-  async function dashboard() {
-    const request = ++dashboardRequest;
+  function loadGoal() {
     const value = personalPreference(learningGoalKey, null);
     const settings = validLearningGoal(value) ? value : null;
     for (const key of ['goal', 'minutes', 'days']) goalForm.elements[key].value = settings?.[key] ?? '';
     byId('learning-goal-delete').hidden = !settings;
     byId('learning-goal-summary').textContent = settings ? [learningGoals[settings.goal],
       settings.minutes && `1回 ${settings.minutes}分`, settings.days && `週 ${settings.days}日`].filter(Boolean).join(' · ') : '目標を設定する（任意）';
+    return settings;
+  }
+
+  async function dashboard() {
+    const request = ++dashboardRequest;
+    const settings = loadGoal();
     const plan = learningTracker.day();
     const resumeSection = byId('dashboard-resume');
     const resume = resumeSection.hidden ? undefined : byId('dashboard-resume-link').hash;
@@ -60,10 +65,6 @@ const dailyLife = (() => {
       recommendation.replaceChildren(element('p', detail), link(label, href, 'button primary'));
     }
     recommend();
-    const list = byId('dashboard-recent');
-    list.replaceChildren();
-    const empty = byId('dashboard-recent-empty');
-    empty.hidden = true;
     await Promise.allSettled([
       practice.all().then(rows => {
         if (request !== dashboardRequest) return;
@@ -73,15 +74,8 @@ const dailyLife = (() => {
       games.all().then(rows => {
         if (request !== dashboardRequest) return;
         const recent = rows.sort((a, b) => String(reviewRecentDate(b).value).localeCompare(String(reviewRecentDate(a).value))).slice(0, 2);
-        empty.hidden = Boolean(recent.length);
         state.game = recent[0]?.id;
         recommend();
-        for (const game of recent) {
-          const { white, black, event } = game.metadata;
-          const row = element('li');
-          row.append(setRowAction(link(white && black ? `${white} 対 ${black}` : event || '保存した対局', '#game-review/' + game.id)));
-          list.append(row);
-        }
       }),
     ]);
   }
@@ -93,17 +87,17 @@ const dailyLife = (() => {
       byId('learning-goal-status').textContent = '目標を保存できませんでした。目標の選択とブラウザーの保存設定を確認してください。';
       return;
     }
-    dashboard();
+    loadGoal();
     byId('learning-goal-status').textContent = '学習目標を保存しました。';
   });
   byId('learning-goal-delete').addEventListener('click', () => {
     try {
       localStorage.removeItem(learningGoalKey);
-      dashboard();
+      loadGoal();
       byId('learning-goal-summary').focus();
       byId('learning-goal-status').textContent = '学習目標を削除しました。';
     } catch { byId('learning-goal-status').textContent = '学習目標を削除できませんでした。'; }
   });
 
-  return { showGuide, dashboard };
+  return { showGuide, dashboard, loadGoal };
 })();

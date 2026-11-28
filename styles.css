@@ -850,3 +850,39 @@ body:has(#site-menu[open]) { overflow: hidden; }
 .chess-term-popup ul { padding-inline-start: 20px; }
 #notation dt { font-weight: 750; }
 #notation dd { margin: 4px 0 12px; }
+
+/* Learning, play and growth use the same rows and buttons as the rest of the app. */
+.journey-app { max-width: 50rem; }
+.journey-app > section + section { margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+.journey-app .row-action { min-height: 44px; }
+.journey-app > p:first-of-type { margin-block: .5rem 1.25rem; }
+.learn-directory > section { margin-top: 1rem; }
+.learn-directory .button { margin: .2rem .2rem .2rem 0; }
+#play-position { margin-top: .75rem; }
+#play-position summary { cursor: pointer; min-height: 44px; align-content: center; }
+#play-position input { width: 100%; max-width: 100%; }
+.growth-type { display: grid; grid-template-columns: clamp(76px, 23vw, 108px) minmax(0, 1fr); gap: clamp(.7rem, 3vw, 1.35rem); align-items: center; margin-block: .75rem; }
+.growth-type canvas { display: block; width: 100%; height: auto; border-radius: .35rem; }
+.growth-type :is(h3, p) { margin-block: .2rem; }
+.growth-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.growth-metrics dd { font-size: clamp(1.15rem, 4vw, 1.5rem); font-weight: 700; }
+.growth-metrics dd[data-pending] { font-size: .9rem; font-weight: 500; }
+.journey-app .row-action + .row-action { margin-top: .3rem; }
+.growth-chart { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: clamp(.2rem, 2vw, .65rem); }
+.growth-chart li { display: grid; grid-template-rows: auto 5rem auto; gap: .3rem; justify-items: center; font-size: clamp(.7rem, 2.8vw, .9rem); }
+.growth-chart-track { display: flex; align-items: end; width: min(70%, 2.25rem); background: rgba(190, 159, 89, .12); border-radius: .2rem; }
+.growth-chart-bar { width: 100%; background: #bca163; border-radius: inherit; }
+.growth-rows, .diagnosis-axes { list-style: none; padding: 0; margin-block: .5rem 1rem; }
+.growth-rows > li { border-bottom: 1px solid var(--line); padding-block: .5rem; overflow-wrap: anywhere; }
+.growth-rows > li p { margin-block: .2rem; }
+.diagnosis-history-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; }
+.diagnosis-history-row button { min-height: 44px; }
+.diagnosis-axes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.diagnosis-axes li { display: grid; grid-template-rows: auto 1fr auto; gap: .2rem; }
+.diagnosis-axes li > span { font-size: .86rem; }
+.diagnosis-axis-bar { display: flex; block-size: .4rem; border-radius: 1rem; overflow: hidden; background: #18352b; }
+.diagnosis-axis-bar span:first-child { background: #bca163; }
+.diagnosis-axis-bar span:last-child { background: #54826a; }
+.diagnosis-players { margin-block: 1rem; }
+.profile-detail h2 { font-size: 1rem; margin-bottom: .25rem; }
+.profile-detail p { margin-top: 0; }

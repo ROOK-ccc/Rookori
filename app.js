@@ -14,6 +14,8 @@ const quizBackLabels = {
   'intro-summary': '入門コースのまとめに戻る',
   home: 'トップに戻る',
   mode: 'モード選択に戻る',
+  profile: 'プロフィールに戻る',
+  discover: '探すに戻る',
 };
 
 function element(tag, text, className) {
@@ -36,11 +38,10 @@ function setRowAction(link) {
 }
 
 function showScreen(id, focusTarget) {
-  if (id === 'backup') learningPages.homePreferences();
+  if (id === 'backup') { learningPages.homePreferences(); refreshDiagnosisBackupLinks(); }
   document.body.dataset.screen = id;
-  document.body.classList.toggle('learn-view', displayedRoute?.path === 'learn');
   document.body.classList.toggle('updates-view', displayedRoute?.path === 'updates');
-  if (id === 'home' || id === 'dashboard') personalPages.progress(id);
+  if (['home', 'dashboard', 'progress'].includes(id)) personalPages.progress(id);
   chessGlossary.close();
   document.querySelectorAll('.screen').forEach((screen) => {
     screen.hidden = screen.id !== id;
@@ -86,7 +87,7 @@ function renderQuestion() {
     button.addEventListener('click', () => selectAnswer(index));
     return button;
   }));
-  byId('previous').textContent = questionIndex === 0 ? quizBackLabels[quizBackPath()] : '前の質問に戻る';
+  byId('previous').textContent = questionIndex === 0 ? (quizBackLabels[quizBackPath()] ?? '診断結果に戻る') : '前の質問に戻る';
   byId('next').textContent = lastQuestion ? '結果を見る' : '次の質問へ';
   byId('next').disabled = answers[questionIndex] === null;
   showScreen('quiz', 'question-title');
@@ -98,8 +99,7 @@ function resultDetail(title, text, className) {
   return card;
 }
 
-function renderResult(code, mode, fromLink = false) {
-  if (!fromLink && !migrationRead(savedTypeResultKey)) rememberDiagnosis(savedTypeResultKey, { code, mode });
+function renderResult(code, mode, fromLink = false, row, saved) {
   const type = types[code];
   byId('result-mode').textContent = modes[mode].name;
   byId('result-code').textContent = code;
@@ -122,6 +122,8 @@ function renderResult(code, mode, fromLink = false) {
     opening,
     resultDetail('上達のヒント', type.tip),
   );
+  byId('result-diagnosis-extra').replaceChildren();
+  if (row) byId('result-diagnosis-extra').append(...diagnosisResultExtras(row, saved));
   renderShareCard(code);
   const shareBase = document.querySelector('link[rel="canonical"]')?.href ?? location.href;
   const link = makeResultLink(shareBase, code, mode);
@@ -134,12 +136,11 @@ function renderResult(code, mode, fromLink = false) {
   showScreen('result', 'result-title');
 }
 
-function renderOpeningResult(resultAnswers, studyId) {
-  if (!migrationRead(savedOpeningResultKey)) rememberDiagnosis(savedOpeningResultKey, resultAnswers);
-  lastOpeningAnswers = resultAnswers;
+function renderOpeningResult(picks, studyId, row, saved) {
+  byId('opening-diagnosis-extra').replaceChildren(...(row ? diagnosisResultExtras(row, saved) : []));
   const ratingLabel = (value) => ['低', '低', '中', '中', '高'][value - 1];
-  byId('opening-results').replaceChildren(...scoreOpenings(resultAnswers).map(({ candidate: recommendation, reason }) => {
-    const candidate = findStudyOpening(recommendation.id) ?? recommendation;
+  byId('opening-results').replaceChildren(...picks.map(({ id, reason }) => {
+    const candidate = findStudyOpening(id) ?? openings.find(item => item.id === id);
     const card = element('article', null, 'opening-card');
     card.dataset.openingId = candidate.id;
     const english = element('p', candidate.english, 'opening-english');
@@ -180,7 +181,7 @@ function updateEntry(data) {
 function goTo(path, data = {}) {
   const from = displayedRoute?.path ?? 'home';
   siteMenu.close(path === from);
-  if ((from === 'cpu' || displayedRoute?.cpuOpening) && path !== from && cpuPage.leave(() => goTo(path, data))) return;
+  if ((from === 'cpu' || displayedRoute?.cpuOpening || displayedRoute?.cpuSetup) && path !== from && cpuPage.leave(() => goTo(path, data))) return;
   if (path === from && !Object.keys(data).length) {
     if (path === 'home' || path === 'learn') renderSite();
     return;
@@ -207,7 +208,7 @@ function backTo(path, data) {
 function quizBackPath() {
   if (currentMode !== 'opening') return 'mode';
   const path = displayedRoute.returnTo;
-  return Object.hasOwn(quizBackLabels, path) ? path : 'home';
+  return Object.hasOwn(quizBackLabels, path) || typeof path === 'string' && path.startsWith('diagnosis/') ? path : 'home';
 }
 
 function showWithReturnFocus(screen, heading, buttonId) {
@@ -227,14 +228,27 @@ function renderSite() {
   if (previous?.opening) openingStudyScreen.close();
   if (previous?.practice || previous?.reviewId) openingMemoryScreen.close();
   if (previous?.lesson) introScreen.close();
-  if ((previous?.path === 'cpu' || previous?.cpuOpening) && previous.path !== path) cpuPage.close();
+  if ((previous?.path === 'cpu' || previous?.cpuOpening || previous?.cpuSetup) && previous.path !== path) cpuPage.close();
   if (previous?.path === 'external' && path !== 'external') lichessPage.close();
   if (previous?.game && previous.path !== path) gameReviewPages.close();
   if (previous?.personalId && previous.path !== path) personalPages.close();
   if (previous?.generalId && previous.path !== path) generalPractice.close();
   if (previous?.path === 'your-style' && path !== 'your-style') stylePage.cancel();
 
-  if (route.generalId) {
+  if (route.diagnosisId) {
+    const saved = readDiagnosisHistory().records.find(row => row.id === route.diagnosisId);
+    const row = saved ?? route.temporaryDiagnosis;
+    if (!row) {
+      growthPage.profile('この診断結果は、このブラウザーに保存されていません。');
+      showScreen('profile', 'profile-title');
+    } else if (row.kind === 'type') renderResult(row.code, row.mode, false, row, Boolean(saved));
+    else renderOpeningResult(row.picks, previous?.opening?.id, row, Boolean(saved));
+  } else if (path === 'growth' || path === 'profile' || path === 'goals') {
+    if (path === 'growth') growthPage.open();
+    if (path === 'profile') growthPage.profile();
+    if (path === 'goals') dailyLife.loadGoal();
+    showScreen(path, siteHeadings[path]);
+  } else if (route.generalId) {
     generalPractice.open(route);
   } else if (path === 'general' || route.generalTheme) {
     generalPractice.openList(route.generalTheme);
@@ -248,7 +262,7 @@ function renderSite() {
     chessGlossary.open(route.termId);
   } else if (path === 'external') {
     lichessPage.open();
-  } else if (path === 'cpu' || route.cpuOpening) {
+  } else if (path === 'cpu' || route.cpuOpening || route.cpuSetup) {
     if (previous?.path !== path) {
       if (route.cpuReplay) {
         const { cpuReplay, ...entry } = history.state;
@@ -260,6 +274,7 @@ function renderSite() {
         catch { position = {}; }
       }
       cpuPage.open(route.cpuReplay, position);
+      if (route.cpuSetup) { byId('cpu-advanced').open = true; byId('cpu-opening').focus(); }
     }
   } else if (route.game || path === 'game-review' || path === 'game-library') {
     gameReviewPages.open(route);
@@ -279,7 +294,6 @@ function renderSite() {
   } else if (path === 'dashboard' || (path === 'home' && (learningTracker.home() === 'dashboard'
     || learningTracker.data.home === 'auto' && Object.keys(generalHistory()).length))) {
     learningPages.dashboard();
-    stylePage.dashboard();
     dailyLife.dashboard();
     showScreen('dashboard', 'dashboard-title');
   } else if (path === 'daily') {
@@ -298,7 +312,8 @@ function renderSite() {
     if (route.recommended) lastOpeningAnswers = route.openingAnswers;
     openingStudyScreen.open(route.opening, route);
   } else if (path === 'opening-result') {
-    renderOpeningResult(route.openingAnswers, previous?.opening?.id);
+    lastOpeningAnswers = route.openingAnswers;
+    renderOpeningResult(diagnosisPicks(route.openingAnswers), previous?.opening?.id);
   } else if (path === 'result') {
     renderResult(route.code, route.mode, route.fromLink);
   } else if (route.mode) {
@@ -306,9 +321,6 @@ function renderSite() {
     showQuiz(route.mode, route.quizAnswers, route.questionIndex);
   } else if (path === 'updates') {
     showScreen('roadmap', siteHeadings.updates);
-  } else if (path === 'learn') {
-    dailyLife.showGuide('learn');
-    showScreen('home', siteHeadings.learn);
   } else if (path === 'welcome') {
     dailyLife.showGuide('welcome');
     showScreen('home', siteHeadings.welcome);
@@ -317,7 +329,9 @@ function renderSite() {
     showWithReturnFocus('openings', siteHeadings.openings, previous?.opening && `catalog-${previous.opening.id}`);
   } else {
     if (path === 'home') dailyLife.showGuide();
-    byId('latest-opening-result').hidden = !lastOpeningAnswers;
+    const latest = readDiagnosisHistory().records.find(row => row.kind === 'opening');
+    byId('latest-opening-result').hidden = !latest;
+    if (latest) byId('latest-opening-result').href = '#diagnosis/' + latest.id;
     showScreen(path, siteHeadings[path]);
   }
 }
@@ -375,18 +389,18 @@ document.addEventListener('click', (event) => {
   const route = displayedRoute;
   if (['study-back', 'study-more'].includes(link.id)) {
     backTo(path, path === 'opening-result' ? { openingAnswers: route.openingAnswers } : undefined);
-  } else if (path.startsWith('study/') && route.path === 'opening-result') {
-    goTo(path, { openingAnswers: route.openingAnswers });
+  } else if (path.startsWith('study/') && (route.path === 'opening-result' || route.diagnosisId)) {
+    goTo(path, { openingAnswers: route.openingAnswers, fromDiagnosis: route.diagnosisId });
   } else if (path === 'opening-result') {
     goTo(path, { openingAnswers: lastOpeningAnswers });
-  } else if (path === 'opening-quiz' && ['beginner', 'improve', 'intro-summary'].includes(route.path)) {
+  } else if (path === 'opening-quiz' && ['beginner', 'improve', 'intro-summary', 'profile', 'discover'].includes(route.path)) {
     goTo(path, { returnTo: route.path });
   } else {
     goTo(path);
   }
 });
 
-byId('restart-opening').addEventListener('click', () => goTo('opening-quiz', { returnTo: 'opening-result' }));
+byId('restart-opening').addEventListener('click', () => goTo('opening-quiz', { returnTo: displayedRoute.path }));
 byId('home-back').addEventListener('click', () => goTo('home'));
 byId('restart').addEventListener('click', () => goTo('mode'));
 byId('error-home').addEventListener('click', () => goTo('home'));
@@ -400,17 +414,15 @@ byId('previous').addEventListener('click', () => {
   renderQuestion();
 });
 byId('next').addEventListener('click', () => {
+  if (displayedRoute?.path !== 'opening-quiz' && !displayedRoute?.path.startsWith('quiz-')) return;
   if (questionIndex === questions.length - 1) {
-    if (currentMode === 'opening') {
-      rememberDiagnosis(savedOpeningResultKey, answers);
-      rookoriAnalytics.event('opening_quiz_complete');
-      goTo('opening-result', { openingAnswers: answers });
-      return;
-    }
-    const code = scoreAnswers(questions, answers);
-    rememberDiagnosis(savedTypeResultKey, { code, mode: currentMode });
-    rookoriAnalytics.event('chess_type_complete');
-    goTo('result', { code, mode: currentMode });
+    const opening = currentMode === 'opening';
+    const data = opening ? { picks: diagnosisPicks(answers) }
+      : { code: scoreAnswers(questions, answers), mode: currentMode, scores: scoreAxisAnswers(questions, answers) };
+    const { row, saved } = completeDiagnosis(opening ? 'opening' : 'type', data);
+    updateEntry({ quizAnswers: null });
+    rookoriAnalytics.event(opening ? 'opening_quiz_complete' : 'chess_type_complete');
+    goTo('diagnosis/' + row.id, saved ? {} : { temporaryDiagnosis: row });
     return;
   }
   questionIndex += 1;

@@ -5,12 +5,14 @@ const { join } = require('node:path');
 const { runInNewContext } = require('node:vm');
 const { webcrypto } = require('node:crypto');
 
-const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
+const scripts = ['vendor/chess.js', 'data.js', 'opening-data.js', 'opening-scoring.js', 'scoring.js', 'navigation.js', 'cpu-game.js', 'intro-course.js',
   'opening-memory.js', 'learning.js', 'game-review.js', 'game-study.js', 'lichess-api.js', 'personal-practice.js', 'play-style.js',
-  'daily-life.js', 'pgn-batch.js', 'game-library.js', 'migration.js'];
+  'daily-life.js', 'pgn-batch.js', 'game-library.js', 'diagnosis-history.js', 'migration.js'];
+const cells = new Map();
+const localStorage = { getItem: key => cells.get(key) ?? null, setItem: (key, value) => cells.set(key, value), removeItem: key => cells.delete(key) };
 const api = runInNewContext(scripts.map(file => readFileSync(join(__dirname, file), 'utf8')).join('\n')
-  + '\n({ validateMigration, addMigrationSettings, learningBackup, makeGameBackup, validateGameBackup, parseReviewGames, reviewGameRecord, reviewNote, studyContentKey, studyEngineResult, mergeLibraryRecords, prepareMigrationLinks, freshLearning, mergePersonalHistory })',
-{ window: { addEventListener() {} }, TextEncoder, crypto: webcrypto });
+  + '\n({ validateMigration, addMigrationSettings, learningBackup, makeGameBackup, validateGameBackup, parseReviewGames, reviewGameRecord, reviewNote, studyContentKey, studyEngineResult, mergeLibraryRecords, prepareMigrationLinks, freshLearning, mergePersonalHistory, diagnosisHistoryKey, diagnosisPicks, completeDiagnosis, deleteDiagnosis, readDiagnosisHistory, getQuestions, scoreAnswers, scoreAxisAnswers })',
+{ window: { addEventListener() {} }, TextEncoder, crypto: webcrypto, localStorage });
 
 test('移行バックアップは棋譜の局面と解析・検討を検証し、対象外のキーを拒否する', async () => {
   const [sample] = api.parseReviewGames('1. e4 e5 *');
@@ -110,4 +112,43 @@ test('空の日次計画に旧履歴を取り込み、その日の両方の問�
   api.addMigrationSettings(storage, { [key]: old });
   assert.deepEqual(JSON.parse(storageMap.get(key)).days[today].correct, ['current', 'old']);
   assert.equal(api.addMigrationSettings(storage, { [key]: old }).added, 0);
+});
+
+test('診断履歴を完了時に保存し、2種類の結果を回答なしで再表示できる', () => {
+  cells.clear();
+  const questions = api.getQuestions('beginner');
+  const answers = questions.map((_, i) => Number(i === 8));
+  const data = { mode: 'beginner', code: api.scoreAnswers(questions, answers), scores: api.scoreAxisAnswers(questions, answers) };
+  const first = api.completeDiagnosis('type', data);
+  const recheck = api.completeDiagnosis('type', data);
+  const opening = api.completeDiagnosis('opening', { picks: api.diagnosisPicks(Array(8).fill(0)) });
+  assert(first.saved && recheck.saved && opening.saved);
+  assert.notEqual(first.row.id, recheck.row.id);
+  assert.deepEqual(Array.from(first.row.scores[0]), [2, 1]);
+  assert.equal(api.readDiagnosisHistory().records.length, 3);
+  assert.equal(api.readDiagnosisHistory().records.length, 3);
+  assert.doesNotMatch(JSON.stringify(api.readDiagnosisHistory()), /answers/i);
+});
+
+test('旧診断を履歴に統合し、同じバックアップを再復元しても重複や復活がない', async () => {
+  cells.clear();
+  const makeBackup = settings => ({ type: 'rookori.site-backup', version: 1, settings,
+    learning: api.learningBackup(localStorage), library: api.makeGameBackup([]), studies: [] });
+  localStorage.setItem('rookori.type-result.v1', JSON.stringify({ code: 'ATCI', mode: 'beginner' }));
+  const old = makeBackup({ 'rookori.type-result.v1': { code: 'SPLD', mode: 'experienced' }, 'rookori.opening-result.v1': Array(8).fill(0) });
+  const imported = await api.validateMigration(old);
+  api.addMigrationSettings(localStorage, imported.values);
+  assert.equal(api.readDiagnosisHistory().records.length, 3);
+  assert(api.readDiagnosisHistory().records.every(row => row.at === null));
+  const current = api.completeDiagnosis('type', { code: 'ATCI', mode: 'beginner', scores: Array.from({ length: 4 }, () => [3, 0]) });
+  assert.equal(api.readDiagnosisHistory().records[0].id,current.row.id);
+  const previous = api.readDiagnosisHistory().records.find(row => row.kind === 'opening');
+  const currentBackup = await api.validateMigration(makeBackup({ [api.diagnosisHistoryKey]: api.readDiagnosisHistory() }));
+  assert(api.deleteDiagnosis(previous.id));
+  api.addMigrationSettings(localStorage, imported.values);
+  api.addMigrationSettings(localStorage, currentBackup.values);
+  api.addMigrationSettings(localStorage, currentBackup.values);
+  assert.equal(api.readDiagnosisHistory().records.length,3);
+  assert(!api.readDiagnosisHistory().records.some(row => row.id === previous.id));
+  assert.equal(api.readDiagnosisHistory().records[0].id,current.row.id);
 });

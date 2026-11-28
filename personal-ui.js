@@ -383,42 +383,33 @@ const personalPages = (() => {
       const answered = rows.filter(({ history }) => history).length;
       const recent = rows.flatMap(({ history }) => history?.events ?? []).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
       const clean = recent.filter(event => event.kind === 'good' && !event.hints).length;
-      node.replaceChildren(element('p', screen === 'home' ? `自分の対局からの復習が${due}問あります。`
-        : `専用問題 ${rows.length}問 · 今日の復習 ${due}問 · 解いた問題 ${answered}問 · 習得済み ${rows.filter(({ history }) => learned(history)).length}問`
-          + (recent.length >= 5 ? ` · 最近${recent.length}回のヒントなし正解 ${Math.round(clean / recent.length * 100)}%` : '')),
-      link('自分だけの練習問題', '#personal'));
+      const action = link('自分専用の練習問題', '#personal');
+      if (screen !== 'progress') {
+        node.replaceChildren(element('p', '自分の対局からの復習が' + due + '問あります。'), action);
+      } else {
+        const measures = element('dl', null, 'dashboard-metrics growth-metrics');
+        const values = [['専用問題', rows.length + '問'], ['今日の復習', due + '問'], ['解いた問題', answered + '問'],
+          ['習得済み', rows.filter(({ history }) => learned(history)).length + '問']];
+        if (recent.length >= 5) values.push(['最近' + recent.length + '回のヒントなし正解', Math.round(clean / recent.length * 100) + '％']);
+        for (const [label, value] of values) {
+          const item = element('div');
+          item.append(element('dt', label), element('dd', value));
+          measures.append(item);
+        }
+        node.replaceChildren(measures, action);
+      }
       node.hidden = false;
     }).catch(() => {});
-    if (screen === 'dashboard') {
-      const request = ++dashboardRequest;
-      const ledger = generalHistory();
-      const details = byId('dashboard-general-progress');
-      details.parentElement.querySelector('[data-practice-evidence]')?.remove();
-      const history = Object.values(ledger);
-      const correct = history.filter(row => row.first.correct && !row.first.hints).length;
-      details.textContent = history.length
-        ? `一般練習 ${history.length}問 · 復習予定 ${history.filter(row => row.due <= localDay()).length}問${history.length >= 5 ? ` · 初回ヒントなし正解 ${Math.round(correct / history.length * 100)}%` : ' · 傾向を表示するには記録がもう少し必要です。'}`
+    if (screen === 'progress') {
+      const general = Object.values(generalHistory());
+      byId('progress-general-metrics').textContent = general.length
+        ? '一般練習で取り組んだ問題 ' + general.length + '問 ／ 復習予定 ' + general.filter(row => row.due <= localDay()).length + '問'
         : '一般練習の記録はまだありません。';
-      loaded.then(async personal => {
-        if (request !== dashboardRequest) return;
-        const summary = generalPractice.dailySummary(el('daily-mode').value, personal, ledger);
-        byId('dashboard-solved').textContent = summary ? summary.join('/') : byId('dashboard-solved').textContent;
-        if (!personal.length && !history.length) return;
-        const { rows, evidence } = await generalPractice.pool(personal, ledger);
-        if (!evidence || request !== dashboardRequest || byId('dashboard').hidden) return;
-        const candidate = rows.find(row => row.tags.includes(evidence.tag) && !ledger[row.id]);
-        const label = practiceThemes[evidence.tag][0];
-        const basis = evidence.games.size >= 2 ? `最近の登録問題のうち${evidence.games.size}局に共通`
-          : `${evidence.attempted}問のうち初回で迷ったかヒントを使った問題が${evidence.missed}問`;
-        const hint = element('div', null, 'dashboard-note');
-        hint.append(element('p', `おすすめ：${label}（${basis}）`));
-        details.after(hint);
-        hint.dataset.practiceEvidence = 'true';
-        if (candidate) hint.append(setRowAction(link(label + 'の問題を解く', '#general/' + candidate.id + '/recommended')));
-        if (evidence.early.length >= 3 && evidence.late.length >= 3) {
-          const percent = events => Math.round(100 * events.reduce((sum, event) => sum + event, 0) / events.length);
-          hint.append(element('span', `ヒントなし正解率：前週 ${percent(evidence.early)}%（${evidence.early.length}回） → 直近7日 ${percent(evidence.late)}%（${evidence.late.length}回）`));
-        }
+    }
+    if (screen === 'dashboard') {
+      loaded.then(personal => {
+        const summary = generalPractice.dailySummary(el('daily-mode').value, personal, generalHistory());
+        if (summary) byId('dashboard-solved').textContent = summary.join('/');
       }).catch(() => {});
     }
   }

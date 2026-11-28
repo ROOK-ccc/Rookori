@@ -5,7 +5,7 @@ const siteHeadings = {
   'pgn-import': 'batch-title',
   learn: 'learn-title',
   general: 'general-title',
-  discover: 'discover-title',
+  discover: 'discover-title', growth: 'growth-title', profile: 'profile-title', goals: 'goals-title', play: 'play-title',
   beginner: 'beginner-title',
   improve: 'improve-title',
   journal: 'journal-title',
@@ -43,11 +43,18 @@ function readSiteRoute(address, state) {
   if (theme) return { path, generalTheme: theme[1] };
   const themes = /^general\/theme\/([A-Za-z0-9]+)$/.exec(path);
   if (themes) return { path, generalTheme: themes[1] };
+  if (path === 'cpu/setup-opening') return { path, cpuSetup: true };
   if (path === 'cpu') return { path, cpuReplay: entry.cpuReplay, cpuPosition: entry.cpuPosition };
   const openingCpu = /^cpu-opening\/([a-z0-9-]+)(?:\/([0-9]+))?$/.exec(path);
   if (openingCpu) return { path, cpuOpening: openingCpu[1], cpuOpeningPly: openingCpu[2] ? Number(openingCpu[2]) : undefined };
   const personal = /^personal\/([a-f0-9]{64})(\/daily)?$/.exec(path);
   if (personal) return { path, personalId: personal[1], personalDaily: Boolean(personal[2]) };
+  const diagnosis = /^diagnosis\/([a-z0-9-]+)$/.exec(path);
+  if (diagnosis && diagnosisId.test(diagnosis[1])) {
+    const row = entry.temporaryDiagnosis;
+    const temporaryDiagnosis = row?.id === diagnosis[1] && validDiagnosisHistory({ version: 1, records: [row], removed: [] }) ? row : undefined;
+    return { path, diagnosisId: diagnosis[1], temporaryDiagnosis };
+  }
   if (Object.hasOwn(siteHeadings, path)) return { path };
   const term = /^glossary\/([a-z0-9-]+)$/.exec(path);
   if (term) return { path, termId: term[1] };

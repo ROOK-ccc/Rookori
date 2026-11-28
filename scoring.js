@@ -8,7 +8,7 @@ function getQuestions(mode) {
   );
 }
 
-function scoreAnswers(questions, answers) {
+function scoreAxisAnswers(questions, answers) {
   const points = Object.fromEntries(axes.flatMap(({ codes }) => codes.map((code) => [code, 0])));
 
   for (const [index, question] of questions.entries()) {
@@ -19,5 +19,9 @@ function scoreAnswers(questions, answers) {
     points[question.codes[answer]] += 1;
   }
 
-  return axes.map(({ codes: [left, right] }) => points[left] > points[right] ? left : right).join('');
+  return axes.map(({ codes: [left, right] }) => [points[left], points[right]]);
+}
+
+function scoreAnswers(questions, answers) {
+  return scoreAxisAnswers(questions, answers).map(([left, right], index) => axes[index].codes[left > right ? 0 : 1]).join('');
 }

@@ -77,7 +77,7 @@ const openingStudyScreen = (() => {
         return section;
       }));
     }
-    const destination = route.recommended ? '#opening-result' : candidate.parentId ? `#study/${candidate.parentId}` : '#openings';
+    const destination = route.fromDiagnosis ? '#diagnosis/' + route.fromDiagnosis : route.recommended ? '#opening-result' : candidate.parentId ? `#study/${candidate.parentId}` : '#openings';
     const fromGame = /^game-review\/(sample|preview|[a-f0-9]{32})$/.test(route.from ?? '');
     const back = byId('study-back');
     back.href = fromGame ? `#${route.from}` : destination;

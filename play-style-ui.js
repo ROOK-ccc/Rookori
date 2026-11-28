@@ -76,7 +76,7 @@ const stylePage = (() => {
   }
 
   function diagnosis() {
-    const result = personalPreference(savedTypeResultKey, null);
+    const result = readDiagnosisHistory().records.find(row => row.kind === 'type');
     el('diagnosis').replaceChildren();
     if (!validSavedTypeResult(result)) {
       el('diagnosis').append(element('p', '保存された16タイプ診断があると、ここに回答に基づく結果が表示されます。'), link('16タイプ診断を試す', 'mode'));
@@ -102,15 +102,15 @@ const stylePage = (() => {
     if (a.lossGames >= 3) advice.append(element('p', `比較可能な解析で、大きく評価が下がった手が${a.lossGames}局で見つかりました。相手の次の一手を考え、ハイライトで実戦の手と候補手を比べてみましょう。`), link('対局を振り返る', 'game-review'));
     else if (a.castleChance >= 3 && a.castled * 2 < a.castleChance) advice.append(element('p', `キャスリングが可能だった${a.castleChance}局のうち、指したのは${a.castled}局です。王を移すタイミングを、定跡設定で一度試せます。`), link('定跡からCPUと対戦する', 'cpu'));
     else advice.append(element('p', '改善を提案できるだけの対局データはまだありません。終了した対局を一局振り返るところから始められます。'), link('対局を振り返る', 'game-review'));
-    const openingAnswers = personalPreference(savedOpeningResultKey, null);
-    if (validOpeningAnswers(openingAnswers)) {
-      const recommended = scoreOpenings(openingAnswers)[0]?.candidate;
+    const opening = readDiagnosisHistory().records.find(row => row.kind === 'opening');
+    if (opening) {
+      const recommended = findStudyOpening(opening.picks[0]?.id);
       if (recommended) advice.append(element('p', 'オープニング診断で選んだ戦い方から、おすすめの定跡を試せます。'), link(`${recommended.name}から対戦する`, 'cpu-opening/' + recommended.id));
     }
     questions.all().then(rows => {
       if (last !== snapshot) return;
       const due = personalDue(rows).length;
-      if (due) advice.append(element('p', `自分の対局から保存した問題に、復習予定が${due}問あります。`), link('自分だけの練習問題', 'personal'));
+      if (due) advice.append(element('p', `自分の対局から保存した問題に、復習予定が${due}問あります。`), link('自分専用の練習問題', 'personal'));
     }).catch(() => {});
     const old = snapshots().find(row => row.date !== snapshot.date && Object.keys(styleChoices).every(key => row.filters[key] === snapshot.filters[key]));
     el('past').textContent = old
@@ -207,12 +207,6 @@ const stylePage = (() => {
     finally { if (token === revision) el('run').disabled = loading = false; }
   }
 
-  function dashboard() {
-    const saved = snapshots()[0];
-    const diagnosisResult = personalPreference(savedTypeResultKey, null);
-    const text = saved ? `保存した棋風分析 ${saved.outline.games}局 · 解析記録あり ${saved.outline.analyzed}局` : '対局を振り返ると、自分が選んだ手の傾向を確かめられます。';
-    byId('dashboard-style').replaceChildren(element('h2', 'あなたの棋風'), element('p', text + (validSavedTypeResult(diagnosisResult) ? ` ／ 16タイプ診断 ${diagnosisResult.code}` : '')), setRowAction(link('棋風を見る', 'your-style')));
-  }
 
-  return { open, cancel, dashboard };
+  return { open, cancel };
 })();

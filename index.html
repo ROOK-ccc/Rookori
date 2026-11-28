@@ -77,11 +77,13 @@
   <script src="personal-ui.js" defer></script>
   <script src="general-practice-ui.js" defer></script>
   <script src="lichess-ui.js" defer></script>
+  <script src="diagnosis-history.js" defer></script>
   <script src="migration.js" defer></script>
   <script src="play-style-ui.js" defer></script>
   <script src="site-menu.js" defer></script>
   <script src="journey.js" defer></script>
   <script src="daily-life-ui.js" defer></script>
+  <script src="growth-ui.js" defer></script>
   <script src="pgn-batch-ui.js" defer></script>
   <script src="pwa.js" defer></script>
 </head>
@@ -107,8 +109,8 @@
       <nav class="app-tabs" aria-label="主要機能">
         <a href="#home"><svg aria-hidden="true"><use href="#ui-home"></use></svg>ホーム</a>
         <a href="#learn"><svg aria-hidden="true"><use href="#ui-learn"></use></svg>学ぶ</a>
-        <a href="#cpu"><svg aria-hidden="true"><use href="#ui-play"></use></svg>対戦</a>
-        <a href="#dashboard"><svg aria-hidden="true"><use href="#ui-grow"></use></svg>成長</a>
+        <a href="#play"><svg aria-hidden="true"><use href="#ui-play"></use></svg>対戦</a>
+        <a href="#growth"><svg aria-hidden="true"><use href="#ui-grow"></use></svg>成長</a>
         <a href="#discover"><svg aria-hidden="true"><use href="#ui-find"></use></svg>探す</a>
       </nav>
       <button class="menu-toggle" id="site-menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-menu"><svg class="ui-icon" aria-hidden="true"><use href="#ui-menu"></use></svg></button>
@@ -137,7 +139,9 @@
         </section>
         <section class="menu-group">
           <h3>成長する</h3>
-          <a href="#personal"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>自分だけの練習問題</a>
+          <a href="#growth"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>成長のまとめ</a>
+          <a href="#profile"><svg class="ui-icon" aria-hidden="true"><use href="#ui-find"></use></svg>学習プロフィール</a>
+          <a href="#personal"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>自分専用の練習問題</a>
           <a href="#general"><svg class="ui-icon" aria-hidden="true"><use href="#ui-learn"></use></svg>テーマ別の一般練習</a>
           <a href="#game-review"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局を振り返る</a>
           <a href="#game-library"><svg class="ui-icon" aria-hidden="true"><use href="#ui-grow"></use></svg>対局履歴</a>
@@ -244,23 +248,9 @@
         </div>
         <button class="text-button" id="welcome-skip" type="button">ガイドをスキップする</button>
       </section>
-      <section class="home-section home-diagnostics" aria-labelledby="learn-title">
-        <h2 id="learn-title" tabindex="-1">自分に合うところから始める</h2>
-        <div class="learn-practice-links">
-          <p><a class="button primary" href="#personal">自分専用の練習問題</a></p>
-          <p><a class="button secondary" href="#daily">今日の10問</a> <a class="button secondary" href="#review">今日の復習</a></p>
-          <section aria-labelledby="learn-puzzles"><h3 id="learn-puzzles">練習問題集</h3>
-            <a class="button secondary" href="#general">すべての問題</a>
-            <a class="button secondary" href="#general/random">ランダム問題</a>
-            <a class="button secondary" href="#general/tactics">タクティクス</a>
-            <a class="button secondary" href="#general/checkmate">チェックメイト</a>
-            <a class="button secondary" href="#general/endgame">エンドゲーム</a>
-            <a class="button secondary" href="#general/themes">テーマ別練習</a>
-            <a class="button secondary" href="#general/levels">難易度別練習</a>
-          </section>
-          <p><a class="button secondary" href="#openings">オープニング教材</a></p>
-          <p><a class="button secondary" href="#intro">基礎学習教材</a></p>
-        </div>
+      <section class="home-section home-diagnostics" aria-labelledby="home-learn-title">
+        <h2 id="home-learn-title" tabindex="-1">自分に合うところから始める</h2>
+
         <div class="first-step-grid" id="home-learning-choices">
           <section class="first-step-card">
             <h3>チェスをまだ知らない人へ</h3>
@@ -288,7 +278,7 @@
         </div>
         <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
         <section class="dashboard-feature home-section"><h2>あなたの対局が、あなたの教材になる。</h2>
-          <p>自分の対局から、自分だけの練習問題を。過去のミスを復習し、次の一手に生かす。</p>
+          <p>自分の対局から、自分専用の練習問題を。過去のミスを復習し、次の一手に生かす。</p>
           <a class="button primary" href="#personal">練習を始める</a>
           <a class="button secondary" href="#openings">日本語の定跡解説を読む</a>
           <a class="button secondary" href="#mode">チェス16タイプ診断</a>
@@ -297,27 +287,37 @@
       </section>
     </section>
 
-    <section id="discover" class="screen inner-screen guide-screen" hidden>
+    <section id="learn" class="screen inner-screen guide-screen journey-app" hidden>
+      <h1 id="learn-title" tabindex="-1">学ぶ</h1>
+        <div class="learn-directory">
+          <p><a class="button primary" href="#personal">自分専用の練習問題</a></p>
+          <p><a class="button secondary" href="#daily">今日の10問</a> <a class="button secondary" href="#review">今日の復習</a></p>
+          <section aria-labelledby="learn-puzzles"><h3 id="learn-puzzles">練習問題集</h3>
+            <a class="button secondary" href="#general">すべての問題</a>
+            <a class="button secondary" href="#general/random">ランダム問題</a>
+            <a class="button secondary" href="#general/tactics">タクティクス</a>
+            <a class="button secondary" href="#general/checkmate">チェックメイト</a>
+            <a class="button secondary" href="#general/endgame">エンドゲーム</a>
+            <a class="button secondary" href="#general/themes">テーマ別練習</a>
+            <a class="button secondary" href="#general/levels">難易度別練習</a>
+          </section>
+          <p><a class="button secondary" href="#openings">オープニング教材</a></p>
+          <section><h2>基礎・戦術・終盤</h2><a class="button secondary" href="#intro">基礎学習教材</a> <a class="button secondary" href="#general/tactics">タクティクス</a> <a class="button secondary" href="#general/endgame">エンドゲーム</a> <a class="text-button" href="#notation">棋譜の読み方</a></section>
+        </div>
+    </section>
+    <section id="play" class="screen inner-screen guide-screen journey-app" hidden>
+      <h1 id="play-title" tabindex="-1">対戦</h1>
+      <p class="guide-intro">コンピューターを相手に、自分のペースで一局指せます。</p>
+      <div class="dashboard-feature"><h2>コンピューター対戦</h2><a class="button primary" href="#cpu">最初の局面から対戦する</a><a class="row-action" href="#cpu/setup-opening"><span>オープニングを選んで対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#game-review"><span>棋譜の途中の局面から対戦する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+        <details id="play-position"><summary>局面を指定して対戦する</summary><form id="play-position-form" class="rookori-fields"><p id="play-position-help" data-chess-terms>棋譜の検討画面などから、盤面を記録したFENをコピーできます。</p><label>盤面の記録 <input name="fen" required maxlength="150" autocomplete="off" spellcheck="false" aria-describedby="play-position-help"></label><button class="button secondary" type="submit">この局面を開く</button><p id="play-position-status" role="status"></p></form></details></div>
+      <p class="planned-feature" id="play-online-planned"><svg class="ui-icon" aria-hidden="true"><use href="#ui-globe"></use></svg><span>オンライン対戦</span><small>今後実装予定</small></p>
+    </section>
+    <section id="discover" class="screen inner-screen guide-screen journey-app" hidden>
       <h1 id="discover-title" tabindex="-1">探す</h1>
-      <div class="app-directory">
-        <section><h2>読み物と用語</h2><ul class="reading-links">
-          <li><a class="row-action" href="https://rookrori.com/practice/" data-reading-link><span>チェスの練習方法</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-          <li><a class="row-action" href="https://rookrori.com/openings/" data-reading-link><span>オープニング教材を読む</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-          <li><a class="row-action" href="https://rookrori.com/guides/" data-reading-link><span>チェスの学習ガイド</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-        </ul></section>
-        <section><h2>自分に合う学び方</h2><ul class="reading-links">
-          <li><a class="row-action" href="#general"><span>練習問題集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-          <li><a class="row-action" href="#notation"><span>棋譜の読み方</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-          <li><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#your-style"><span>実際の対局から棋風を知る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-        </ul></section>
-        <section><h2>Rookoriと設定</h2><ul class="reading-links">
-          <li><a class="row-action" href="#roadmap"><span>これまでと、これから</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#backup"><span>学習データのバックアップ・復元</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li><li><a class="row-action" href="#privacy"><span>アクセス解析とプライバシー</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></li>
-        </ul></section>
-      </div>
-      <p class="planned-feature" id="discover-community-planned">
-        <svg class="ui-icon" aria-hidden="true"><use href="#ui-chat"></use></svg>
-        <span>コミュニティ</span><small>今後実装予定</small>
-      </p>
+      <p class="guide-intro">診断や用語集から、自分のチェスの学び方を見つけましょう。</p>
+      <section><h2>診断を試す</h2><a class="row-action" href="#mode"><span>チェス16タイプ診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#opening-quiz"><span>オープニング診断</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>チェスの言葉を調べる</h2><a class="row-action" href="#glossary"><span>チェス用語集</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <p class="planned-feature" id="discover-community-planned"><svg class="ui-icon" aria-hidden="true"><use href="#ui-chat"></use></svg><span>コミュニティ</span><small>今後実装予定</small></p>
     </section>
     <section id="beginner" class="screen inner-screen guide-screen" hidden>
       <a class="text-button" href="#learn">学習トップへ戻る</a>
@@ -453,6 +453,7 @@
         <p id="card-status" role="status"></p>
       </section>
       <div class="result-details" id="result-details"></div>
+      <div id="result-diagnosis-extra"></div>
       <section class="result-link" aria-labelledby="result-link-title">
         <h2 id="result-link-title">診断結果のリンク</h2>
         <div class="share-actions">
@@ -478,6 +479,7 @@
       </div>
       <p class="result-note">白番の戦い方と、黒番でよく出会う2つの初手への対応を学ぶ基本セットです。相手の初手や応手によっては、別の戦い方が必要になります。推薦は回答から見た戦法との相性を表し、難易度と学習負担はRookori独自の目安です。</p>
       <div class="opening-results" id="opening-results"></div>
+      <div id="opening-diagnosis-extra"></div>
       <div class="opening-actions">
         <button class="button primary" id="restart-opening" type="button">もう一度診断する</button>
         <a class="text-button" href="#learn">学習トップへ戻る</a>
@@ -784,10 +786,6 @@
           <p>Stockfish 19 Liteは、このブラウザー内で動作します。<a href="vendor/stockfish/NOTICE.txt">ライセンスとソースコードの案内</a>・<a href="vendor/chess.LICENSE.txt">chess.jsのライセンス</a></p>
           <p><a href="vendor/stockfish/stockfish.js-19.0.0-source.tar.gz" download>Stockfishの対応ソース</a>・<a href="vendor/stockfish/nn-61e7af4bb97d.nnue" download>対応する評価ネットワーク</a></p>
         </details>
-        <p class="planned-feature" id="cpu-online-planned">
-          <svg class="ui-icon" aria-hidden="true"><use href="#ui-globe"></use></svg>
-          <span>オンライン対戦</span><small>今後実装予定</small>
-        </p>
       </div>
       <div id="cpu-session" hidden>
         <div class="study-layout cpu-layout">
@@ -1016,7 +1014,7 @@
                     <button type="button" id="personal-add-selected" class="button secondary" hidden>選んだ局面を追加する</button>
                     <button type="button" id="personal-dismiss-candidates" class="text-button">今回は追加しない</button>
                   </div>
-                  <a class="text-button" href="#personal">自分だけの練習問題を開く</a>
+                  <a class="text-button" href="#personal">自分専用の練習問題を開く</a>
                   <a id="personal-generated-first" class="button primary" href="#personal" hidden>追加した問題を解く</a>
                 </details>
                 <div class="review-analysis-actions">
@@ -1253,6 +1251,37 @@
       </details>
     </section>
 
+    <section id="growth" class="screen inner-screen guide-screen journey-app" hidden>
+      <h1 id="growth-title" tabindex="-1">成長</h1>
+      <section aria-labelledby="growth-profile-title"><h2 id="growth-profile-title">学習プロフィール</h2><div id="growth-card"></div>
+        <a class="row-action" href="#profile"><span>プロフィールと診断履歴を見る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>学習の概要</h2><dl id="growth-metrics" class="dashboard-metrics growth-metrics"></dl><a class="row-action" href="#progress"><span>上達記録の詳細を見る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>直近7日間の学習</h2><div id="growth-week"></div></section>
+      <section><h2>次に取り組むこと</h2><div id="growth-weakness"></div></section>
+      <section><h2>最近の対局</h2><div id="growth-games"></div><a class="row-action" href="#game-library"><span>対局履歴を見る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a><a class="row-action" href="#game-review"><span>棋譜を取り込んで振り返る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>学習目標</h2><p id="growth-goal"></p><a class="row-action" href="#goals"><span>目標を設定・変更する</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+    </section>
+    <section id="profile" class="screen inner-screen guide-screen journey-app" hidden>
+      <h1 id="profile-title" tabindex="-1">学習プロフィール</h1>
+      <p><a class="text-button" href="#growth">成長に戻る</a></p>
+      <p id="profile-status" role="status"></p>
+      <section><h2>チェス16タイプ診断</h2><div id="profile-type"></div><a class="row-action" href="#mode"><span>16タイプ診断を受ける</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>オープニング診断</h2><div id="profile-opening"></div><a class="row-action" href="#opening-quiz"><span>オープニング診断を受ける</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>実際の対局からわかる棋風</h2><div id="profile-style"></div><a class="row-action" href="#your-style"><span>対局から棋風を調べる</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a></section>
+      <section><h2>診断履歴</h2><p>このブラウザーに保存した結果を、新しい順に表示します。</p><div id="profile-history"></div></section>
+    </section>
+    <section id="goals" class="screen inner-screen guide-screen journey-app" hidden>
+      <h1 id="goals-title" tabindex="-1">学習目標</h1>
+      <a class="row-action" href="#growth"><span>成長に戻る</span><svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
+      <p id="learning-goal-summary" tabindex="-1"></p>
+        <form id="learning-goal-form" class="rookori-fields">
+          <label>学習目標 <select name="goal" required><option value="">目標を選ぶ</option></select></label>
+          <label>1回の時間 <select name="minutes"><option value="">指定しない</option><option value="5">5分</option><option value="10">10分</option><option value="20">20分</option><option value="30">30分</option></select></label>
+          <label>学習の頻度 <select name="days"><option value="">指定しない</option><option value="1">週1日</option><option value="2">週2日</option><option value="3">週3日</option><option value="7">毎日</option></select></label>
+          <div class="study-mode-links"><button class="button secondary" type="submit">目標を保存する</button><button class="text-button" id="learning-goal-delete" type="button" hidden>目標を削除する</button></div>
+        </form>
+        <p id="learning-goal-status" role="status"></p>
+    </section>
     <section id="dashboard" class="screen inner-screen guide-screen dashboard-page" hidden>
       <h1 id="dashboard-title" tabindex="-1">今日の学習</h1>
       <section id="dashboard-resume" class="dashboard-feature" aria-labelledby="dashboard-resume-title" hidden>
@@ -1279,26 +1308,6 @@
       <section class="dashboard-feature" id="dashboard-recommendation"><h2>今日のおすすめ</h2><div id="dashboard-next" class="daily-next"></div></section>
       <section id="dashboard-plan"></section>
       <div id="dashboard-personal-progress" hidden></div>
-      <section><h2>練習の記録</h2><p id="dashboard-general-progress" class="dashboard-note"></p>
-        <a class="row-action" href="#personal">練習のメニューを開く<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
-      </section>
-      <details class="opening-card">
-        <summary id="learning-goal-summary">目標を設定する（任意）</summary>
-        <form id="learning-goal-form" class="rookori-fields">
-          <label>学習目標 <select name="goal" required><option value="">目標を選ぶ</option></select></label>
-          <label>1回の時間 <select name="minutes"><option value="">指定しない</option><option value="5">5分</option><option value="10">10分</option><option value="20">20分</option><option value="30">30分</option></select></label>
-          <label>学習の頻度 <select name="days"><option value="">指定しない</option><option value="1">週1日</option><option value="2">週2日</option><option value="3">週3日</option><option value="7">毎日</option></select></label>
-          <div class="study-mode-links"><button class="button secondary" type="submit">目標を保存する</button><button class="text-button" id="learning-goal-delete" type="button" hidden>目標を削除する</button></div>
-        </form>
-        <p id="learning-goal-status" role="status"></p>
-      </details>
-      <section class="dashboard-records" aria-labelledby="dashboard-records-title"><h2 id="dashboard-records-title">最近の対局</h2>
-        <p id="dashboard-recent-empty" class="dashboard-note" hidden>保存した対局がここに表示されます。</p>
-        <ul id="dashboard-recent"></ul>
-        <a class="row-action" href="#game-library">対局履歴を見る<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
-        <a class="row-action" href="#game-review">対局を振り返る<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
-      </section>
-      <section id="dashboard-style"></section>
       <a class="row-action" href="#backup">ホーム画面の表示設定<svg class="ui-icon" aria-hidden="true"><use href="#ui-chevron"></use></svg></a>
     </section>
     <section id="daily" class="screen inner-screen guide-screen" hidden>
@@ -1306,7 +1315,7 @@
       <a class="text-button" href="#dashboard">今日の学習へ戻る</a>
       <p class="guide-intro" id="daily-status"></p>
       <label>出題する問題 <select id="personal-daily-mode"><option value="recommended">おすすめ</option><option value="general">一般問題のみ</option><option value="personal">自分の対局からの問題のみ</option></select></label>
-      <p><a class="text-button" href="#personal">自分だけの練習問題を見る</a></p>
+      <p><a class="text-button" href="#personal">自分専用の練習問題を見る</a></p>
       <ol class="daily-list" id="daily-list"></ol>
     </section>
     <section id="your-style" class="screen inner-screen guide-screen" hidden>
@@ -1337,7 +1346,7 @@
     </section>
     <section id="personal" class="screen inner-screen guide-screen" hidden>
       <h1 id="personal-title" tabindex="-1">あなたの対局が、あなたの教材になる。</h1>
-      <p>自分の対局から、自分だけの練習問題を。過去のミスを復習し、次の一手に生かす。</p>
+      <p>自分の対局から、自分専用の練習問題を。過去のミスを復習し、次の一手に生かす。</p>
       <p class="guide-intro">過去の一手を、未来の強さに。</p>
       <p id="personal-counts" role="status"></p>
       <div class="study-mode-links">
@@ -1450,6 +1459,8 @@
     </section>
     <section id="progress" class="screen inner-screen guide-screen" hidden>
       <h1 id="progress-title" tabindex="-1">上達記録</h1>
+      <p><a class="text-button" href="#growth">成長に戻る</a></p>
+      <section aria-labelledby="progress-practice-title"><h2 id="progress-practice-title">練習問題の記録</h2><div id="progress-personal-progress" hidden></div><p id="progress-general-metrics"></p></section>
       <p class="guide-intro">学習した内容と練習の成績を振り返れます。</p>
       <div id="progress-summary" class="report-summary"></div>
       <section class="opening-card report-section" aria-labelledby="calendar-title">
@@ -1656,13 +1667,13 @@
       <p>RookoriはLichessとは独立した非公式サービスです。Lichessを開いた場合や直接取得を利用した場合のLichess側の取り扱いは、<a href="https://lichess.org/privacy" rel="noreferrer">Lichessのプライバシーポリシー</a>をご覧ください。</p>
       <p>一括取り込みで入力した対局時の名前は、選んだ棋譜との照合に使います。設定した使用色は棋譜に紐づけてこのブラウザーに保存します。名前や棋譜の内容を照合のために外部サイトに送ることはありません。</p>
       <h2>このブラウザーに保存される情報と削除方法</h2>
-      <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。オープニング診断は、結果の再表示に必要な選択肢番号を端末に保存します。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
+      <p>学習記録、診断記録、対局履歴、メモ、解析結果、保存した検討手順と設定は、このブラウザーのサイトデータに保存します。新しい診断履歴には結果と集計値を保存します。以前のオープニング診断で保存した選択肢番号は、過去の結果の復元に使います。Stockfishによる解析もブラウザー内で実行します。サーバーへのアップロードや、端末間の自動同期は行いません。</p>
       <p><a href="#backup">一括バックアップ</a>で、このブラウザーのデータをファイルに保存して別のサイトや端末へ移せます。棋譜、メモ、診断記録、個別練習問題とその履歴、保存した棋風分析はアクセス解析に送りません。</p>
       <p>利用ガイドの表示設定と任意の学習目標も、このブラウザーに保存します。オフライン表示用のキャッシュには、ページやアイコンなどの公開ファイルを保存します。</p>
       <ul>
         <li><a href="#external">外部サイトとの連携</a>の「保存したユーザー名を削除」で、過去に保存したLichessユーザー名を消せます。</li>
         <li><a href="#game-library">対局履歴</a>から棋譜と紐づくメモを削除できます。対局の復習画面ではメモを個別に削除できます。</li>
-        <li>学習目標は<a href="#dashboard">今日の学習</a>から削除できます。</li>
+        <li>学習目標は<a href="#goals">学習目標</a>から、診断結果は<a href="#profile">学習プロフィール</a>から個別に削除できます。</li>
         <li>解析結果を含むサイトデータをすべて消すには、ブラウザーの設定からこのサイトのデータを削除してください。この操作では学習記録や同意設定も消えます。同じホスト名の別サイトのデータに影響する場合があります。書き出したバックアップや棋譜ファイルは、保存先で別途削除してください。</li>
       </ul>
       <h2>Google Analytics 4 と同意の設定</h2>

@@ -13,12 +13,12 @@ function createRookoriAnalytics(win, doc) {
 
   const titles = {
     roadmap: 'Rookoriのこれまでと、これから', updates: 'アップデート履歴',
-    home: 'ホーム', beginner: '初心者ガイド', improve: '学習ガイド', journal: 'チェス日記帳',
+    home: 'ホーム', learn: '学ぶ', beginner: '初心者ガイド', improve: '学習ガイド', journal: 'チェス日記帳',
     openings: 'オープニング一覧', memorize: 'オープニング暗記一覧', 'opening-study': 'オープニング学習',
     'opening-practice': '暗記練習', mode: '診断の種類', quiz: '16タイプ診断',
     'opening-quiz': 'オープニング診断', result: '16タイプ診断の結果', 'opening-result': 'オープニング診断の結果',
     intro: 'はじめてのチェス', 'intro-lesson': '入門レッスン', 'intro-summary': '入門の結果',
-    dashboard: '今日の学習', daily: '今日の練習問題', review: '復習', progress: '上達記録',
+    dashboard: '今日の学習', growth: '成長', profile: '学習プロフィール', goals: '学習目標', play: '対戦', daily: '今日の練習問題', review: '復習', progress: '上達記録',
     'game-review': '対局の取り込み', 'game-player': '対局再生', 'game-library': '対局履歴',
     external: '外部サイトとの連携', 'pgn-import': '棋譜の一括取り込み',
     personal: '個別練習問題', 'personal-play': '個別練習問題を解く', 'your-style': 'あなたの棋風',
